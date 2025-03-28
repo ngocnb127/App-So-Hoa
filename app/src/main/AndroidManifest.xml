@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-sdk android:maxSdkVersion="31" />
+
+    <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.PREVENT_POWER_KEY" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE " />
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES " />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".FMSApplication"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/my_backup_rules"
+        android:hardwareAccelerated="false"
+        android:icon="@drawable/ic_fuel_tanker"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="true"
+        android:roundIcon="@drawable/ic_fuel"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme.NoActionBar"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".ReviewActivity"
+            android:screenOrientation="landscape"
+            android:exported="false" />
+        <activity
+            android:name=".PrintInvoiceActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ReceiptSignActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name=".ReceiptActivity"
+            android:exported="true" />
+        <activity android:name=".B2505Activity" />
+        <activity android:name=".B2508Activity" />
+        <activity android:name=".B2502Activity" />
+        <activity android:name=".A2307Activity" />
+        <activity
+            android:name=".StartupActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".NewExtractActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".NewRefuelActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".VersionUpdateActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".RefuelDetailActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".RefuelDetailConfirmActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".RefuelPreviewActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".PrintReceiptActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".InventoryActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".SettingActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".ExtractActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".RefuelActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <receiver
+            android:name=".receivers.WifiReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
+                <action android:name="android.net.wifi.STATE_CHANGE" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name=".receivers.WifiReceiver$WifiActiveService" />
+    </application>
+
+</manifest>

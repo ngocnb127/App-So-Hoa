@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".RefuelActivity">
+    <include
+        app:layout_constraintBottom_toTopOf="parent"
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar"></include>
+
+    <TextView
+        android:id="@+id/lblFlightNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="10dp"
+        android:text="Mã chuyến bay"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/txtGrossQty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:width="200dp"
+        android:text="0.0"
+        android:textSize="@dimen/large_text"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblQty"
+
+        />
+
+    <TextView
+        android:id="@+id/txtTemp"
+        android:layout_width="0dp"
+        android:width="200dp"
+        android:layout_height="wrap_content"
+
+        android:text="0.0"
+        android:textSize="@dimen/large_text"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblTemp" />
+
+    <TextView
+        android:id="@+id/lblQty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="320dp"
+        android:text="Gross Qty"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/lblTemp"
+        android:layout_width="82dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Temperature"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblQty" />
+
+    <TextView
+        android:id="@+id/txtLog"
+
+        android:layout_width="0dp"
+        android:layout_height="200dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="10dp"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="@id/guideline_right"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@+id/txtTemp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.01" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.99" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.53" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.33" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.66" />
+
+    <CheckBox
+        android:id="@+id/chkCondition"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="208dp"
+        android:text="Kiểm xe"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/chkInventory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="12dp"
+        android:text="Kiểm hàng"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/chkCondition" />
+
+    <Button
+        android:id="@+id/btn_2502"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Nhận thêm hàng"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/chkCondition" />
+
+    <Button
+        android:id="@+id/btnStop"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+
+        android:layout_marginEnd="10dp"
+        android:enabled="false"
+
+        android:text="@string/stop"
+        app:layout_constraintEnd_toEndOf="@id/guideline_right"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_right"
+        app:layout_constraintTop_toBottomOf="@+id/txtLog" />
+
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:enabled="false"
+
+        android:text="@string/start"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@+id/txtLog" />
+
+    <Button
+        android:id="@+id/btnPause"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+
+        android:layout_marginEnd="10dp"
+        android:enabled="false"
+        android:text="@string/pause"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center_right"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@+id/txtLog" />
+
+    <TextView
+        android:id="@+id/lblParkingLot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Vị trí đỗ"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblAircraftNo" />
+
+    <TextView
+        android:id="@+id/lblAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Lượng nhiên liệu yêu cầu"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblParkingLot" />
+
+    <TextView
+        android:id="@+id/lblAircraftNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Số hiệu tàu bay"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblFlightNo" />
+
+    <TextView
+        android:id="@+id/txtFlightCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/guideline_right"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_right"
+        app:layout_constraintTop_toTopOf="@id/lblFlightNo" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

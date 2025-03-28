@@ -1,0 +1,11 @@
+package com.megatech.tcpclient;
+
+public enum TcpEventType {
+    CONNECTION_STARTED,
+    CONNECTION_ESTABLISHED,
+    CONNECTION_FAILED,
+    CONNECTION_LOST,
+    MESSAGE_RECEIVED,
+    MESSAGE_SENT,
+    DISCONNECTED
+}

@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.FLIGHT_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.REFUEL_ITEM_TYPE" />
+
+        <import type="com.megatech.fms.helpers.NumberFormat"></import>
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData"></variable>
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:orientation="vertical">
+
+
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="right">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text='@{mItem.refuelItemType == REFUEL_ITEM_TYPE.EXTRACT?"Chuyến hút mới":"Chuyến tra nạp mới"}'
+                android:textColor="#fff"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:textFontWeight="20" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+                android:text="@string/save" />
+
+        </androidx.appcompat.widget.Toolbar>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.6"
+            app:cardCornerRadius="2dp"
+            app:cardUseCompatPadding="true"
+            tools:context=".NewRefuelActivity">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    tools:layout_editor_absoluteX="-190dp"
+                    tools:layout_editor_absoluteY="0dp">
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#ffffff"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="Hãng bay" />
+
+
+                        <EditText
+                            android:id="@+id/new_refuel_airline"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.75"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text="@={mItem.airlineModel.name}"
+                            ></EditText>
+                        <Spinner
+                            android:id="@+id/new_refuel_airline_spinner"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.75"
+                            android:padding="10dp"
+                            android:spinnerMode="dialog"
+                            android:visibility="gone"/>
+
+                    </TableRow>
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#efefef"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/charter_name" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_charter_name"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.75"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text="@={mItem.invoiceNameCharter}"
+                            android:textIsSelectable="true" />
+
+                    </TableRow>
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#ffffff"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/flightCode" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_flightCode"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text="@={mItem.flightCode}"
+                            android:textIsSelectable="true" />
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/parking_lot" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_parking"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="number|textCapCharacters"
+                            android:onClick="onClick"
+
+                            android:padding="10dp"
+                            android:text="@={mItem.parkingLot}"
+                            android:textIsSelectable="true" />
+
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#efefef"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            android:id="@+id/textView14"
+
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="Đường bay" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_routeName"
+
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword|textCapCharacters"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text="@={mItem.routeName}" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/flight_type" />
+
+                        <CheckBox android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:checked="@={mItem.international}"/>
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#ffffff"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="Loại tàu bay" />
+
+
+                        <EditText
+                            android:id="@+id/new_refuel_aircraftType"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:selectAllOnFocus="true"
+                            android:text='@={mItem.aircraftType}'
+                            android:visibility="visible" />
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/aircraftCode" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_aircraftCode"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:focusable="false"
+                            android:inputType="textVisiblePassword|textCapCharacters"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text="@={mItem.aircraftCode}"
+                            android:textIsSelectable="true" />
+
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#efefef"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/arrival_time" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_arrival"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="time"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text='@{DateUtils.getTime(mItem.arrivalTime)}'
+                            android:textIsSelectable="true" />
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/departureTime" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_departure"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:focusable="false"
+                            android:inputType="time"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text='@{DateUtils.getTime(mItem.departureTime)}'
+                            android:textIsSelectable="true" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#ffffff"
+                        android:paddingTop="5dp"
+                        android:paddingBottom="5dp">
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/refuelTime" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_date"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:ems="10"
+                            android:focusable="false"
+                            android:inputType="date"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text='@{DateUtils.getTime(mItem.refuelTime)}'
+                            android:textIsSelectable="true" />
+
+
+                        <TextView
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:padding="5dp"
+                            android:text="@string/estimate_amount" />
+
+                        <EditText
+                            android:id="@+id/new_refuel_estimateAmount"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.25"
+                            android:focusable="false"
+                            android:inputType="number"
+                            android:onClick="onClick"
+                            android:padding="10dp"
+                            android:text='@={NumberFormat.format("#,##0",mItem.estimateAmount)}'
+                            android:textIsSelectable="true" />
+
+                    </TableRow>
+
+
+                </TableLayout>
+
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+
+
+</layout>

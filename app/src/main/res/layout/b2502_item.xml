@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+        <import type="com.megatech.fms.helpers.DateUtils" />
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.TruckFuelModel" />
+    </data>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+    android:paddingLeft="10dp"    >
+    <CheckBox
+        android:id="@+id/b2502_item_chk"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content" android:layout_weight=".05"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        ></CheckBox>
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".075"
+        android:text='@{DateUtils.formatDate(mItem.startTime,"HH:mm")}'></TextView>
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".075"
+        android:text='@{DateUtils.formatDate(mItem.endTime,"HH:mm")}'></TextView>
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{mItem.tankNo}'></TextView>
+
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{mItem.ticketNo}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:text='@{String.format("%.0f",mItem.amount)}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:text='@{String.format("%.0f",mItem.accumulatedRefuelAmount)}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:text='@{mItem.operatorName}'></TextView>
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:text='@{mItem.maintenanceStaff}'></TextView>
+</LinearLayout>
+</layout>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.Toolbar xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/colorPrimary"
+    app:titleTextColor="@color/colorWhite"
+    android:elevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="right|center_vertical">
+
+        <Button
+            android:id="@+id/btnUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/update_list"
+            android:visibility="gone"
+
+            />
+        <Button
+            android:id="@+id/btnRefuel"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/refuel"
+            android:visibility="gone"
+
+            />
+
+        <Button
+            android:id="@+id/btnInvoice"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/invoice"
+            android:visibility="gone"
+
+             />
+
+        <Button
+            android:id="@+id/btn_2502"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/add_inventory"
+
+
+            />
+
+        <Button
+            android:id="@+id/btnSetting"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/setting"
+
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/logout"
+
+            />
+
+        <TextView
+            android:id="@+id/lbltoolbar_Inventory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:gravity="right|center_vertical"
+            android:textColor="@color/colorWhite" />
+    </LinearLayout>
+</androidx.appcompat.widget.Toolbar>

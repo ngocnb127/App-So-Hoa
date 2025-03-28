@@ -1,0 +1,177 @@
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
+apply plugin: 'com.google.firebase.firebase-perf'
+
+android {
+    signingConfigs {
+        release {
+            storeFile file('C:\\Users\\admin\\StudioProjects\\fms4\\keys\\fms4.jks')
+            storePassword '123456'
+            keyAlias = 'keyfms'
+            keyPassword '123456'
+        }
+
+        debug {
+            storeFile file('D:\\TEST_TRA_NAP\\fms4-master_v2\\fms4-master\\keys\\fms4.jks')
+            storePassword '123456'
+            keyAlias = 'keyfms'
+            keyPassword '123456'
+        }
+
+    }
+    compileSdk 34
+    defaultConfig {
+        def date = new Date()
+        def formattedDate = date.format('yyyyMMdd')
+
+        applicationId "com.megatech.fms"
+
+        minSdkVersion 26
+        targetSdkVersion 31
+        versionCode 55
+        def versionNumber = "11"
+        def buildNumber = "6"
+
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = [
+                        "room.schemaLocation"  : "$projectDir/schemas".toString(),
+                        "room.incremental"     : "true",
+                        "room.expandProjection": "true"]
+            }
+        }
+        resValue "string", "app_name", "FMS Delivery"
+        buildConfigField 'int', 'DB_VERSION', '11'
+        buildConfigField 'boolean', 'PRINT_RECEIPT', 'true'
+        buildConfigField 'String', 'PRINTER_IP', '"192.168.1.1"'
+        buildConfigField 'boolean','FHS', 'false'
+        buildConfigField 'double', 'TAX_RATE', '0.1'
+        buildConfigField 'String', 'AUTHORITY','"com.megatech.fms.fileprovider"'
+        buildConfigField 'String', 'METER_UNIT','"GALLON"'
+        buildConfigField 'boolean', 'THERMAL_PRINTER','false'
+
+        signingConfig signingConfigs.release
+        proguardFiles
+
+        applicationVariants.all { variant ->
+            variant.outputs.all { output ->
+                //def date = new Date()
+                //def formattedDate = date.format('yyyyMMdd')
+
+                outputFileName = "fms-${variant.name}-${versionCode}-${formattedDate}" + ".apk"
+
+
+            }
+        }
+
+    }
+    buildTypes {
+        debug {
+
+            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+
+            buildConfigField 'String', 'DB_FILE', '"fms_debug.db"'
+            buildConfigField 'String', 'PRINTER_IP', '"10.0.2.2"'
+            buildConfigField 'boolean', 'FHS', 'false'
+            buildConfigField 'boolean', 'THERMAL_PRINTER', 'false'
+
+            resValue "string", "app_name", "FMS Delivery DEBUG"
+        }
+        release {
+            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+            buildConfigField 'String', 'DB_FILE', '"fms_release.db"'
+
+            buildConfigField 'boolean', 'PRINT_RECEIPT', 'false'
+
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+        }
+
+        thermal {
+            initWith release
+            applicationIdSuffix  ".fhs"
+
+            buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
+
+            buildConfigField 'String', 'DB_FILE', '"fms_thermal.db"'
+
+            resValue "string", "app_name", "FMS Delivery THERMAL"
+
+        }
+
+        demo {
+            initWith release
+            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+            buildConfigField 'String', 'DB_FILE', '"fms_demo.db"'
+            buildConfigField 'boolean', 'THERMAL_PRINTER', 'false'
+
+            resValue "string", "app_name", "FMS Delivery TEST"
+        }
+
+
+        demo_thermal {
+            initWith demo
+            buildConfigField 'String', 'DB_FILE', '"fms_demo_thermal.db"'
+            buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
+
+            resValue "string", "app_name", "FMS Delivery TEST THERMAL"
+        }
+
+
+
+    }
+
+    dataBinding {
+        enabled = true
+    }
+    compileOptions {
+        sourceCompatibility 1.8
+        targetCompatibility 1.8
+    }
+    flavorDimensions 'fms'
+    namespace 'com.megatech.fms'
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    //noinspection GradleCompatible
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+    implementation 'androidx.fragment:fragment:1.7.1'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    //implementation 'com.google.firebase:firebase-analytics:17.2.1'
+    //implementation 'com.google.firebase:firebase-messaging:20.1.0'
+    //implementation 'com.android.volley:dc-volley:1.1.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
+    implementation project(path: ':tcpclient')
+    implementation 'android.arch.lifecycle:extensions:1.1.1'
+    implementation 'androidx.room:room-common:2.6.1'
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+    implementation project(path: ':sdk-iq')
+    //implementation 'com.squareup.retrofit2:retrofit:2.8.1'
+
+    // Import the BoM for the Firebase platform
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')
+
+    // Declare the dependencies for the Crashlytics and Analytics libraries
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation 'com.google.firebase:firebase-crashlytics:19.0.1'
+    implementation 'com.google.firebase:firebase-analytics:22.0.1'
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+    implementation 'com.google.firebase:firebase-perf:21.0.1'
+    implementation files('libs/ZSDK_ANDROID_API.jar')
+    //implementation 'com.toptoche.searchablespinner:searchablespinnerlibrary:1.3.1'
+
+}

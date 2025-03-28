@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.megatech.fms",
+  "variantName": "demo",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 55,
+      "versionName": "11.6.20240126.55",
+      "outputFile": "fms-demo-55-20240126.apk"
+    }
+  ],
+  "elementType": "File"
+}

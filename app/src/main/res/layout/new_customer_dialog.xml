@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+    </data>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Mã hãng bay"
+                    android:maxLines="1" />
+
+                <EditText
+                    android:id="@+id/new_customer_airline_code"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:inputType="text|textCapCharacters"
+                    android:nextFocusForward="@id/new_customer_airline_code"
+                    android:padding="10dp" />
+
+
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Tên hãng bay" />
+
+                <EditText
+                    android:id="@+id/new_customer_airline_name"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:ems="10"
+                    android:focusable="true"
+                    android:inputType="textVisiblePassword"
+                    android:maxLines="1"
+
+                    android:padding="10dp"
+
+                    android:textIsSelectable="true" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/address" />
+
+                <EditText
+                    android:id="@+id/new_customer_airline_address"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:ems="10"
+                    android:focusable="true"
+                    android:inputType="textVisiblePassword"
+                    android:maxLines="1"
+                    android:padding="10dp"
+
+                    android:textIsSelectable="true" />
+
+
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/textView14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/taxcode" />
+
+                <EditText
+                    android:id="@+id/new_customer_airline_taxcode"
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:focusable="true"
+                    android:inputType="number"
+
+                    android:maxLines="1"
+                    android:padding="10dp" />
+
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/textView15"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/price" />
+
+                <EditText
+                    android:id="@+id/new_customer_airline_price"
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:focusable="true"
+                    android:inputType="number|numberDecimal"
+                    android:text="0"
+                    android:maxLines="1"
+                    android:padding="10dp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <Button
+                    android:id="@+id/new_customer_btnsave"
+                    android:text="@string/save">
+
+                </Button>
+
+            </TableRow>
+
+
+        </TableLayout>
+
+    </LinearLayout>
+
+</layout>

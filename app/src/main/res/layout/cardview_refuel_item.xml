@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="android.graphics.Color" />
+
+        <import type="com.megatech.fms.model.REFUEL_ITEM_STATUS" />
+        <import type="com.megatech.fms.model.RefuelItemData.FLIGHT_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.ITEM_PRINT_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.REFUEL_ITEM_TYPE" />
+
+        <import type="com.megatech.fms.helpers.NumberFormat" />
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData" />
+    </data>
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:background="@{mItem.status == REFUEL_ITEM_STATUS.DONE ? Color.rgb(  248,248,248 ): Color.WHITE}"
+        android:orientation="vertical"
+        android:padding="30dp"
+        app:cardCornerRadius="5dp"
+
+        >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@{mItem.flightStatus == FLIGHT_STATUS.CANCELLED ? Color.rgb(  211,211,211) : mItem.status == REFUEL_ITEM_STATUS.DONE ? Color.rgb(  200,200,200): mItem.status == REFUEL_ITEM_STATUS.PROCESSING? Color.rgb(240,255,240): Color.rgb(  240,240,240)}"
+                android:orientation="horizontal"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:orientation="vertical">
+
+                    <CheckedTextView
+                        android:id="@+id/refuel_item_chk"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".05"
+                        android:checkMark="@{mItem.status == REFUEL_ITEM_STATUS.DONE ? (mItem.printed? @drawable/ic_printed: @drawable/ic_check): (mItem.status == REFUEL_ITEM_STATUS.PROCESSING? @drawable/ic_fuel_truck: null)}"
+                        android:checked="@{mItem.status== REFUEL_ITEM_STATUS.DONE}"
+                        android:gravity="center"
+                        android:padding="3dp" />
+
+
+                </LinearLayout>
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.3"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/refuel_item_flightCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+
+                        android:gravity="start"
+                        android:text="@{mItem.flightCode}"
+                        android:textAllCaps="true"
+                        android:textColor="@color/colorBrown"
+                        android:textFontWeight="8"
+                        android:textSize="@dimen/large_text"
+                        android:textStyle="bold" />
+
+                    <TextView
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+
+                        android:gravity="start"
+
+                        android:text="@{mItem.routeName}"
+                        android:textAllCaps="true"
+                        android:textColor="@color/colorPrimaryDark"
+                        android:textSize="@dimen/medium_text"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.3"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/refuel_item_aircraftCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@{mItem.aircraftCode}"
+                        android:textColor="@color/colorBrown"
+                        android:textSize="@dimen/large_text"
+                        android:textStyle="bold" />
+
+                    <TextView
+
+                        android:id="@+id/textView16"
+                        android:layout_width="match_parent"
+
+                        android:layout_height="wrap_content"
+
+                        android:gravity="start"
+                        android:text="@{mItem.aircraftType}"
+                        android:textAllCaps="true"
+                        android:textColor="@color/colorPrimaryDark"
+                        android:textSize="@dimen/medium_text"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.2"
+                    android:orientation="vertical">
+
+
+                    <TextView
+                        android:id="@+id/refuel_item_parlingLot"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@{mItem.parkingLot}"
+                        android:textColor="@color/colorBrown"
+                        android:textSize="@dimen/large_text"
+                        android:textStyle="bold" />
+
+                    <TextView
+
+
+                        android:layout_width="match_parent"
+
+                        android:layout_height="wrap_content"
+
+                        android:gravity="start"
+                        android:text="@{mItem.truckNo}"
+                        android:textAllCaps="true"
+                        android:textColor="@color/colorPrimaryDark"
+                        android:textSize="@dimen/medium_text"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.3"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.05"
+                            android:src="@drawable/driver" />
+
+                        <TextView
+
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="start"
+                            android:text="@{mItem.driverName}"
+                            android:textSize="@dimen/medium_text" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.05"
+                            android:src="@drawable/operator" />
+
+                        <TextView
+
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="start"
+                            android:text="@{mItem.operatorName}"
+                            android:textSize="@dimen/medium_text" />
+                    </LinearLayout>
+
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:orientation="vertical">
+
+
+                    <CheckedTextView
+                        android:id="@+id/refuel_item_sync"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:checkMark="@{mItem.isLocalModified?@drawable/ic_not_sync_large :null }"
+                        android:checked="@{mItem.isLocalModified}"
+                        android:gravity="center"
+                        android:padding="3dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/card_refuel_item_expand"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingVertical="3dp"
+                android:visibility="visible">
+
+
+                <ImageView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.05"
+                    android:src="@drawable/ic_clock" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+
+                    android:text='@{String.format("%-12s%-12s","Hạ cánh", DateUtils.formatDatePlus(mItem.arrivalTime,"HH:mm"))}'
+                    android:textSize="@dimen/medium_text"></TextView>
+
+                <TextView
+                    android:id="@+id/refuel_item_refuel_time"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:text='@{String.format("%-12s%-12s", mItem.refuelItemType == REFUEL_ITEM_TYPE.EXTRACT?"Hút": "Tra nạp", DateUtils.formatDatePlus(mItem.refuelTime,"HH:mm"))}'
+                    android:textColor="@color/colorPrimaryDark"
+                    android:textSize="@dimen/medium_text"
+                    android:textStyle="bold"></TextView>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:text='@{String.format("%-12s%-12s","Cất cánh", DateUtils.formatDatePlus(mItem.departureTime,"HH:mm"))}'
+                    android:textSize="@dimen/medium_text"></TextView>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:text='@{String.format("%-12s%-12s","Hóa đơn: ", mItem.invoiceStatus ==0? mItem.invoiceNumber : (mItem.invoiceStatus ==1? @string/invoice_issuing: @string/receipt_not_created))}'
+                    android:textSize="@dimen/medium_text"
+                    android:textStyle="bold"
+                    android:visibility='@{mItem.status == REFUEL_ITEM_STATUS.DONE? View.VISIBLE: View.INVISIBLE}'
+                    android:textColor="@color/colorRed"></TextView>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/card_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#90E2D789"
+            android:visibility="@{mItem.flightStatus == FLIGHT_STATUS.CANCELLED? View.VISIBLE: View.GONE}">
+
+            <ImageView  android:src="@drawable/ic_cancelled"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_gravity="center"
+                />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+</layout>

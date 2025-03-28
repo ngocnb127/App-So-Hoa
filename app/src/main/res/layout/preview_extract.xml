@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.FLIGHT_STATUS" />
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData"></variable>
+    </data>
+
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+            <TableRow
+            android:id="@+id/rowButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            >
+
+                <Button
+                    android:id="@+id/btnBack"
+                    android:layout_width="wrap_content"
+                    android:drawableStart="@drawable/ic_exit"
+                    android:onClick="onClick"
+                    android:text="@string/back" />
+
+                <TextView
+                    android:text="Xem lại mẻ hút nhiên liệu"
+                    android:textColor="#fff"
+                    android:textStyle="bold"
+                    android:textSize="24sp"
+                    android:layout_gravity="center"
+                    android:gravity="center"></TextView>
+            </TableRow>
+        </androidx.appcompat.widget.Toolbar>
+
+
+        <TableLayout
+            android:id="@+id/tblRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="0"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/flightCode" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_flightCode"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@{mItem.flightCode}"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/textView14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/airline" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_airline"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+
+                    android:padding="5dp"
+                    android:text="@{mItem.airlineModel.name}"
+                    android:visibility="visible" />
+
+                <Spinner
+                    android:id="@+id/refuel_preview_airline_spinner"
+                    android:layout_width="0dp"
+                    android:layout_height="30dp"
+                    android:layout_weight="0.25"
+                    android:entries="@array/vat_array"
+                    android:spinnerMode="dropdown"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                    app:layout_constraintTop_toBottomOf="@id/refuel_preview_airline" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/aircraftCode" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_aircraftCode"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.aircraftCode}"
+                    android:textIsSelectable="true" />
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Bãi đỗ" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_parking"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+
+                    android:text="@{mItem.parkingLot}"
+                    android:textIsSelectable="true" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                tools:layout_editor_absoluteY="104dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Giờ bắt đầu hút nhiên liệu" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_starttime"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text='@{DateUtils.formatDate(mItem.startTime,"dd/MM/yyyy HH:mm")}'
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Giờ kết thúc hút nhiên liệu" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_endtime"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text='@{DateUtils.formatDate(mItem.endTime,"dd/MM/yyyy HH:mm")}'
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+            <TableRow
+                android:background="#efefef"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/real_amount_kg" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_weight"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:ems="10"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:text='@{String.format("%,.0f",mItem.weight)}'
+
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/textView4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/real_amount_gal" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_realAmount"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:ems="10"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{String.format("%,.0f",mItem.realAmount)}'
+                    android:textIsSelectable="true" />
+
+
+            </TableRow>
+
+            <TableRow
+                android:background="#ffffff"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:visibility="gone">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/start_meter" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_start_meter"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{String.format("%.0f",mItem.startNumber)}'
+                    android:textIsSelectable="true" />
+
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/end_meter" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_end_meter"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{String.format("%.0f",mItem.endNumber)}'
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+
+            <TableRow
+                android:background="#ffffff"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    android:id="@+id/textView12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="Nhiệt độ" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_Temperature"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{String.format("%.2f",mItem.manualTemperature)}'
+                    android:textIsSelectable="true" />
+
+
+
+                <TextView
+                    android:id="@+id/textView13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/density" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_density"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{String.format("%.4f",mItem.density)}'
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+            <TableRow
+                android:background="#efefef"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:visibility="visible">
+
+                <TextView
+
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/qc_no"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toEndOf="@id/guideline_left" />
+
+                <TextView
+                    android:id="@+id/refuel_preview_qc_no"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{mItem.qualityNo}'
+                    android:textIsSelectable="true"
+                    android:visibility="gone" />
+                <TextView
+
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="5dp"
+                    android:text="@string/return_invoice_number"
+                    app:layout_constraintStart_toEndOf="@id/guideline_left"
+                    />
+
+                <TextView
+                    android:id="@+id/refuel_preview_return_invoice_number"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.75"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{mItem.returnInvoiceNumber}'
+                    android:textIsSelectable="true" />
+
+
+
+            </TableRow>
+
+
+        </TableLayout>
+
+
+
+
+
+    </LinearLayout>
+
+</layout>

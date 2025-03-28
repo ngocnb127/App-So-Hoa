@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <variable
+            name="shift"
+            type="com.megatech.fms.model.ShiftModel"></variable>
+    </data>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="1000dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:textSize="@dimen/medium_text">
+
+        <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+
+            <TableRow
+                android:background='@{shift.prevShift.selected? @color/colorSelected : @color/colorWhite}'
+                android:padding="10dp">
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".3"
+                    android:text="@string/prev_shift"
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:text="@{shift.prevShift.name}"
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.prevShift.startTime,"dd/MM/yyyy HH:mm")}'
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.prevShift.endTime,"dd/MM/yyyy HH:mm")}'
+
+                    android:textSize="@dimen/medium_text" />
+
+                <RadioButton
+                    android:id="@+id/radPrev"
+                    android:checked="@={shift.prevShift.selected}"
+                    android:value="-1" />
+            </TableRow>
+
+            <TableRow
+                android:background='@{shift.selected? @color/colorSelected : @color/colorWhite}'
+                android:padding="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".3"
+                    android:text="@string/current_shift"
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:text="@{shift.name}"
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.startTime,"dd/MM/yyyy HH:mm")}'
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.endTime,"dd/MM/yyyy HH:mm")}'
+                    android:textSize="@dimen/medium_text" />
+
+                <RadioButton
+                    android:id="@+id/radCurrent"
+                    android:checked="@={shift.selected}"
+                    android:value="0" />
+            </TableRow>
+
+            <TableRow
+                android:background='@{shift.nextShift.selected? @color/colorSelected : @color/colorWhite}'
+                android:padding="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".3"
+                    android:text="@string/next_shift"
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:text="@{shift.nextShift.name}"
+
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.nextShift.startTime,"dd/MM/yyyy HH:mm")}'
+                    android:textSize="@dimen/medium_text" />
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".4"
+                    android:ems="10"
+                    android:text='@{DateUtils.formatDate(shift.nextShift.endTime,"dd/MM/yyyy HH:mm")}'
+                    android:textSize="@dimen/medium_text" />
+
+                <RadioButton
+                    android:id="@+id/radNext"
+                    android:checked="@={shift.nextShift.selected}"
+                    android:value="1" />
+            </TableRow>
+
+
+        </TableLayout>
+    </LinearLayout>
+</layout>

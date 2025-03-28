@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".RefuelActivity">
+
+    <include
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar"
+        app:layout_constraintBottom_toTopOf="parent"></include>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardAmount"
+        android:layout_width="185dp"
+        android:layout_height="200dp"
+        app:layout_constraintStart_toEndOf="@id/guideline_center"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:text="Thể tích" />
+
+        <TextView
+            android:id="@+id/txtGrossQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|center_vertical"
+            android:gravity="center"
+            android:text="0.0"
+
+            android:textSize="@dimen/large_text" />
+    </androidx.cardview.widget.CardView>
+
+
+    <TextView
+        android:id="@+id/lblFlightNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="10dp"
+        android:text="Mã chuyến bay"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.01" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.99" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.45" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.25" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.66" />
+
+    <CheckBox
+        android:id="@+id/chkCondition"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="208dp"
+        android:text="Kiểm tra xe"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/chkInventory"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="12dp"
+        android:text="Kiểm tra hàng"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/chkCondition" />
+
+    <Button
+        android:id="@+id/btnStop"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+
+        android:layout_marginEnd="10dp"
+
+        android:layout_marginBottom="20dp"
+        android:enabled="false"
+        android:text="@string/stop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guideline_right"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_right" />
+
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+
+        android:layout_marginBottom="20dp"
+        android:enabled="false"
+        android:text="@string/start"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@id/guideline_left" />
+
+    <Button
+        android:id="@+id/btnPause"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="20dp"
+        android:enabled="false"
+        android:text="@string/pause"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center_right"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left" />
+
+    <TextView
+        android:id="@+id/lblParkingLot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Vị trí đỗ"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblAircraftNo" />
+
+    <TextView
+        android:id="@+id/lblAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Lượng nhiên liệu yêu cầu"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblParkingLot" />
+
+    <TextView
+        android:id="@+id/lblAircraftNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Số hiệu tàu bay"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblFlightNo" />
+
+    <TextView
+        android:id="@+id/txtFlightCode"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblFlightNo" />
+
+    <TextView
+        android:id="@+id/txtAircraftCode"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblAircraftNo" />
+
+    <TextView
+        android:id="@+id/txtParkingLot"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblParkingLot" />
+
+    <TextView
+        android:id="@+id/txtEstimateAmount"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center"
+        app:layout_constraintStart_toStartOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/lblAmount" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardTemperatur"
+        android:layout_width="185dp"
+        android:layout_height="200dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toEndOf="@id/cardAmount"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:text="Nhiệt độ" />
+
+        <TextView
+            android:id="@+id/txtTemp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|center_vertical"
+
+            android:gravity="center"
+            android:text="0.0"
+            android:textSize="@dimen/large_text" />
+    </androidx.cardview.widget.CardView>
+
+    <TextView
+        android:id="@+id/lblStartMeter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="@string/start_meter"
+        app:layout_constraintStart_toEndOf="@id/guideline_center"
+        app:layout_constraintTop_toBottomOf="@id/cardAmount" />
+
+    <TextView
+        android:id="@+id/txtStartMeter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_top"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_right"
+        app:layout_constraintTop_toBottomOf="@id/cardAmount" />
+
+    <TextView
+        android:id="@+id/lblEndMeter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:text="Số đồng hồ kết thúc"
+        app:layout_constraintStart_toEndOf="@id/guideline_center"
+        app:layout_constraintTop_toBottomOf="@id/lblStartMeter" />
+
+    <TextView
+        android:id="@+id/txtEndMeter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_top"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_right"
+        app:layout_constraintTop_toBottomOf="@id/lblStartMeter" />
+
+    <CheckedTextView
+        android:id="@+id/refuel_chk_connect_lcr"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:gravity="left"
+        android:onClick="onClick"
+        android:text="Kết nối thiết bị LCR"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center_left"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/refuel_check_inventory" />
+
+    <ProgressBar
+        android:id="@+id/progressBar2"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="33dp"
+        android:layout_height="25dp"
+        app:layout_constraintEnd_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="@id/refuel_chk_connect_lcr" />
+
+    <TextView
+        android:id="@+id/txtLog"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/margin_start"
+        android:text="TextView"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/btnStart"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/refuel_chk_connect_lcr" />
+
+    <CheckedTextView
+        android:id="@+id/refuel_check_condition"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:checkMark="@drawable/ic_unchecked_2"
+        android:onClick="onClick"
+        android:text="Kiểm tra xe"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/lblAmount" />
+
+    <CheckedTextView
+        android:id="@+id/refuel_check_inventory"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_start"
+        android:layout_marginTop="@dimen/margin_top"
+        android:checkMark="@drawable/ic_unchecked_2"
+        android:onClick="onClick"
+        android:text="Kiểm tra hàng"
+        app:layout_constraintEnd_toStartOf="@id/guideline_center_left"
+        app:layout_constraintStart_toStartOf="@id/guideline_left"
+        app:layout_constraintTop_toBottomOf="@id/refuel_check_condition" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".InventoryActivity">
+
+    <include
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar"
+
+        app:layout_constraintTop_toTopOf="parent"></include>
+
+    <TextView
+        android:id="@+id/lblInventory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/current_amount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
+    <EditText
+        android:id="@+id/txtInventory"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:digits="0123456789."
+        android:inputType="number"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lblInventory" />
+
+    <TextView
+        android:id="@+id/lblQualityControlNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="Số phiếu hóa nghiệm"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtInventory" />
+
+    <EditText
+        android:id="@+id/txtQualityControlNo"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:digits="0123456789."
+        android:inputType="number"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lblQualityControlNo" />
+
+    <Button
+        android:id="@+id/btnUpdate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="Lưu"
+        app:layout_constraintStart_toEndOf="@id/txtQualityControlNo"
+        app:layout_constraintTop_toBottomOf="@id/lblQualityControlNo" />
+</androidx.constraintlayout.widget.ConstraintLayout>

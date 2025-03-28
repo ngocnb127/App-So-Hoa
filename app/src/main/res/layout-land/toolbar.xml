@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.Toolbar xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/toolbar_height"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/colorPrimary"
+    app:titleTextColor="@color/colorWhite"
+    android:elevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="right|center_vertical">
+
+        <Button
+            android:id="@+id/btnRefuel"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/refuel"
+            android:visibility="gone"
+
+            />
+
+        <Button
+            android:id="@+id/btnExtract"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/extract_list"
+            android:visibility="visible"
+
+            />
+
+        <Button
+            android:id="@+id/btnInvoice"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/invoice"
+            android:visibility="gone"
+
+            />
+
+        <Button
+            android:id="@+id/btn_2502"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/add_inventory"
+
+
+            />
+
+        <Button
+            android:id="@+id/btn_bm_2505"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/bm_2505"
+
+
+            />
+
+        <Button
+            android:id="@+id/btn_bm_2508"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/bm_2508"
+
+
+            />
+
+        <Button
+            android:id="@+id/btn_a_2307"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/bm_2307"
+
+
+            />
+
+        <Button
+            android:id="@+id/btnReceipt"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/receipts"
+            android:visibility="gone"
+
+
+            />
+
+        <Button
+            android:id="@+id/btnSetting"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/setting"
+
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/logout"
+
+            />
+
+        <TextView
+            android:id="@+id/lblShiftInfo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:layout_weight=".5"
+            android:gravity="right|center_vertical"
+            android:visibility="visible"
+            android:textColor="@color/colorWhite" />
+
+        <Button
+            android:id="@+id/btn_shift"
+            android:layout_width="30dp"
+            android:layout_height="match_parent"
+            android:drawablePadding="0dp"
+            android:padding="0dp"
+            android:text="▼" />
+        <!--android:textColor="@color/colorWhite"
+        android:background="@android:color/transparent"
+        -->
+
+
+        <TextView
+            android:id="@+id/lbltoolbar_Inventory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:layout_weight=".5"
+            android:gravity="right|center_vertical"
+            android:textColor="@color/colorWhite" />
+
+    </LinearLayout>
+</androidx.appcompat.widget.Toolbar>
