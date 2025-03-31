@@ -1,7 +1,6 @@
 package com.megatech.fms.view;
 
 import android.app.Activity;
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,12 +16,10 @@ import androidx.databinding.DataBindingUtil;
 import androidx.databinding.InverseBindingAdapter;
 import androidx.databinding.InverseBindingListener;
 
-import com.megatech.fms.A2307Activity;
 import com.megatech.fms.B2508Activity;
 import com.megatech.fms.R;
 import com.megatech.fms.databinding.B2508ItemBinding;
 import com.megatech.fms.model.BM2508Model;
-import com.megatech.fms.model.CheckTrucksModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,9 +68,9 @@ public class BM2508ArrayAdapter extends ArrayAdapter<BM2508Model> {
                         if(activityb2508.modelb2508.getUserSkypecSignaturePath() != null){
                             model.setUserSkypecSignaturePath(activityb2508.modelb2508.getUserSkypecSignaturePath());
                         }
-                        if (activityb2508.modelb2508.getAirlineSignaturePath() != null)
+                        if (activityb2508.modelb2508.getAirlineSignaturePath(null) != null)
                         {
-                            model.setAirlineSignaturePath(activityb2508.modelb2508.getAirlineSignaturePath());
+                            model.setAirlineSignaturePath(activityb2508.modelb2508.getAirlineSignaturePath(null));
                         }
                     }
                     activityb2508.openFormDetail(model);

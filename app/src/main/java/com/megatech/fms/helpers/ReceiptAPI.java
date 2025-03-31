@@ -67,18 +67,47 @@ public class ReceiptAPI extends  BaseAPI{
                     uploader.addFilePart("BM2508-Image", f);
                 }
             }
-            if (model.getAirlineSignaturePath() !=null && !model.getAirlineSignaturePath().isEmpty()) {
-                File f = new File(model.getAirlineSignaturePath());
-                if (f.exists()) {
-                    uploader.addFilePart("Airline-Signature", f);
+//            if (model.getAirlineSignaturePath(null) !=null && !model.getAirlineSignaturePath(null).isEmpty() ) {
+//                File f = new File(model.getAirlineSignaturePath(null));
+//                if (f.exists()) {
+//                    uploader.addFilePart("Airline-Signature", f);
+//                }
+//            }
+
+            String airlineImageUrl = model.getUrlImageAirline();
+            String airlineSignaturePath = model.getAirlineSignaturePath(null);
+
+            if (airlineSignaturePath == null || airlineImageUrl.equals(airlineSignaturePath)) {
+                File file = new File(airlineImageUrl);
+                if (file.exists()) {
+                    try {
+                        uploader.addFilePart("Airline-Signature", file);
+                    } catch (Exception e) {
+                        e.printStackTrace(); // Log or handle the error appropriately
+                    }
                 }
             }
-            if (model.getUserSkypecSignaturePath() !=null && !model.getUserSkypecSignaturePath().isEmpty()) {
-                File f = new File(model.getUserSkypecSignaturePath());
-                if (f.exists()) {
-                    uploader.addFilePart("UserSkypec-Signature", f);
+
+            String UrlImageSkypec = model.getUrlImageSkypec();
+            String UserSkypecSignaturePath = model.getUserSkypecSignaturePath();
+
+            if (UserSkypecSignaturePath == null || UrlImageSkypec.equals(UserSkypecSignaturePath)) {
+                File file = new File(UrlImageSkypec);
+                if (file.exists()) {
+                    try {
+                        uploader.addFilePart("UserSkypec-Signature", file);
+                    } catch (Exception e) {
+                        e.printStackTrace(); // Log or handle the error appropriately
+                    }
                 }
             }
+
+//            if (model.getUserSkypecSignaturePath() !=null && !model.getUserSkypecSignaturePath().isEmpty()) {
+//                File f = new File(model.getUserSkypecSignaturePath());
+//                if (f.exists()) {
+//                    uploader.addFilePart("UserSkypec-Signature", f);
+//                }
+//            }
             //model.setPdfImageString(null);
             HttpResponse response = uploader.finish();
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {

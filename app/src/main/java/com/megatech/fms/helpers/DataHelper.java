@@ -451,6 +451,9 @@ public class DataHelper {
                             item.setId(newData.getId());
                             item.setJsonData(newData.toJson());
                             repo.insertBM2508(item);
+                            ReceiptAPI client = new ReceiptAPI();
+                            // Gửi file ảnh lên API
+                            client.postMultipartBM2508(itemData);
                         }
                     }
                 }
@@ -461,6 +464,9 @@ public class DataHelper {
                     int i = 0;
                     for (BM2508Model model : lstModel) {
                         repo.insertBM2508(BM2508.fromModel(model));
+                        ReceiptAPI client = new ReceiptAPI();
+                        // Gửi file ảnh lên API
+                        client.postMultipartBM2508(model);
                     }
 
                 }

@@ -150,6 +150,7 @@ public class B2508NewItemFragement extends DialogFragment {
             Trucklst = b2508Activity.Trucklist;
             flights = b2508Activity.flightList;
              activityb25 =  b2508Activity;
+
         }
 //        activity = ((B2508Activity) getActivity());
 //        List<UserModel> userList = activity.userList;
@@ -230,7 +231,8 @@ public class B2508NewItemFragement extends DialogFragment {
 
             }
         });
-
+        model.setUrlImageAirline("");
+        model.setUrlImageSkypec("");
 
     }
 

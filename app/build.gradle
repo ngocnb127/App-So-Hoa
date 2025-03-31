@@ -71,7 +71,7 @@ android {
     buildTypes {
         debug {
 
-            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+            buildConfigField 'String', 'API_BASE_URL', '"http://203.128.244.70/"'
 
             buildConfigField 'String', 'DB_FILE', '"fms_debug.db"'
             buildConfigField 'String', 'PRINTER_IP', '"10.0.2.2"'

@@ -37,6 +37,31 @@ public class BM2508Model extends BaseModel {
     private String TextAirlineSignature;
     private String TextUserSkypecSignature;
 
+
+
+    private String UrlImageAirline;
+
+
+
+    private String UrlImageSkypec;
+
+    public String getUrlImageAirline() {
+        return UrlImageAirline;
+    }
+
+    public void setUrlImageAirline(String urlImageAirline) {
+        UrlImageAirline = urlImageAirline;
+    }
+
+    public String getUrlImageSkypec() {
+        return UrlImageSkypec;
+    }
+
+    public void setUrlImageSkypec(String urlImageSkypec) {
+        UrlImageSkypec = urlImageSkypec;
+    }
+
+
     public String getTextUserSkypecSignature() {
         return TextUserSkypecSignature;
     }
@@ -51,7 +76,7 @@ public class BM2508Model extends BaseModel {
     public void setTextAirlineSignature(String TextAirlineSignature) {
         this.TextAirlineSignature = TextAirlineSignature;
     }
-    public String getAirlineSignaturePath() {
+    public String getAirlineSignaturePath(Object o) {
         return AirlineSignaturePath;
     }
 

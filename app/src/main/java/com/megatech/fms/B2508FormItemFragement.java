@@ -7,12 +7,7 @@ import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.gesture.GestureOverlayView;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.InputType;
@@ -24,17 +19,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SearchView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -42,26 +33,22 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.DialogFragment;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.megatech.fms.databinding.B2508FormBinding;
-import com.megatech.fms.databinding.B2508NewBinding;
 import com.megatech.fms.helpers.DataHelper;
-import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.BM2508Model;
 import com.megatech.fms.model.FlightModel;
-import com.megatech.fms.model.ReceiptModel;
 import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 import com.megatech.fms.view.FlightArrayAdapter;
 
-import java.io.FileOutputStream;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -81,6 +68,7 @@ public class B2508FormItemFragement extends DialogFragment {
         this.model = model;
         this.model.setTextAirlineSignature("Chạm để ký");
         this.model.setTextUserSkypecSignature("Chạm để ký");
+
         if (model.getFlightCode() == null || model.getFlightCode() == "")
         {
             this.model.setFlightCode(model.getFlightNo()) ;
@@ -169,9 +157,9 @@ public class B2508FormItemFragement extends DialogFragment {
         if (airlineSignatureImageView != null) {
             // Reset ImageView trước khi load ảnh mới
             airlineSignatureImageView.setImageDrawable(null);
-            if (model.getAirlineSignaturePath() != null) {
+            if (model.getAirlineSignaturePath(null) != null) {
                 Glide.with(view.getContext())
-                        .load(model.getAirlineSignaturePath())
+                        .load(model.getUrlImageAirline())
                         .into(airlineSignatureImageView);
                 airlineSignatureImageView.setVisibility(View.VISIBLE);
             } else {
@@ -188,7 +176,7 @@ public class B2508FormItemFragement extends DialogFragment {
             skypecSignatureImageView.setImageDrawable(null);
             if (model.getUserSkypecSignaturePath() != null) {
                 Glide.with(view.getContext())
-                        .load(model.getUserSkypecSignaturePath())
+                        .load(model.getUrlImageSkypec())
                         .into(skypecSignatureImageView);
                 skypecSignatureImageView.setVisibility(View.VISIBLE);
             } else {
@@ -197,88 +185,9 @@ public class B2508FormItemFragement extends DialogFragment {
                 skypecSignatureImageView.setVisibility(View.GONE);
             }
         }
-//        activity = ((B2508Activity) getActivity());
-//        List<UserModel> userList = activity.userList;
-//        flights = activity.flightList;
-//        containers = activity.containerList;
 
-//        Spinner spnairport = view.findViewById(R.id.b2508_new_airport_form);
-//        ArrayAdapter<AirportsModel> spnairportAdapter = new ArrayAdapter<AirportsModel>(activity, R.layout.support_simple_spinner_dropdown_item, airports);
-//        spnairportAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-//        spnairport.setAdapter(spnairportAdapter);
-//        spnairport.setEnabled(false);
-//        if (model.getAirportId() > 0) {
-//            for (int i = 0; i < airports.size(); i++)
-//                if (model.getAirportId().equals(airports.get(i).getId())) {
-//                    spnairport.setSelection(i);
-//                    break;
-//                }
-//        }
-//        spnairport.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-//            @Override
-//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-//                AirportsModel airport = (AirportsModel) adapterView.getItemAtPosition(i);
-//                model.setAirportId(airport.getId());
-//                model.setAirportName(airport.getName());
-//            }
-//
-//            @Override
-//            public void onNothingSelected(AdapterView<?> adapterView) {
-//
-//            }
-//        });
-//
-//        Spinner spntruck = view.findViewById(R.id.b2508_new_truck_no_form);
-//        ArrayAdapter<TruckModel> spntruckAdapter = new ArrayAdapter<TruckModel>(activity, R.layout.support_simple_spinner_dropdown_item, Trucklst);
-//        spntruckAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-//        spntruck.setAdapter(spntruckAdapter);
-//        spntruck.setEnabled(false);
-//        if (model.getTruckId() > 0) {
-//            for (int i = 0; i < Trucklst.size(); i++)
-//                if (model.getTruckId().equals(Trucklst.get(i).getId())) {
-//                    spntruck.setSelection(i);
-//                    break;
-//                }
-//        }
-//        spntruck.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-//            @Override
-//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-//                TruckModel truck = (TruckModel) adapterView.getItemAtPosition(i);
-//                model.setTruckId(truck.getId());
-//                model.setTruckNo(truck.getTruckNo());
-//            }
-//
-//            @Override
-//            public void onNothingSelected(AdapterView<?> adapterView) {
-//
-//            }
-//        });
-//
-//        Spinner spngc7 = view.findViewById(R.id.b2508_unit_form);
-//        ArrayAdapter<BM2508Model.ResultModel> spngcAdapter = new ArrayAdapter<BM2508Model.ResultModel>(activity, R.layout.support_simple_spinner_dropdown_item, resultModelList);
-//        spngcAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-//        spngc7.setAdapter(spngcAdapter);
-//        if (model.getUnit() != null) {
-//            for (int i = 0; i < resultModelList.size(); i++)
-//                if (model.getUnit().equals(resultModelList.get(i).getName())) {
-//                    spngc7.setSelection(i);
-//                    break;
-//                }
-//        }
-//        spngc7.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-//            @Override
-//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-//                BM2508Model.ResultModel Result = (BM2508Model.ResultModel) adapterView.getItemAtPosition(i);
-//                model.setUnit(Result.getName());
-//            }
-//
-//            @Override
-//            public void onNothingSelected(AdapterView<?> adapterView) {
-//
-//            }
-//        });
-
-
+        //TextView urlImageAirline = view.findViewById(R.id.urlImageAirline);
+        //urlImageAirline.setText(model.getUrlImageAirline());
     }
 
     @Override
@@ -298,14 +207,17 @@ public class B2508FormItemFragement extends DialogFragment {
         switch (id) {
             case R.id.b2508_new_back_form:
 
-                ImageView airlineSignatureImageView = view.findViewById(R.id.ImageAirlineSign);
-                if (airlineSignatureImageView != null) {
+                if (!model.isCaptured()) {
+                    activityb25.showConfirmMessage(R.string.image_Airline_not_saved, new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
 
-                    // Nếu muốn xóa ảnh, thêm dòng sau:
-                    airlineSignatureImageView.setImageDrawable(null);
-                }
-                dlg.dismiss();
-
+                            dlg.dismiss();
+                            return null;
+                        }
+                    });
+                } else
+                    dlg.dismiss();
 
                 break;
             case R.id.b2508_new_save_form:
@@ -318,6 +230,7 @@ public class B2508FormItemFragement extends DialogFragment {
         }
     }
 
+
     private void save() {
 
         new AsyncTask<Void, Void, Void>() {
@@ -326,9 +239,11 @@ public class B2508FormItemFragement extends DialogFragment {
                 if (activityb25.modelb2508.getUserSkypecSignaturePath() != null){
                     model.setUserSkypecSignaturePath(activityb25.modelb2508.getUserSkypecSignaturePath());
                 }
-                if (activityb25.modelb2508.getAirlineSignaturePath() != null){
-                    model.setAirlineSignaturePath(activityb25.modelb2508.getAirlineSignaturePath());
+                if (activityb25.modelb2508.getAirlineSignaturePath(null) != null){
+                    model.setAirlineSignaturePath(activityb25.modelb2508.getAirlineSignaturePath(null));
                 }
+                model.setUserSkypecSignaturePath(null);
+                model.setUserSkypecSignaturePath(null);
                 DataHelper.postBM2508(model);
                 return null;
             }
@@ -348,6 +263,7 @@ public class B2508FormItemFragement extends DialogFragment {
 
 
     }
+
 
     private void openFlightSelect() {
         Dialog flightDlg = new Dialog(getActivity());
@@ -503,7 +419,6 @@ public class B2508FormItemFragement extends DialogFragment {
         dialog.show();
 
 
-
         input.requestFocus();
         if (id == R.id.b2505_new_density || id==R.id.b2505_new_density15)
             input.setSelection(2, input.getText().length());
@@ -550,21 +465,6 @@ public class B2508FormItemFragement extends DialogFragment {
         });
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        ImageView airlineSignatureImageView = getView().findViewById(R.id.ImageAirlineSign);
-        ImageView skypecSignatureImageView = getView().findViewById(R.id.ImageUserSkypecSign);
-        if (airlineSignatureImageView != null) {
-            Glide.with(getContext()).clear(airlineSignatureImageView);
-            airlineSignatureImageView.setImageDrawable(null);
-            airlineSignatureImageView.setVisibility(View.GONE);
-        }
-        if (skypecSignatureImageView != null) {
-            Glide.with(getContext()).clear(skypecSignatureImageView);
-            skypecSignatureImageView.setImageDrawable(null);
-            skypecSignatureImageView.setVisibility(View.GONE);
-        }
-    }
+
 
 }

@@ -405,6 +405,7 @@
     <string name="update_split_amount">Nhập số lượng tách hóa đơn (KG)</string>
     <string name="error_split_amount_too_large">Số lượng tách hóa đơn quá lớn. Vui lòng kiểm tra lại!</string>
     <string name="receipt_not_saved">Phiếu chưa được xuất hóa đơn. Bạn có muốn thoát?</string>
+    <string name="image_Airline_not_saved">Hình ảnh chữ ký khách hàng chưa được lưu. Bạn có muốn thoát?</string>
     <string name="update_defueling_no">Nhập số phiếu hút</string>
     <string name="print_receipt">In Hóa Đơn Điện Tử</string>
     <string name="not_capture_confirm">Chưa chụp hình phiếu. Bạn muốn chụp hình và xuất hóa đơn?</string>

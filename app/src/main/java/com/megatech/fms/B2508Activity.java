@@ -283,9 +283,6 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             modelb2508.setPdfPath(currentPhotoPath);
             modelb2508.setCaptured(true);
             binding.invalidateAll();
-            Log.d("BM2508Model 2", "------------");
-            Log.d("BM2508Model 2", modelb2508.toJson());
-            Log.d("BM2508Model 2", "------------");
             if (exitAfterCapture)
                 save();
         }
@@ -294,8 +291,9 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
         else if (requestCode == Airline && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
             modelb2508.setAirlineSignaturePath(file);
+            modelb2508.setUrlImageAirline(file);
             ReceiptAPI client = new ReceiptAPI();
-           // save();
+            // save();
             ImageView signatureImageView = b2508FormItemFragement.getView().findViewById(R.id.ImageAirlineSign);
 
             if (signatureImageView != null) {
@@ -304,7 +302,7 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
                 if (bitmap != null) {
                     signatureImageView.setImageBitmap(bitmap);
                     signatureImageView.setVisibility(View.VISIBLE);
-                    saveImageToGallery(b2508FormItemFragement.getContext(), bitmap, modelb2508.getUniqueId().toString()+"airline_image.jpg", true);
+                    //saveImageToGallery(b2508FormItemFragement.getContext(), bitmap, "airline_image.jpg");
                 }
             }
             b2508FormItemFragement.model.setAirlineSignaturePath(file);
@@ -313,12 +311,12 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
 
             // Gửi file ảnh lên API
             client.postMultipartBM2508(modelb2508);
-
         }
         else if (requestCode == UserSkypec && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
             modelb2508.setUserSkypecSignaturePath(file);
-           // save();
+            modelb2508.setUrlImageSkypec(file);
+            // save();
             ImageView signatureImageView = b2508FormItemFragement.getView().findViewById(R.id.ImageUserSkypecSign);
 
             if (signatureImageView != null) {
@@ -327,7 +325,7 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
                 if (bitmap != null) {
                     signatureImageView.setImageBitmap(bitmap);
                     signatureImageView.setVisibility(View.VISIBLE);
-                    saveImageToGallery(b2508FormItemFragement.getContext(), bitmap, modelb2508.getUniqueId().toString()+"userSkypec_image.jpg", false);
+                    //saveImageToGallery(b2508FormItemFragement.getContext(), bitmap, "userSkypec_image.jpg");
                 }
             }
             b2508FormItemFragement.model.setUserSkypecSignaturePath(file);
@@ -338,6 +336,7 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             client.postMultipartBM2508(modelb2508);
         }
     }
+
     public void saveImageToGallery(Context context, Bitmap bitmap, String fileName,boolean isAirlineSignature) {
         OutputStream fos;
         try {

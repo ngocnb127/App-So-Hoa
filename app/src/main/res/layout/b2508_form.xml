@@ -45,7 +45,6 @@
                 android:layout_gravity="end"
                 android:layout_marginStart="16dp"
                 android:onClick="onClick"
-                android:visibility="gone"
                 android:text="@string/save" />
            <!-- <Button
                 android:id="@+id/btnCapture"
@@ -631,6 +630,31 @@ not valid for billing."></TextView>
                 android:padding="0dp"
                 android:layout_marginStart="80dp"
                 android:text='@{mItem.TextUserSkypecSignature}'></TextView>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/urlImageAirline"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="210dp"
+                android:text='Chưa có ảnh'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/urlImageSkypec"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="80dp"></TextView>
         </TableRow>
         <TableRow
             android:layout_width="match_parent"
