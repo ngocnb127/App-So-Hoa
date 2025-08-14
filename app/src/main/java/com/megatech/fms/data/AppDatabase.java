@@ -22,6 +22,7 @@ import com.megatech.fms.data.dao.FlightDao;
 import com.megatech.fms.data.dao.InvoiceDao;
 import com.megatech.fms.data.dao.LogEntryDao;
 import com.megatech.fms.data.dao.ParkingLotDao;
+import com.megatech.fms.data.dao.ProductDao;
 import com.megatech.fms.data.dao.ReceiptDao;
 import com.megatech.fms.data.dao.RefuelItemDao;
 import com.megatech.fms.data.dao.ReviewDao;
@@ -47,6 +48,7 @@ import com.megatech.fms.data.entity.Truck;
 import com.megatech.fms.data.entity.TruckFuel;
 import com.megatech.fms.data.entity.User;
 import com.megatech.fms.enums.INVOICE_TYPE;
+import com.megatech.fms.data.entity.Product;
 
 @Database(entities = {RefuelItem.class,
         Airline.class,
@@ -64,9 +66,10 @@ import com.megatech.fms.enums.INVOICE_TYPE;
         Receipt.class,
         LogEntry.class,
         Review.class,
-        BM2505Container.class
+        BM2505Container.class,
+        Product.class
         },
-        version = 8,
+        version = 9,
         exportSchema = false
         )
 @TypeConverters({Converters.class,
@@ -177,7 +180,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, BuildConfig.DB_FILE)
-                            .addMigrations(MIGRATION_8_14)
+                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }
@@ -198,6 +201,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract TruckFuelDao truckFuelDao();
     public abstract BM2505Dao bm2505Dao();
+    public abstract ProductDao ProductDao();
     public abstract BM2508Dao bm2508Dao();
 
     public abstract CheckTrucksDao checkTrucksDao();

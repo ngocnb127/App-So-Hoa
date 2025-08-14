@@ -42,7 +42,9 @@ public class InstallHelper {
 
         Intent intent = new Intent(ctx, VersionUpdateActivity.class);
         intent.setAction(PACKAGE_INSTALLED_ACTION);
-        PendingIntent pendingIntent = PendingIntent.getActivity(ctx, 0, intent, 0);
+//        PendingIntent pendingIntent = PendingIntent.getActivity(ctx, 0, intent, 0);
+        PendingIntent pendingIntent = PendingIntent.getActivity(ctx, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
         IntentSender statusReceiver = pendingIntent.getIntentSender();
 
         session.commit(statusReceiver);

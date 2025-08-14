@@ -157,7 +157,7 @@ public class B2508FormItemFragement extends DialogFragment {
         if (airlineSignatureImageView != null) {
             // Reset ImageView trước khi load ảnh mới
             airlineSignatureImageView.setImageDrawable(null);
-            if (model.getAirlineSignaturePath(null) != null) {
+            if (model.getAirlineSignaturePath() != null) {
                 Glide.with(view.getContext())
                         .load(model.getUrlImageAirline())
                         .into(airlineSignatureImageView);
@@ -239,8 +239,8 @@ public class B2508FormItemFragement extends DialogFragment {
                 if (activityb25.modelb2508.getUserSkypecSignaturePath() != null){
                     model.setUserSkypecSignaturePath(activityb25.modelb2508.getUserSkypecSignaturePath());
                 }
-                if (activityb25.modelb2508.getAirlineSignaturePath(null) != null){
-                    model.setAirlineSignaturePath(activityb25.modelb2508.getAirlineSignaturePath(null));
+                if (activityb25.modelb2508.getAirlineSignaturePath() != null){
+                    model.setAirlineSignaturePath(activityb25.modelb2508.getAirlineSignaturePath());
                 }
                 model.setUserSkypecSignaturePath(null);
                 model.setUserSkypecSignaturePath(null);

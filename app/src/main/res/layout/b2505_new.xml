@@ -257,7 +257,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight=".25"
                 android:padding="5dp"
-                android:text="@string/rtc_no" />
+                android:text="@string/Cert_no" />
 
             <TextView
                 android:id="@+id/b2505_new_rtc_no"
@@ -285,8 +285,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight=".25"
                 android:padding="5dp"
+                android:visibility="gone"
                 android:text="@string/temperature"></TextView>
-
+            <!--Ẩn đi Nhiệt độ-->
             <TextView
                 android:id="@+id/b2505_new_temperature"
                 style="?android:attr/textAppearanceMedium"
@@ -297,6 +298,7 @@
                 android:focusable="false"
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
+                android:visibility="gone"
                 android:padding="5dp"
                 android:text='@{String.format("%.2f",mItem.temperature)}'></TextView>
 
@@ -327,6 +329,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#efefef"
+            android:visibility="gone"
             android:padding="5dp">
 
             <TextView
@@ -348,7 +351,7 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{String.format("%.4f",mItem.density)}'></TextView>
+                android:text='@{String.format("%.0f",mItem.density)}'></TextView>
 
             <TextView
                 style="?android:attr/textAppearanceMedium"
@@ -378,8 +381,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#ffffff"
+            android:visibility="gone"
             android:padding="5dp">
-
+<!--Ẩn đi-->
             <TextView
                 style="?android:attr/textAppearanceMedium"
                 android:layout_width="0dp"

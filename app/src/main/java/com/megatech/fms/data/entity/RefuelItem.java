@@ -104,6 +104,7 @@ public class RefuelItem extends BaseEntity {
 
 
     private String productName;
+    private int productId;
 
     private String qualityNo;
     private double taxRate;
@@ -226,6 +227,10 @@ public class RefuelItem extends BaseEntity {
         this.userId = userId;
     }
 
+    public void setProductId(Integer productId)  {
+        this.productId = productId;
+    }
+
     public void setTruckId(Integer truckId) {
         this.truckId = truckId;
     }
@@ -326,6 +331,9 @@ public class RefuelItem extends BaseEntity {
 
     public int getUserId() {
         return userId;
+    }
+    public int getProductId() {
+        return productId;
     }
 
     public int getTruckId() {

@@ -220,7 +220,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         builder.setMessage(id == R.id.btnStart ? R.string.start_confirm : R.string.stop_confirm);
 
         builder.setPositiveButton(getString(id == R.id.btnStart ? R.string.start : R.string.stop), (dialog, id12) -> {
-            Logger.appendLog(id == R.id.btnStart ? "Confirm start " : "Confirm stop");
+            Logger.appendLog(id == R.id.btnStart ? "ConfirFm start " : "Confirm stop");
             if (id == R.id.btnStop) {
                 stop();
             } else if (id == R.id.btnStart) {
@@ -378,6 +378,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                         //((TextView) findViewById(R.id.refuelitem_detail_airline)).setText(item.getName());
                         mItem.setAirlineId(item.getId());
                         mItem.setProductName(item.getProductName());
+
                         mItem.setAirlineModel(item);
                         if (mItem.isInternational() && item.isInternational())
                             mItem.setPrice(item.getPrice());

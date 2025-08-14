@@ -1,5 +1,6 @@
 package com.megatech.fms;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
@@ -22,6 +23,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.Spinner;
@@ -33,6 +35,7 @@ import androidx.annotation.Nullable;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.DialogFragment;
 
+import com.bumptech.glide.Glide;
 import com.megatech.fms.databinding.B2505NewBinding;
 import com.megatech.fms.databinding.B2508NewBinding;
 import com.megatech.fms.helpers.DataHelper;
@@ -46,6 +49,7 @@ import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 import com.megatech.fms.view.FlightArrayAdapter;
 
+import java.io.File;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -57,6 +61,12 @@ import java.util.regex.Pattern;
 
 public class B2508NewItemFragement extends DialogFragment {
 
+    private static final int REQUEST_AIRLINE_SIGN = 101;
+    private static final int REQUEST_SKYPEC_SIGN = 102;
+
+    private ImageView imgAirlineSign, imgSkypecSign;
+    private String urlImageAirline, urlImageSkypec;
+
     public B2508NewItemFragement() {
         this.model = new BM2508Model();
         this.model.setTime(new Date());
@@ -66,10 +76,19 @@ public class B2508NewItemFragement extends DialogFragment {
         this.model.setAirportId(FMSApplication.getApplication().getUser().getAirportId());
         this.model.setStaffId(FMSApplication.getApplication().getUser().getUserId());
         this.model.setStaffName(FMSApplication.getApplication().getUser().getUserName());
+
     }
 
     public B2508NewItemFragement(BM2508Model model) {
         this.model = model;
+        if (model.getFlightCode() == null || model.getFlightCode() == "")
+        {
+            this.model.setFlightCode(model.getFlightNo()) ;
+        }
+
+        this.model.setTextAirlineSignature("Chạm để ký");
+        this.model.setTextUserSkypecSignature("Chạm để ký");
+
         if (model.getFlightCode() == null || model.getFlightCode() == "")
         {
             this.model.setFlightCode(model.getFlightNo()) ;
@@ -130,6 +149,8 @@ public class B2508NewItemFragement extends DialogFragment {
         //return super.onCreateView(inflater, container, savedInstanceState);
         binding = DataBindingUtil.inflate(inflater, R.layout.b2508_new, container, false);
         binding.setMItem(this.model);
+
+
         return binding.getRoot();
     }
 
@@ -231,9 +252,29 @@ public class B2508NewItemFragement extends DialogFragment {
 
             }
         });
-        model.setUrlImageAirline("");
-        model.setUrlImageSkypec("");
+//        model.setUrlImageAirline("");
+//        model.setUrlImageSkypec("");
+//        ImageView imgAirline = view.findViewById(R.id.imageAirline);
+//        ImageView imgSkypec = view.findViewById(R.id.imageSkypec);
 
+// Load ảnh từ file nội bộ nếu tồn tại, nếu không thì load từ server
+//        File airlineFile = new File(model.getUrlImageAirline());
+//        if (airlineFile.exists()) {
+//            Glide.with(this)
+//                    .load(airlineFile)
+//                    .into(imgAirline);
+//        }
+//
+//        File skypecFile = new File(model.getUrlImageSkypec());
+//        if (skypecFile.exists()) {
+//            Glide.with(this)
+//                    .load(skypecFile)
+//                    .into(imgSkypec);
+//        } else {
+//            Glide.with(this)
+//                    .load(model.getUserSkypecSignaturePath())
+//                    .into(imgSkypec);
+//        }
     }
 
     @Override
@@ -245,6 +286,7 @@ public class B2508NewItemFragement extends DialogFragment {
     }
 
 
+    @SuppressLint("NonConstantResourceId")
     public void onClick(View view) {
         int id = view.getId();
         switch (id) {
@@ -302,6 +344,8 @@ public class B2508NewItemFragement extends DialogFragment {
                 break;
 
 
+
+
         }
     }
 
@@ -310,6 +354,9 @@ public class B2508NewItemFragement extends DialogFragment {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
+
+
+
                 DataHelper.postBM2508(model);
                 return null;
             }

@@ -76,7 +76,7 @@ public class BM2508Model extends BaseModel {
     public void setTextAirlineSignature(String TextAirlineSignature) {
         this.TextAirlineSignature = TextAirlineSignature;
     }
-    public String getAirlineSignaturePath(Object o) {
+    public String getAirlineSignaturePath() {
         return AirlineSignaturePath;
     }
 

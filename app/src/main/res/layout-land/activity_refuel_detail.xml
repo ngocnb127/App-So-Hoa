@@ -107,7 +107,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
                 <TableLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
@@ -511,7 +513,7 @@
                             android:focusable="false"
 
                             android:padding="5dp"
-                            android:text='@{String.format("%.2f",mItem.projectedCapacity)}'
+                            android:text='@{String.format("%.2f",mItem.ProjectedCapacity)}'
                             android:textIsSelectable="true" />
 
                         <TextView
@@ -527,18 +529,18 @@
                             android:id="@+id/refuelitem_actual_capacity"
                             style="?android:attr/textAppearanceMedium"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="23dp"
                             android:layout_weight="0.25"
-                            android:textColor="@color/colorRed"
                             android:focusable="false"
-
                             android:padding="5dp"
-                            android:text='@{String.format("%.2f",mItem.actualCapacity)}'
+
+                            android:text='@{String.format("%.2f",mItem.ActualCapacity)}'
+                            android:textColor="@color/colorRed"
                             android:textIsSelectable="true" />
                     </TableRow>
                 </TableLayout>
 
-
+                </ScrollView>
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
 

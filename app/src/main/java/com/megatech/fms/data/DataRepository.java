@@ -15,6 +15,7 @@ import com.megatech.fms.data.entity.Flight;
 import com.megatech.fms.data.entity.Invoice;
 import com.megatech.fms.data.entity.LogEntry;
 import com.megatech.fms.data.entity.ParkingLot;
+import com.megatech.fms.data.entity.Product;
 import com.megatech.fms.data.entity.Receipt;
 import com.megatech.fms.data.entity.RefuelItem;
 import com.megatech.fms.data.entity.Review;
@@ -32,6 +33,7 @@ import com.megatech.fms.model.BM2508Model;
 import com.megatech.fms.model.CheckTrucksModel;
 import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.model.LogEntryModel;
+import com.megatech.fms.model.ProductModel;
 import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.model.ReviewModel;
 import com.megatech.fms.model.ShiftModel;
@@ -484,9 +486,13 @@ public class DataRepository {
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
-        long start = cal.getTime().getTime();
-        cal.add(Calendar.DATE,1);
-        long end = cal.getTime().getTime();
+        // ✅ Lùi lại 1 ngày
+        cal.add(Calendar.DATE, -1);
+        long start = cal.getTimeInMillis();
+
+        // ✅ Tiếp tục cộng thêm 2 ngày để lấy đến hết ngày hiện tại
+        cal.add(Calendar.DATE, 2);
+        long end = cal.getTimeInMillis();
         List<Flight> localList = db.flightDao().getAll(start, end);
         List<FlightModel> returnList = new ArrayList();
         for (Flight item : localList) {
@@ -662,6 +668,24 @@ public class DataRepository {
 
             model.setLocalId(item.getLocalId());
             db.bm2505Dao().updateContainer(model);
+        }
+    }
+    public List<ProductModel> getProductList() {
+        List<Product> localList = db.ProductDao().getAll();
+        List<ProductModel> returnList = new ArrayList<>();
+        for (Product item : localList) {
+            returnList.add(item.toModel());
+        }
+        return returnList;
+    }
+    public void insertProduct(Product model) {
+        Product item = db.ProductDao().get(model.getId(), model.getLocalId());
+
+        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
+            db.ProductDao().insert(model);
+        } else {
+            model.setLocalId(item.getLocalId());
+            db.ProductDao().update(model);
         }
     }
 }

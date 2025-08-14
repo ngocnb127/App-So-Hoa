@@ -1,6 +1,8 @@
 package com.megatech.fms;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
@@ -18,6 +20,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -45,9 +48,12 @@ import static com.megatech.fms.model.RefuelItemData.GALLON_TO_LITTER;
 
 public class B2502NewItemFragement extends DialogFragment {
 
+    private int mYear, mMonth, mDay, mHour, mMinute;
     public B2502NewItemFragement() {
         this.model = new TruckFuelModel();
         this.model.setUnit("Gallon");
+
+        this.model.setWaterCheck(true);
         //this.model.setTime(new Date());
         this.model.setOperatorId(FMSApplication.getApplication().getUser().getUserId());
         this.model.setTruckId(FMSApplication.getApplication().getTruckId());
@@ -153,6 +159,7 @@ public class B2502NewItemFragement extends DialogFragment {
     }
 
 
+    @SuppressLint("NonConstantResourceId")
     public void onClick(View view) {
         int id = view.getId();
         switch (id) {
@@ -191,6 +198,19 @@ public class B2502NewItemFragement extends DialogFragment {
                 m_Title = getString(R.string.update_qc_no);
                 showEditDialog(id, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
                 break;
+
+            case R.id.b2505_new_appearance_cb:
+                dlg.findViewById(R.id.b2505_new_appearance).setVisibility(View.GONE);
+                model.setAppearanceCheck("C&B");
+                binding.invalidateAll();
+                break;
+            case R.id.b2505_new_appearance_other:
+            case R.id.b2505_new_appearance:
+                dlg.findViewById(R.id.b2505_new_appearance).setVisibility(View.VISIBLE);
+                m_Title = getString(R.string.update_appearance_check);
+                showEditDialog(id, InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+                break;
+
             case R.id.b2502_new_start_time:
             case R.id.b2502_new_end_time:
             case R.id.b2502_new_test_start_time:
@@ -201,8 +221,37 @@ public class B2502NewItemFragement extends DialogFragment {
     }
 
     private void save() {
+
         if (model.getId() == 0)
-            activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo());
+        {
+
+            if (!model.getFullVolumn())
+                activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo());
+            else
+                activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo(),model.getFullVolumn());
+        }
+
+
+        Date startTime = model.getStartTime();
+        Date endTime = model.getEndTime();
+
+        Date testStartTime = model.getTestStartTime();
+        Date testEndTime = model.getTestEndTime();
+        long tenMinutesMillis = 10 * 60 * 1000;
+        if (startTime != null && endTime != null && endTime.getTime() <= startTime.getTime()) {
+            activity.showErrorMessage(R.string.invalid_end_time); // ví dụ: "Giờ kết thúc phải lớn hơn giờ bắt đầu"
+            return; // Dừng lại, không tiếp tục lưu
+        }
+
+        if (testStartTime != null && testEndTime != null && testEndTime.getTime() < (testStartTime.getTime() + tenMinutesMillis)) {
+            activity.showErrorMessage(R.string.invalid_test_end_time); // "Thời gian bắt đầu test phải cách giờ kết thúc nạp ít nhất 10 phút"
+            return;
+
+        }
+        if (endTime != null && testStartTime != null  && testStartTime.getTime() <= endTime.getTime()) {
+            activity.showErrorMessage(R.string.invalid_test_start_time_end_time);
+            return; // Dừng lại, không tiếp tục lưu
+        }
 
         new AsyncTask<Void, Void, Void>() {
             @Override
@@ -225,37 +274,81 @@ public class B2502NewItemFragement extends DialogFragment {
     }
 
     private void showTimeDialog(int id) {
+        final Date date = new Date();
+
+        if (id == R.id.b2502_new_start_time )
+            date.setTime(model.getStartTime().getTime());
+        else if (id == R.id.b2502_new_end_time )
+            date.setTime(model.getEndTime().getTime());
+        else if (id == R.id.b2502_new_test_start_time )
+            date.setTime(model.getTestStartTime().getTime());
+        else if (id == R.id.b2502_new_test_end_time )
+            date.setTime(model.getTestEndTime().getTime());
 
         final Calendar c = Calendar.getInstance();
-        c.setTime(model.getTime());
-        TimePickerDialog datePickerDialog = new TimePickerDialog(this.getActivity(), new TimePickerDialog.OnTimeSetListener() {
+        c.setTime(date);
+        mYear = c.get(Calendar.YEAR);
+        mMonth = c.get(Calendar.MONTH);
+        mDay = c.get(Calendar.DAY_OF_MONTH);
+        mHour = c.get(Calendar.HOUR_OF_DAY);
+        mMinute = c.get(Calendar.MINUTE);
 
+        DatePickerDialog datePickerDialog = new DatePickerDialog(requireContext(), new DatePickerDialog.OnDateSetListener() {
             @Override
-            public void onTimeSet(TimePicker timePicker, int i, int i1) {
-                c.set(Calendar.HOUR_OF_DAY, timePicker.getHour());
-                c.set(Calendar.MINUTE, timePicker.getMinute());
-                Date t = c.getTime();
-                switch (id) {
-                    case R.id.b2502_new_end_time:
-                        model.setEndTime(t);
-                        break;
-                    case R.id.b2502_new_start_time:
-                        model.setStartTime(t);
-                        break;
-                    case R.id.b2502_new_test_start_time:
-                        model.setTestStartTime(t);
-                        break;
-                    case R.id.b2502_new_test_end_time:
-                        model.setTestEndTime(t);
-                        break;
-                }
-
-                binding.invalidateAll();
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                c.set(year, month, dayOfMonth);
+                TimePickerDialog timePickerDialog = new TimePickerDialog(requireContext(),
+                        new TimePickerDialog.OnTimeSetListener() {
+                            @Override
+                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                                c.set(Calendar.MINUTE, minute);
+                                c.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                                updateTime(id, c);
+                            }
+                        }, mHour, mMinute, false);
+                timePickerDialog.show();
             }
-        }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false);
+        }, mYear, mMonth, mDay);
+
         datePickerDialog.show();
     }
 
+
+    private Calendar getCalendar(int id) {
+        final Date date = new Date();
+        if (id == R.id.b2502_new_start_time)
+            date.setTime(this.model.getStartTime().getTime());
+        else if (id == R.id.b2502_new_end_time)
+            date.setTime(this.model.getEndTime().getTime());
+        else if (id == R.id.b2502_new_test_start_time)
+            date.setTime(this.model.getTestStartTime().getTime());
+        else if (id == R.id.b2502_new_test_end_time)
+            date.setTime(this.model.getTestEndTime().getTime());
+
+        final Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        return c;
+    }
+
+
+    private void updateTime(int id, Calendar c) {
+
+        if (id == R.id.b2502_new_start_time)
+            this.model.setStartTime(c.getTime());
+        else if (id == R.id.b2502_new_end_time)
+            this.model.setEndTime(c.getTime());
+        else if (id == R.id.b2502_new_test_start_time)
+            this.model.setTestStartTime(c.getTime());
+        else if (id == R.id.b2502_new_test_end_time)
+            this.model.setTestEndTime(c.getTime());
+        updateBinding();
+    }
+    private void updateBinding() {
+
+        binding.invalidateAll();
+
+
+    }
     private String m_Text = "";
     private String m_Title = "";
 
@@ -352,7 +445,7 @@ public class B2502NewItemFragement extends DialogFragment {
                             break;
                         case R.id.b2502_new_accumulatedRefuelAmount:
                             double db = numberFormat.parse(m_Text).doubleValue();
-                                model.setAccumulatedRefuelAmount(db);
+                                model.setAccumulateRefuelAmount(db);
                             break;
                         case R.id.b2502_new_maintenance_staff:
                             model.setMaintenanceStaff(m_Text);
@@ -365,6 +458,11 @@ public class B2502NewItemFragement extends DialogFragment {
                             break;
                         case R.id.b2502_new_qc_no:
                             model.setQcNo(m_Text);
+                            break;
+
+                        case R.id.b2505_new_appearance_other:
+                        case R.id.b2505_new_appearance:
+                            model.setAppearanceCheck(m_Text);
                             break;
 
                     }

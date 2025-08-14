@@ -118,7 +118,7 @@
     <string name="logout_message">Bạn có muốn thoát khỏi ứng dụng?</string>
 
     <string name="invoice">Hóa đơn</string>
-    <string name="add_inventory">BM 25.02</string>
+    <string name="add_inventory">25.02</string>
     <string name="title_refuelitem_list">Items</string>
     <string name="title_refuelitem_detail">RefuelItem Detail</string>
     <string name="extract">Hút nhiên liệu</string>
@@ -167,7 +167,7 @@
     <string name="departureTime">Giờ cất cánh</string>
     <string name="arrivalTime">Giờ hạ cánh</string>
     <string name="refuelTime">Giờ tra nạp</string>
-    <string name="update_list">Cập nhật kế hoạch</string>
+    <string name="update_list">Cập nhật K.hoạch</string>
     <string name="sending_start">Đang bắt đầu &#8230; </string>
     <string name="sending_stop">Đang kết thúc &#8230;</string>
     <string name="update_real_amount">Cập nhật sản lượng thực tế (GALLON)</string>
@@ -205,7 +205,7 @@
     <string name="version_updating">Đang cập nhật ...</string>
     <string name="update_checking">Đang kiểm tra phiên bản mới ...</string>
     <string name="using_version">Phiên bản đang sử dụng</string>
-    <string name="new_refuel">Tạo chuyến mới</string>
+    <string name="new_refuel">Chuyến mới</string>
     <string name="aircraft_type">Loại tàu bay</string>
     <string name="route_name">Đường bay</string>
     <string name="airport">Sân bay</string>
@@ -213,7 +213,7 @@
     <string name="stop_confirm">Kết thúc mẻ ?</string>
     <string name="start_confirm">Bắt đầu mẻ ?</string>
     <string name="print">In</string>
-    <string name="extract_list">Hút nhiên liệu</string>
+    <string name="extract_list">Hút Jet A-1</string>
     <string name="new_extract">Tạo chuyến hút mới</string>
     <string name="error_saving_data">Có lỗi trong khi ghi dữ liệu, vui lòng kiểm tra lại</string>
     <string name="shift">Ca làm việc</string>
@@ -292,6 +292,9 @@
     <string name="new_version">Mẫu mới</string>
     <string name="old_version">Mẫu cũ</string>
     <string name="invalid_density">Nhập sai giới hạn tỉ trọng cho nhiên liệu Jet A-1 (0.72 - 0.86)</string>
+    <string name="invalid_end_time">Giờ kết thúc NHẬP HÀNG phải lớn hơn giờ bắt đầu NHẬP HÀNG</string>
+    <string name="invalid_test_end_time">Giờ kết thúc KIỂM TRA phải lớn hơn giờ bắt đầu KIỂM TRA  tối thiểu 10 phút</string>
+    <string name="invalid_test_start_time_end_time">Giờ bắt đầu KIỂM TRA phải lớn hơn giờ kết thúc NHẬP HÀNG</string>
     <string name="invalid_number_format">Định dạng số không đúng</string>
     <string name="assigned_to_another_truck">Mẻ này được phân công cho xe khác, bạn muốn thực hiện tra nạp?</string>
     <string name="internet_status">Trạng thái 3G</string>
@@ -320,6 +323,7 @@
     <string name="print_selected">In mẻ được chọn</string>
     <string name="print_extract">In P.hoàn trả</string>
     <string name="update_tax_rate">Cập nhật VAT(%)</string>
+    <string name="update_product">Cập nhật loại nhiên liệu </string>
     <string name="duplicate_invoice_number">Nhập trùng số hóa đơn. Vui lòng kiểm tra lại</string>
     <string name="empty_required_field">Dữ liệu không được dể trống, vui lòng kiểm tra lại</string>
     <string name="print_error">Có lỗi khi in, bạn muốn tiếp tục nhập số hóa đơn?</string>
@@ -369,19 +373,21 @@
     <string name="delete_confirm">Bạn chắc chắn muốn xóa các dòng được chọn?</string>
     <string name="amount_must_less_than_capacity">Lượng nhiên liệu nhập không được nhiều hơn dung tích xe</string>
     <string name="capacity">Dung tích</string>
-    <string name="bm_2505">BM 25.05</string>
-    <string name="bm_2508">BM 25.08</string>
-    <string name="bm_2307">BM 23.07A</string>
+    <string name="bm_2505">25.05</string>
+    <string name="bm_2508">25.08</string>
+    <string name="bm_2307">23.07A</string>
+    <string name="receiptlist">Đã xuất</string>
     <string name="bm2502_checker">Người kiểm tra</string>
     <string name="create_user">Người tạo</string>
     <string name="bm2505_checker">Nhân viên kiểm tra</string>
     <string name="rtc_no">Số CNKTCL</string>
+    <string name="Cert_no">Số CNXH</string>
     <string name="density_15">Tỷ trọng 15°C</string>
     <string name="difference">Chênh lệch</string>
     <string name="evaluation">Đánh giá</string>
     <string name="appearance_check">Kiểm tra ngoại quan</string>
     <string name="water_check">Viên thử nước</string>
-    <string name="pressure_diff">Chênh lệch áp suất bầu tra nạp</string>
+    <string name="pressure_diff">Chênh lệch áp suất bầu lọc</string>
     <string name="hose_pressure">Áp suất đầu vòi tra nạp</string>
     <string name="update_density15">Cập nhật tỷ trọng 15</string>
     <string name="update_rtc_no">Cập nhật số CNKTCL</string>
@@ -404,11 +410,12 @@
     <string name="receipt_number">Số phiếu</string>
     <string name="update_split_amount">Nhập số lượng tách hóa đơn (KG)</string>
     <string name="error_split_amount_too_large">Số lượng tách hóa đơn quá lớn. Vui lòng kiểm tra lại!</string>
-    <string name="receipt_not_saved">Phiếu chưa được xuất hóa đơn. Bạn có muốn thoát?</string>
+    s
     <string name="image_Airline_not_saved">Hình ảnh chữ ký khách hàng chưa được lưu. Bạn có muốn thoát?</string>
     <string name="update_defueling_no">Nhập số phiếu hút</string>
     <string name="print_receipt">In Hóa Đơn Điện Tử</string>
     <string name="not_capture_confirm">Chưa chụp hình phiếu. Bạn muốn chụp hình và xuất hóa đơn?</string>
+    <string name="not_capture_sign">Chưa đủ chữ ký người mua hoặc người bán hoặc chưa chụp hình phiếu giao nhận?</string>
     <string name="save_receipt_completed">Đã lưu phiếu thành công</string>
     <string name="no_return_amount">Không có số hoàn trả, vui lòng kiểm tra lại.</string>
     <string name="real_amount_too_big">Sản lượng thực tế quá lớn. Vui lòng kiểm tra lại.</string>
@@ -501,11 +508,14 @@
     <string name="thankyou_e">Thank you!</string>
     <string name="receipt_not_found">Không tìm được dữ liệu. Vui lòng kiểm tra lại.</string>
     <string name="title_data_error">Lỗi dữ liệu</string>
-    <string name="view_receipt">Xem phiếu cũ</string>
+    <string name="view_receipt">Xem phiếu cũ</string>s
+    <string name="receipt_not_saved">Phiếu chưa được xuất hóa đơn. Bạn có muốn thoát?\n Lưu ý: Việc thoát ra sẽ mất chữ ký trước đó và cần phải ký và in lại trước khi xuất hóa đơn</string>
+
     <string name="flight">Chuyến bay</string>
     <string name="bm2505_report_type">Loại phiếu</string>
     <string name="update_depot">Nhập kho chứa</string>
     <string name="bm2505_container_type">Loại</string>
+    <string name="product_type">Loại NL</string>
     <string name="bm2505_depot">Kho chứa</string>
     <string name="start_time">Giờ bắt đầu</string>
     <string name="end_time">Giờ kết thúc</string>
@@ -573,6 +583,7 @@
     <string name="Result35">9.Kiểm tra đồng hồ lưu lượng</string>
     <string name="Result36">10.Kiểm tra hoạt động của bơm, dừng bơm khẩn cấp</string>
     <string name="Result42">11.Kiểm tra bên ngoài, vệ sinh bên ngoài camera</string>
+    <string name="no_product_found">lỗi chọn loại nhiên liệu</string>
 
     <string-array name="vat_array">
         <item>0%</item>

@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
         <import type="com.megatech.fms.helpers.DateUtils" />
-
+        <import type="android.view.View" />
         <variable
             name="mItem"
             type="com.megatech.fms.model.TruckFuelModel" />
     </data>
-
+    <ScrollView
+        android:layout_width="match_parent"
+    android:layout_height="match_parent">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,7 +67,7 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{DateUtils.formatDate(mItem.startTime,"HH:mm")}' />
+                android:text='@{DateUtils.formatDate(mItem.startTime,"dd/MM/yyyy HH:mm")}' />
             <TextView
                 style="?android:attr/textAppearanceMedium"
                 android:layout_width="0dp"
@@ -84,7 +87,7 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{DateUtils.formatDate(mItem.endTime,"HH:mm")}' />
+                android:text='@{DateUtils.formatDate(mItem.endTime,"dd/MM/yyyy HH:mm")}' />
         </TableRow>
 
 
@@ -182,7 +185,7 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{String.format("%.0f",mItem.accumulatedRefuelAmount)}'></TextView>
+                android:text='@{String.format("%.0f",mItem.AccumulateRefuelAmount)}'></TextView>
         </TableRow>
         <TableRow
             android:layout_width="match_parent"
@@ -240,7 +243,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight=".25"
                 android:padding="5dp"
-                android:text="@string/qc_no"></TextView>
+                android:text="@string/Cert_no"></TextView>
 
             <TextView
                 android:id="@+id/b2502_new_qc_no"
@@ -305,7 +308,7 @@
                     android:hint="@string/touch_to_edit"
                     android:onClick="onClick"
                     android:padding="5dp"
-                    android:text='@{DateUtils.formatDate(mItem.testStartTime,"HH:mm")}' />
+                    android:text='@{DateUtils.formatDate(mItem.testStartTime,"dd/MM/yyyy HH:mm")}' />
                 <TextView
                     style="?android:attr/textAppearanceMedium"
                     android:layout_width="0dp"
@@ -325,10 +328,11 @@
                     android:hint="@string/touch_to_edit"
                     android:onClick="onClick"
                     android:padding="5dp"
-                    android:text='@{DateUtils.formatDate(mItem.testEndTime,"HH:mm")}' />
+                    android:text='@{DateUtils.formatDate(mItem.testEndTime,"dd/MM/yyyy HH:mm")}' />
 
                 <TextView
                     style="?android:attr/textAppearanceMedium"
+                    android:visibility="gone"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight=".25"
@@ -339,6 +343,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight=".25"
                     android:orientation="horizontal"
+                    android:visibility="gone"
                     android:padding="5dp">
                     <RadioButton
                         android:layout_width="wrap_content"
@@ -357,6 +362,140 @@
                 </RadioGroup>
             </TableRow>
         </TableRow>
-    </LinearLayout>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
 
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/appearance_check" />
+
+            <TableLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25">
+
+                <TableRow>
+
+                    <RadioGroup
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".25"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/b2505_new_appearance_cb"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight=".5"
+                            android:checked='@{mItem.appearanceCheck.equals("C&amp;B")}'
+                            android:text="C&amp;B" />
+
+                        <RadioButton
+                            android:id="@+id/b2505_new_appearance_other"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight=".5"
+                            android:checked='@{!mItem.appearanceCheck.equals("C&amp;B")}'
+                            android:onClick="onClick"
+                            android:text="@string/other" />
+                    </RadioGroup>
+                </TableRow>
+
+                <TableRow>
+
+                    <TextView
+                        android:id="@+id/b2505_new_appearance"
+                        style="?android:attr/textAppearanceMedium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".25"
+                        android:drawableStart="@drawable/ic_edit"
+                        android:focusable="false"
+                        android:hint="@string/touch_to_edit"
+                        android:onClick="onClick"
+                        android:padding="5dp"
+                        android:text='@{mItem.appearanceCheck}'
+                        android:visibility='@{mItem.appearanceCheck.equals("C&amp;B")?View.GONE:View.VISIBLE}' />
+                </TableRow>
+            </TableLayout>
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/water_check" />
+
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                app:waterCheck="@={mItem.waterCheck}"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radioButtonP"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="P"></RadioButton>
+
+                <RadioButton
+                    android:id="@+id/radioButtonF"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="F"></RadioButton>
+
+                <RadioButton
+                    android:id="@+id/radioButtonNA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="N/A"></RadioButton>
+
+
+            </RadioGroup>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="5dp"
+                android:text="Xe đã đầy nhiên liệu" />
+
+            <CheckBox
+                android:id="@+id/b2502_new_FullVolumn"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.fullVolumn}"
+                android:focusable="false"
+                android:onClick="onClick"
+
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+        </TableRow>
+    </LinearLayout>
+</ScrollView>
 </layout>

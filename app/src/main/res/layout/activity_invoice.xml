@@ -98,6 +98,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
+
             <TableRow
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -175,6 +176,23 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@{invoiceItem.taxCode}" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/product_type" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@{invoiceItem.PName}"
+                    android:textColor="#FF0000"
+                android:textStyle="bold" />
+
             </TableRow>
 
             <TableRow

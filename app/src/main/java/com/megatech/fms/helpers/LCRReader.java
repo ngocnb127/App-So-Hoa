@@ -42,6 +42,7 @@ import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.PRINTING_STATE;
 import com.liquidcontrols.lcr.iq.sdk.lc.api.network.NETWORK_TYPE;
 import com.liquidcontrols.lcr.iq.sdk.utils.AsyncCallback;
 import com.liquidcontrols.lcr.iq.sdk.utils.TimeSet;
+import com.liquidcontrols.lcr.iq.sdk.utils.AIPLogger;
 import com.megatech.fms.model.LCRDataModel;
 
 import java.text.NumberFormat;

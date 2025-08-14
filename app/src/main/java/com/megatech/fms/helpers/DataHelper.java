@@ -19,6 +19,7 @@ import com.megatech.fms.data.entity.CheckTrucks;
 import com.megatech.fms.data.entity.Flight;
 import com.megatech.fms.data.entity.Invoice;
 import com.megatech.fms.data.entity.LogEntry;
+import com.megatech.fms.data.entity.Product;
 import com.megatech.fms.data.entity.Receipt;
 import com.megatech.fms.data.entity.RefuelItem;
 import com.megatech.fms.data.entity.Review;
@@ -36,6 +37,7 @@ import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.model.InvoiceFormModel;
 import com.megatech.fms.model.InvoiceModel;
 import com.megatech.fms.model.LogEntryModel;
+import com.megatech.fms.model.ProductModel;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.ReceiptModel;
 import com.megatech.fms.model.RefuelItemData;
@@ -217,6 +219,13 @@ public class DataHelper {
     }
 
     public static void Synchronize() {
+//        Logger.appendLog("SYNC", "Start synchronize");
+//
+//        if (!AppStateObserver.isAppInForeground()) {
+//            Logger.appendLog("SYNC", "Abort sync — app in background");
+//            return;
+//        }
+
         if (!processing) {
             processing = true;
             //post local modified data
@@ -466,7 +475,7 @@ public class DataHelper {
                         repo.insertBM2508(BM2508.fromModel(model));
                         ReceiptAPI client = new ReceiptAPI();
                         // Gửi file ảnh lên API
-                        client.postMultipartBM2508(model);
+                        //client.postMultipartBM2508(model);
                     }
 
                 }
@@ -485,6 +494,19 @@ public class DataHelper {
                     }
                     //repo.deleteOudateTrucks(ids);
                 }
+
+                // sync Product
+                new Thread(() -> {
+
+
+                    List<ProductModel> lstproduct = httpClient.getProductList();
+                    if (lstModel != null) {
+                        for (ProductModel model : lstproduct) {
+                            repo.insertProduct(Product.fromModel(model));
+                        }
+                    }
+
+                }).start();
 
                 //Users
 
@@ -541,6 +563,7 @@ public class DataHelper {
                 }
             }).start();
             //get n
+
         }
 
 
@@ -628,6 +651,18 @@ public class DataHelper {
             return repo.getUsers();
         }
         return httpClient.getUsers();
+    }
+
+    public static List<ProductModel> getProducts() {
+        if (isDebug) {
+
+
+            List<ProductModel> localList = repo.getProductList();
+
+            return localList;
+        }
+        return httpClient.getProductList();
+
     }
 
     public static InvoiceFormModel[] getInvoiceForms() {

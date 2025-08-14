@@ -18,6 +18,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -80,6 +81,7 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             @Override
             public void onSuccess() {
                 model.setPrinted(true);
+
                 binding.invalidateAll();
             }
         });
@@ -639,7 +641,7 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
 
     private void openSave() {
         //LocalDate today = LocalDate.now();
-
+        if (isSaving) return;
         if (!model.isCaptured() && !BuildConfig.THERMAL_PRINTER) {
             showConfirmMessage(R.string.not_capture_confirm, new Callable<Void>() {
                 @Override
@@ -656,32 +658,51 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                 }
             }*/);
         } else
-            showConfirmMessage(R.string.e_invoice_confirm, new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    save();
-                    return null;
-                }
-            });
+
+            if ((model.getSellerSignaturePath() != null && !model.getSellerSignaturePath().isEmpty()
+                    && model.getSignaturePath() != null && !model.getSignaturePath().isEmpty())
+                    || model.isCaptured()) {
+
+                showConfirmMessage(R.string.e_invoice_confirm, new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        save();
+                        return null;
+                    }
+                });
+
+            } else {
+                showErrorMessage(R.string.not_capture_sign);
+            }
 
     }
 
     private boolean autoNumber = true;
 
+    private boolean isSaving = false;   // thêm biến cờ
+
     private void save() {
+        // Nếu đang lưu thì không cho gọi lại
+        if (isSaving) return;
+        isSaving = true;
+
+        // Disable nút Save để tránh bấm nhiều lần
+        View btnSave = findViewById(R.id.btnSave);
+        if (btnSave != null) {
+            btnSave.setEnabled(false);
+        }
+
         Logger.appendLog("RECEIPT_WINDOW", "save receipt " + model.getNumber());
         setProgressDialog();
         sendScreenshot();
+
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
                 DataHelper.postReceipt(model);
                 if (autoNumber) {
                     TruckModel setting = FMSApplication.getApplication().getSetting();
-
-                    int number = Integer.valueOf( model.getNumber().substring(4),36);
-
-
+                    int number = Integer.valueOf(model.getNumber().substring(4), 36);
                     setting.setReceiptCount(number);
                     FMSApplication.getApplication().saveSetting(setting);
                 }
@@ -690,14 +711,17 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
 
             @Override
             protected void onPostExecute(Void response) {
+                // Reset trạng thái
+                isSaving = false;
+                if (btnSave != null) {
+                    btnSave.setEnabled(true);
+                }
                 postCompleted();
-
                 super.onPostExecute(response);
             }
         }.execute();
-
-
     }
+
 
     private void postCompleted() {
         closeProgressDialog();

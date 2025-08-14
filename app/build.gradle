@@ -6,14 +6,14 @@ apply plugin: 'com.google.firebase.firebase-perf'
 android {
     signingConfigs {
         release {
-            storeFile file('C:\\Users\\admin\\StudioProjects\\fms4\\keys\\fms4.jks')
+            storeFile file('/Users/ngoc/Documents/DevNgoc/App-So-Hoa/keys/fms4.jks')
             storePassword '123456'
             keyAlias = 'keyfms'
             keyPassword '123456'
         }
 
         debug {
-            storeFile file('D:\\TEST_TRA_NAP\\fms4-master_v2\\fms4-master\\keys\\fms4.jks')
+            storeFile file('/Users/ngoc/Documents/DevNgoc/App-So-Hoa/keys/fms4.jks')
             storePassword '123456'
             keyAlias = 'keyfms'
             keyPassword '123456'
@@ -28,8 +28,8 @@ android {
         applicationId "com.megatech.fms"
 
         minSdkVersion 26
-        targetSdkVersion 31
-        versionCode 55
+        targetSdkVersion 33
+        versionCode 97
         def versionNumber = "11"
         def buildNumber = "6"
 
@@ -71,7 +71,7 @@ android {
     buildTypes {
         debug {
 
-            buildConfigField 'String', 'API_BASE_URL', '"http://203.128.244.70/"'
+            buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
 
             buildConfigField 'String', 'DB_FILE', '"fms_debug.db"'
             buildConfigField 'String', 'PRINTER_IP', '"10.0.2.2"'
@@ -81,10 +81,10 @@ android {
             resValue "string", "app_name", "FMS Delivery DEBUG"
         }
         release {
-            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+            buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
             buildConfigField 'String', 'DB_FILE', '"fms_release.db"'
 
-            buildConfigField 'boolean', 'PRINT_RECEIPT', 'false'
+            buildConfigField 'boolean', 'PRINT_RECEIPT', 'true'
 
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -94,6 +94,8 @@ android {
         thermal {
             initWith release
             applicationIdSuffix  ".fhs"
+
+            buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
 
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
 
@@ -105,7 +107,7 @@ android {
 
         demo {
             initWith release
-            buildConfigField 'String', 'API_BASE_URL', '"http://fmsapi.skypec.com.vn/"'
+            buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
             buildConfigField 'String', 'DB_FILE', '"fms_demo.db"'
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'false'
 

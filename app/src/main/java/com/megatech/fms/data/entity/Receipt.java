@@ -227,6 +227,19 @@ public class Receipt extends  BaseEntity {
         this.cancelReason = cancelReason;
     }
 
+    private int productId;
+    private String pCode;
+    private String pName;
+
+    // Getter/Setter
+    public int getProductId() { return productId; }
+    public void setProductId(int productId) { this.productId = productId; }
+
+    public String getPCode() { return pCode; }
+    public void setPCode(String pCode) { this.pCode = pCode; }
+
+    public String getPName() { return pName; }
+    public void setPName(String pName) { this.pName = pName; }
 
 
     public ReceiptModel toModel()

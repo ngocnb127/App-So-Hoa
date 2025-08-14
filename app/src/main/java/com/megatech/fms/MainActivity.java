@@ -499,7 +499,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
 
 
             }
-        }, 10, 5 * 1000);
+        }, 10, 60 * 1000);
 
     }
 

@@ -430,7 +430,6 @@
                 android:checked="@={mItem.cover3}"
                 android:focusable="false"
                 android:onClick="onClick"
-
                 android:padding="3dp"
                 android:textIsSelectable="true" />
 
@@ -548,32 +547,105 @@
 
         </TableRow>
 
-        <TableRow
+
+
+
+        <LinearLayout
+            android:id="@+id/signature_info_block"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#ffffff"
-            android:padding="3dp">
+            android:orientation="vertical"
+            android:visibility="gone"> <!-- Ẩn toàn bộ khối này -->
 
-            <TextView
-                style="?android:attr/textAppearanceMedium"
-                android:id="@+id/urlImageAirline"
-                android:layout_width="0dp"
+            <TableRow
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight=".25"
-                android:padding="0dp"
-                android:layout_marginStart="210dp"
-                android:text='Chưa có ảnh'></TextView>
+                android:padding="5dp"
+                android:background="#EEEEEE">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="AirlineSignaturePath:"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_airlineSignaturePath"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="@{mItem.airlineSignaturePath}"
+                    android:textSize="12sp" />
+            </TableRow>
 
-            <TextView
-                style="?android:attr/textAppearanceMedium"
-                android:id="@+id/urlImageSkypec"
-                android:layout_width="0dp"
+            <TableRow
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight=".25"
-                android:padding="0dp"
-                android:layout_marginStart="80dp"
-                android:text='Chưa có ảnh'></TextView>
-        </TableRow>
+                android:padding="5dp"
+                android:background="#EEEEEE">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="UserSkypecSignaturePath:"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_userSkypecSignaturePath"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="@{mItem.userSkypecSignaturePath}"
+                    android:textSize="12sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:background="#EEEEEE">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="UrlImageAirline:"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_urlImageAirline"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="@{mItem.urlImageAirline}"
+                    android:textSize="12sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:background="#EEEEEE">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="UrlImageSkypec:"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tv_urlImageSkypec"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="@{mItem.urlImageSkypec}"
+                    android:textSize="12sp" />
+            </TableRow>
+
+        </LinearLayout>
+
+
+
+
 
     </LinearLayout>
     </ScrollView>
