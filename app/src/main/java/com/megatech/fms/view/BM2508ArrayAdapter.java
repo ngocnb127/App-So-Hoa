@@ -68,9 +68,9 @@ public class BM2508ArrayAdapter extends ArrayAdapter<BM2508Model> {
                         if(activityb2508.modelb2508.getUserSkypecSignaturePath() != null){
                             model.setUserSkypecSignaturePath(activityb2508.modelb2508.getUserSkypecSignaturePath());
                         }
-                        if (activityb2508.modelb2508.getAirlineSignaturePath(null) != null)
+                        if (activityb2508.modelb2508.getAirlineSignaturePath() != null)
                         {
-                            model.setAirlineSignaturePath(activityb2508.modelb2508.getAirlineSignaturePath(null));
+                            model.setAirlineSignaturePath(activityb2508.modelb2508.getAirlineSignaturePath());
                         }
                     }
                     activityb2508.openFormDetail(model);

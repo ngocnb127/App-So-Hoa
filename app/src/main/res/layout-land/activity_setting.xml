@@ -254,6 +254,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="3"
             android:orientation="horizontal">
+            <RadioButton
+                android:id="@+id/rad_zq511"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="ZQ511"
+
+                android:textSize="@dimen/medium_text"></RadioButton>
 
             <RadioButton android:id="@+id/rad_zq520"
                 android:layout_width="wrap_content"
@@ -263,14 +271,7 @@
                 android:text="ZQ520"
                 android:textSize="@dimen/medium_text"></RadioButton>
 
-            <RadioButton
-                android:id="@+id/rad_zq511"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:padding="5dp"
-                android:text="ZQ511"
 
-                android:textSize="@dimen/medium_text"></RadioButton>
 
         </RadioGroup>
 

@@ -3,7 +3,7 @@ apply plugin: 'com.android.library'
 android {
     signingConfigs {
         debug {
-            storeFile file('D:\\TEST_TRA_NAP\\fms4-master_v2\\fms4-master\\keys\\fms4.jks')
+            storeFile file('/Users/ngoc/Documents/DevNgoc/App-So-Hoa/keys/fms4.jks')
             storePassword '123456'
             keyPassword '123456'
             keyAlias 'keyfms'

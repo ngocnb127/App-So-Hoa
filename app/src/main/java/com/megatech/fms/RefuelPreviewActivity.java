@@ -50,6 +50,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.megatech.fms.data.entity.BM2505;
+import com.megatech.fms.data.entity.Product;
 import com.megatech.fms.databinding.ActivityRefuelPreviewBinding;
 import com.megatech.fms.databinding.B2505NewBinding;
 import com.megatech.fms.databinding.InvoicePreviewBinding;
@@ -68,6 +69,7 @@ import com.megatech.fms.model.BM2505Model;
 import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.model.InvoiceFormModel;
 import com.megatech.fms.model.InvoiceModel;
+import com.megatech.fms.model.ProductModel;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.ReceiptModel;
 import com.megatech.fms.model.RefuelItemData;
@@ -104,6 +106,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private final int RECEIPT_WINDOW = 2;
     private final int INVOICE_WINDOW = 4;
     List<AirlineModel> airlines = null;
+    public List<ProductModel> productList = null;
 
     /// bind data to view
     ArrayList<RefuelItemData> allItems = new ArrayList<RefuelItemData>();
@@ -187,6 +190,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private String uniqueId;
     private boolean hasReview ;
     //AlertDialog progressDialog;
+    @SuppressLint("StaticFieldLeak")
     private void loadData() {
 
         setProgressDialog();
@@ -197,8 +201,10 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
                 airlines = DataHelper.getAirlines();
 
+
                 if (userList == null)
                     userList = DataHelper.getUsers();
+                productList = DataHelper.getProducts();
 
                 //refuelData = DataHelper.getRefuelItem(remoteId, localId);
                 refuelData = DataHelper.getRefuelItem(uniqueId);
@@ -329,12 +335,25 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                    return false;
             });
         } else {
+
+            if (refuelData.getProductId() > 0 && productList != null) {
+                for (ProductModel product : productList) {
+                    if (product.getId() == refuelData.getProductId()) {
+                        refuelData.setPCode(product.getCode());
+                        refuelData.setPName(product.getName());
+                        refuelData.setProductName(product.getName());
+                        break;
+                    }
+                }
+            }
+
             //extractBinding = DataBindingUtil.setContentView(this, R.layout.preview_extract);
             extractBinding = DataBindingUtil.inflate(getLayoutInflater(), R.layout.preview_extract, null, false);
 
             extractBinding.setMItem(refuelData);
 
             setContentView(extractBinding.getRoot());
+
 
         }
 
@@ -376,6 +395,17 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     refuelData.getOthers().get(i).setAirlineModel(refuelData.getAirlineModel());
             }
         }
+        if (refuelData.getProductId() > 0 && productList != null) {
+            for (ProductModel product : productList) {
+                if (product.getId() == refuelData.getProductId()) {
+                    refuelData.setPCode(product.getCode());
+                    refuelData.setPName(product.getName());
+                    refuelData.setProductName(product.getName());
+                    break;
+                }
+            }
+        }
+
         allItems.clear();
         allItems.add(refuelData);
 
@@ -918,6 +948,9 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             case R.id.refuel_preview_vat:
                 openVatSpinner();
                 break;
+//            case R.id.refuel_preview_product:
+//                openProductSpinner();
+//                break;
             case R.id.refuel_preview_airline:
                 showConfirmMessage(R.string.change_airline_confirm, new Callable<Void>() {
                     @Override
@@ -1020,6 +1053,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         BM2505Model model = new BM2505Model();
         model.flightCode = refuelData.getFlightCode();
         model.aircraftCode = refuelData.getAircraftCode();
+        model.setFlightId(refuelData.getFlightId());
         model.setTime(new Date());
         model.setOperatorId(FMSApplication.getApplication().getUser().getUserId());
         model.setTruckId(FMSApplication.getApplication().getTruckId());
@@ -1183,6 +1217,23 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         }
         updateBinding();
     }
+    private void updateProduct() {
+        if (refuelData.getProductId() > 0 && productList != null) {
+            for (ProductModel product : productList) {
+                if (product.getId() == refuelData.getProductId()) {
+                    refuelData.setPCode(product.getCode());
+                    refuelData.setPName(product.getName());
+                    refuelData.setProductName(product.getName());
+                    break;
+                }
+            }
+        }
+
+        // Cập nhật giao diện
+        if (binding != null)
+            binding.invalidateAll();
+    }
+
 
     private void doRefuel() {
         if (refuelData != null) {
@@ -1345,6 +1396,45 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         b.create().show();
 
     }
+
+    private void openProductSpinner() {
+        if (!isEditable) {
+            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (productList == null || productList.isEmpty()) {
+            Toast.makeText(this, R.string.no_product_found, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<String> productNames = new ArrayList<>();
+        for (ProductModel p : productList) {
+            productNames.add(p.getCode()); // Đảm bảo getName() không null
+        }
+
+        String currentProductName = refuelData.getProductName();
+        int currentIndex = productNames.indexOf(currentProductName);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.update_product)
+                .setSingleChoiceItems(
+                        productNames.toArray(new String[0]),
+                        currentIndex,
+                        (dialog, which) -> {
+                            ProductModel selected = productList.get(which);
+                            refuelData.setProductId(selected.getId());
+                            refuelData.setPCode(selected.getCode());
+                            refuelData.setPName(selected.getName());
+                            refuelData.setProductName(selected.getCode());
+                            updateBinding();
+                            dialog.dismiss();
+                        })
+                .create()
+                .show();
+    }
+
+
 
     private void openAirlineDialog() {
         Dialog airlineDlg = new Dialog(this);

@@ -2,6 +2,7 @@ package com.megatech.fms;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
@@ -20,6 +21,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SearchView;
@@ -51,6 +53,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class B2505NewItemFragement extends DialogFragment {
+
+    private int mYear, mMonth, mDay, mHour, mMinute;
 
     public B2505NewItemFragement() {
         this.model = new BM2505Model();
@@ -254,7 +258,7 @@ public class B2505NewItemFragement extends DialogFragment {
                 save();
                 break;
             case R.id.b2505_new_time:
-                showTimeDialog();
+                showTimeDialog(id);
                 break;
             case R.id.b2505_new_flight:
                 openFlightSelect();
@@ -296,7 +300,7 @@ public class B2505NewItemFragement extends DialogFragment {
                 break;
             case R.id.b2505_new_density:
                 m_Title = getString(R.string.update_density);
-                showEditDialog(id, InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                showEditDialog(id, InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_NORMAL);
                 break;
             case R.id.b2505_new_density15:
                 m_Title = getString(R.string.update_density15);
@@ -390,21 +394,63 @@ public class B2505NewItemFragement extends DialogFragment {
         flightDlg.show();
     }
 
-    private void showTimeDialog() {
+    private void showTimeDialog(int id)  {
+
+        final Date date = new Date();
+
+        if (id == R.id.b2505_new_time )
+            date.setTime(model.getTime().getTime());
 
         final Calendar c = Calendar.getInstance();
-        c.setTime(model.getTime());
-        TimePickerDialog datePickerDialog = new TimePickerDialog(this.getActivity(), new TimePickerDialog.OnTimeSetListener() {
+        c.setTime(date);
+        c.setTime(date);
+        mYear = c.get(Calendar.YEAR);
+        mMonth = c.get(Calendar.MONTH);
+        mDay = c.get(Calendar.DAY_OF_MONTH);
+        mHour = c.get(Calendar.HOUR_OF_DAY);
+        mMinute = c.get(Calendar.MINUTE);
 
+        DatePickerDialog datePickerDialog = new DatePickerDialog(requireContext(), new DatePickerDialog.OnDateSetListener() {
             @Override
-            public void onTimeSet(TimePicker timePicker, int i, int i1) {
-                c.set(Calendar.HOUR_OF_DAY, timePicker.getHour());
-                c.set(Calendar.MINUTE, timePicker.getMinute());
-                model.setTime(c.getTime());
-                binding.invalidateAll();
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                c.set(year, month, dayOfMonth);
+                TimePickerDialog timePickerDialog = new TimePickerDialog(requireContext(),
+                        new TimePickerDialog.OnTimeSetListener() {
+                            @Override
+                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                                c.set(Calendar.MINUTE, minute);
+                                c.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                                updateTime(id, c);
+                            }
+                        }, mHour, mMinute, false);
+                timePickerDialog.show();
             }
-        }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false);
+        }, mYear, mMonth, mDay);
+
         datePickerDialog.show();
+    }
+
+    private Calendar getCalendar(int id) {
+        final Date date = new Date();
+        if (id == R.id.b2505_new_time)
+            date.setTime(this.model.getTime().getTime());
+
+
+        final Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        return c;
+    }
+    private void updateTime(int id, Calendar c) {
+
+        if (id == R.id.b2505_new_time)
+            this.model.setTime(c.getTime());
+        updateBinding();
+    }
+    private void updateBinding() {
+
+        binding.invalidateAll();
+
+
     }
 
     private String m_Text = "";
@@ -475,7 +521,7 @@ public class B2505NewItemFragement extends DialogFragment {
 
 
         input.requestFocus();
-        if (id == R.id.b2505_new_density || id==R.id.b2505_new_density15)
+        if ( id==R.id.b2505_new_density15)
             input.setSelection(2, input.getText().length());
         else
             input.setSelection(0, input.getText().length());

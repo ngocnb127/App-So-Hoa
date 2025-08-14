@@ -10,6 +10,7 @@ import android.util.Log;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.OnLifecycleEvent;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.gson.FieldNamingPolicy;
@@ -18,6 +19,7 @@ import com.google.gson.GsonBuilder;
 import com.megatech.fms.data.AppDatabase;
 import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.enums.INVOICE_TYPE;
+import com.megatech.fms.helpers.AppStateObserver;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.HttpClient;
 import com.megatech.fms.helpers.Logger;
@@ -40,15 +42,20 @@ public class FMSApplication extends Application implements LifecycleObserver {
 
     private static FMSApplication cApp;
     public static boolean isFHS = BuildConfig.FHS;
+    private ScheduledExecutorService scheduler;
+
 
     @Override
     public void onCreate() {
         super.onCreate();
 
+        AppStateObserver.init();
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         checkDatabase();
-        registerDBService();
+        //registerDBService();
         cApp = this;
     }
+
 
     @Override
     public void onLowMemory() {
@@ -93,7 +100,7 @@ public class FMSApplication extends Application implements LifecycleObserver {
                     }
                     catch (Exception ex)
                     {}
-                }, 0, 30, TimeUnit.SECONDS);
+                }, 0, 60, TimeUnit.SECONDS);
     }
 
     private void checkDatabase() {
@@ -127,12 +134,32 @@ public class FMSApplication extends Application implements LifecycleObserver {
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     public void onEnterForeground() {
         //Logger.appendLog("FMS", "Foreground");
-
+        checkDatabase();
+        startSyncScheduler(); // chỉ khởi chạy khi app lên foreground
     }
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     public void onEnterBackground() {
         //Logger.appendLog("FMS", "Background");
+        stopSyncScheduler();
+    }
 
+
+    private void startSyncScheduler() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.scheduleAtFixedRate(() -> {
+                try {
+                    DataHelper.Synchronize();
+                } catch (Exception ex) {}
+            }, 0, 30, TimeUnit.SECONDS);
+        }
+    }
+
+    private void stopSyncScheduler() {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+            scheduler = null;
+        }
     }
 ///////////////////////////////////////////////
 
@@ -329,6 +356,21 @@ public class FMSApplication extends Application implements LifecycleObserver {
         setCurrentAmount( currentAmount + addedAmount);
 
 
+    }
+    public void setInventory(final double addedAmount, String qcNo, boolean isFullFuel) {
+        final SharedPreferences preferences = getSharedPreferences("FMS", MODE_PRIVATE);
+        double currentAmount = getSetting().getCurrentAmount();
+        double maxAmount = getSetting().getCapacity();
+
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("QC_NO", qcNo);
+        editor.apply();
+
+        if (isFullFuel) {
+            setCurrentAmount(maxAmount);
+        } else {
+            setCurrentAmount(currentAmount + addedAmount);
+        }
     }
 
     public void saveShift(ShiftModel model) {

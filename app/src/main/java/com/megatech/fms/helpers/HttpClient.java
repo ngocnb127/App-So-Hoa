@@ -19,6 +19,7 @@ import com.megatech.fms.model.InvoiceFormModel;
 import com.megatech.fms.model.InvoiceModel;
 import com.megatech.fms.model.LCRDataModel;
 import com.megatech.fms.model.LoginResultModel;
+import com.megatech.fms.model.ProductModel;
 import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.model.ShiftModel;
 import com.megatech.fms.model.TruckFuelModel;
@@ -988,7 +989,31 @@ public class HttpClient {
         }
         return null;
     }
+    public List<ProductModel> getProductList() {
+        String url = API_BASE_URL + "api/Products/list"; // sửa URL đúng endpoint của API product
 
+        try {
+            HttpResponse response = sendGET(url);
+            if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                String data = response.getData();
+
+                JSONArray arr = new JSONArray(data);
+                List<ProductModel> lst = new ArrayList<>();
+                if (arr.length() > 0) {
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+                        ProductModel item = gson.fromJson(o.toString(), ProductModel.class);
+                        lst.add(item);
+                    }
+                }
+                return lst;
+            }
+        } catch (Exception e) {
+            Log.e("product list", e.getMessage());
+        }
+
+        return null;
+    }
     public RefuelItemData getRefuelItem(String uniqueId) {
         String url = API_BASE_URL + "api/refuels/?uniqueId=";
         try {

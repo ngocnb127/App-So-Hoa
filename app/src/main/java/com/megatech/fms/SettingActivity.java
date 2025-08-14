@@ -84,8 +84,18 @@ public class SettingActivity extends UserBaseActivity {
         txtIp.setText(settingModel.getDeviceIP());
         txtPrinter.setText(settingModel.getPrinterIP());
 
-        rad520.setChecked(settingModel.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520);
-        rad511.setChecked(settingModel.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ511);
+        TruckModel.THERMAL_PRINTER_TYPE type = settingModel.getThermalPrinterType();
+        if (type == TruckModel.THERMAL_PRINTER_TYPE.ZQ520) {
+            rad520.setChecked(true);
+            rad511.setChecked(false);
+        } else {
+            // Mặc định là ZQ511
+            rad511.setChecked(true);
+            rad520.setChecked(false);
+            settingModel.setThermalPrinterType(TruckModel.THERMAL_PRINTER_TYPE.ZQ511);
+        }
+
+
 
         getDeviceIMEI();
 
@@ -176,9 +186,9 @@ public class SettingActivity extends UserBaseActivity {
 
                 if (BuildConfig.THERMAL_PRINTER)
                 {
-                    RadioButton rad = (RadioButton) findViewById(R.id.rad_zq520);
+                    RadioButton rad = (RadioButton) findViewById(R.id.rad_zq511);
 
-                    settingModel.setThermalPrinterType(rad.isChecked()? TruckModel.THERMAL_PRINTER_TYPE.ZQ520: TruckModel.THERMAL_PRINTER_TYPE.ZQ511);
+                    settingModel.setThermalPrinterType(rad.isChecked()? TruckModel.THERMAL_PRINTER_TYPE.ZQ511: TruckModel.THERMAL_PRINTER_TYPE.ZQ520);
                 }
                 EditText editText = findViewById(R.id.txtCurrentAmount);
                 float currentAmount = Float.parseFloat(editText.getText().toString());

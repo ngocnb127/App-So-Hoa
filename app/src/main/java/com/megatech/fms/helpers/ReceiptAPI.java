@@ -51,7 +51,7 @@ public class ReceiptAPI extends  BaseAPI{
         }
         catch (Exception ex)
         {
-            Logger.appendLog("ReceiptAPI", ex.getMessage());
+            Logger.appendLog("ReceiptAPI 1", ex.getMessage());
         }
         return null;
     }
@@ -75,7 +75,7 @@ public class ReceiptAPI extends  BaseAPI{
 //            }
 
             String airlineImageUrl = model.getUrlImageAirline();
-            String airlineSignaturePath = model.getAirlineSignaturePath(null);
+            String airlineSignaturePath = model.getAirlineSignaturePath();
 
             if (airlineSignaturePath == null || airlineImageUrl.equals(airlineSignaturePath)) {
                 File file = new File(airlineImageUrl);
@@ -117,27 +117,27 @@ public class ReceiptAPI extends  BaseAPI{
         }
         catch (Exception ex)
         {
-            Logger.appendLog("ReceiptAPI", ex.getMessage());
+            Logger.appendLog("ReceiptAPI2", ex.getMessage());
         }
         return null;
     }
     public ReceiptModel post(ReceiptModel model)
     {
         try {
-            Logger.appendLog("ReceiptAPI", "Post Receipt: " + model.getNumber());
+            Logger.appendLog("ReceiptAPI3", "Post Receipt: " + model.getNumber());
             getPdfString(model);
             String parm = gson.toJson(model);
             model.setPdfImageString(null);
             HttpResponse response = httpClient.sendPOST(url, parm);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                Logger.appendLog("ReceiptAPI", "Post Receipt: " + model.getNumber() + " OK");
+                Logger.appendLog("ReceiptAPI4", "Post Receipt: " + model.getNumber() + " OK");
                 return gson.fromJson(response.getData(), ReceiptModel.class);
             }
 
         }
         catch (Exception ex)
         {
-            Logger.appendLog("ReceiptAPI", ex.getMessage());
+            Logger.appendLog("ReceiptAPI5", ex.getMessage());
         }
         return null;
     }
@@ -207,7 +207,7 @@ public class ReceiptAPI extends  BaseAPI{
         }
         catch (Exception ex)
         {
-            Logger.appendLog("ReceiptAPI", ex.getMessage());
+            Logger.appendLog("ReceiptAPI6", ex.getMessage());
         }
     }
 }

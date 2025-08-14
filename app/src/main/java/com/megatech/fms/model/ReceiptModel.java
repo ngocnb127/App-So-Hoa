@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.Locale;
 
 public class ReceiptModel extends BaseModel {
 
@@ -38,6 +39,8 @@ public class ReceiptModel extends BaseModel {
             String number = refuel.getReceiptNumber();
             if (number == null || number.isEmpty() || (refuel.getReceiptCount() > 0 && createNew))
                 number = receiptCode + String.format("%4s",Integer.toString(receiptCount, 36)).replace(" ","0").toUpperCase();
+
+
             String data = gson.toJson(refuel);
             model = gson.fromJson(data, ReceiptModel.class);
             model.uniqueId = UUID.randomUUID().toString();
@@ -72,12 +75,24 @@ public class ReceiptModel extends BaseModel {
             model.taxCode = refuel.getAirlineModel().getTaxCode().trim();
             model.customerType = refuel.getAirlineModel().isInternational()?1:0;
             model.productName = refuel.getAirlineModel().getProductName();
+
             model.isReturn = isReturn;
             model.setFlightType(refuel.isInternational()?1:0);
+
+            for (RefuelItemData item : refuels) {
+                if (item.getProductId() == 6) {
+                    model.setProductId(item.getProductId());
+                    model.setPName(item.getPName());
+                    model.setPCode(item.getPCode());
+                    break; // chỉ cần lấy bản ghi đầu tiên có productId = 6
+                }
+            }
 
             //int receiptCount = 1;
             int id = 0;
             for (RefuelItemData itemData : refuels) {
+
+
 
                 addItem(model, itemData);
                 if (itemData.getStartTime().compareTo(model.getStartTime()) < 0) {
@@ -103,6 +118,9 @@ public class ReceiptModel extends BaseModel {
                 number += "HT";
 
             model.setNumber(number);
+//            model.setProductId(refuel.getProductId());
+//            model.setPName(refuel.getPName());
+//            model.setPCode(refuel.getPCode());
         }
 
         return model;
@@ -181,7 +199,7 @@ public class ReceiptModel extends BaseModel {
         builder.append("\n");
         builder.append(String.format("A/C Type         : %-16s A/C reg     : %s\n", this.aircraftType, this.aircraftCode));
         builder.append(String.format("Flight No.       : %-16s Route       : %s\n", this.flightCode, this.routeName));
-        builder.append(String.format("Cert No.         : %-16s Product Name: %s\n", this.qualityNo, this.productName));
+        builder.append(String.format("Cert No.         : %-16s Product Name: %s\n", this.qualityNo, (this.pCode == null ? "JET A-1" : this.pCode)));
         builder.append(String.format("Start Time       : %-16s End Time    : %s\n", DateUtils.formatDate(this.startTime, "HH:mm dd/MM/yyyy"), DateUtils.formatDate(this.endTime, "HH:mm dd/MM/yyyy")));
         builder.append("Refueling Method : " + (isFHS ? "FHS" : "Refueler") + "\n");
         builder.append("------------------------------------------------------------------\n");
@@ -259,7 +277,7 @@ public class ReceiptModel extends BaseModel {
                 "^FO250," + (height + 180) + "^FB320,1,0,R,0^FD" + DateUtils.formatDate(endTime, "HH:mm dd/MM/yyyy") + "^FS\n" +
                 "^FO0," + (height + 210) + "^FB250,1,0,L,0^FDProduct Name        ^FS\n" +
                 "^FO240," + (height + 210) + "^FB10,1,0,C,0^FD:^FS\n" +
-                "^FO250," + (height + 210) + "^FB320,1,0,R,0^FDJet A-1^FS\n" +
+                "^FO250," + (height + 210) + "^FB320,1,0,R,0^FD"+(pCode == null ? "JET A-1" : pCode)+"^FS\n" +
                 "^FO0," + (height + 240) + "^FB250,1,0,L,0^FDRefueling Method^FS\n" +
                 "^FO240," + (height + 240) + "^FB10,1,0,C,0^FD:^FS\n" +
                 "^FO250," + (height + 240) + "^FB320,1,0,R,0^FD" + (isFHS ? "FHS" : "Refueler") + "^FS  \n" +
@@ -350,9 +368,29 @@ public class ReceiptModel extends BaseModel {
             height += 20;
             builder.append("^FO150," + height + "^XGE:SELLER.GRF,1,1^FS");
         }
+
+//        String qrData = String.format(Locale.US,
+//                "{\"number\":\"%s\",\"gallon\":%.0f,\"volume\":%.0f,\"weight\":%.0f}",
+//                this.number, gallon, volume, weight);
+//
+//// Tăng khoảng cách trước khi đặt QR
+//        height += 40;
+//
+//// ^BQN: QR Code (Model 2), module size (ví dụ 6–8)
+//// ^FDLA: L = error correction thấp, A = auto-encode
+//        int qrModuleSize = 7; // tuỳ máy in, 6–10 là đẹp
+//        builder.append("^FO0,").append(String.valueOf(height))
+//                .append("^BQN,2,").append(String.valueOf(qrModuleSize)).append("\n")
+//                .append("^FDLA,").append(qrData).append("^FS\n");
+//
+//// Tăng chiều cao label cho đủ chỗ QR
+//        height += 200;
+
         builder.append("^PQ1");
         builder.append("^LH0,0\n" );
         builder.append("^XZ");
+
+
 
         builder.insert(3,"^LL"+(height+200));
         return builder.toString();
@@ -408,7 +446,7 @@ public class ReceiptModel extends BaseModel {
                 "^FO250," + (height + 180) + "^FB320,1,0,R,0^FD" + DateUtils.formatDate(endTime, "HH:mm dd/MM/yyyy") + "^FS\n" +
                 "^FO0," + (height + 210) + "^FB250,1,0,L,0^FDProduct Name        ^FS\n" +
                 "^FO240," + (height + 210) + "^FB10,1,0,C,0^FD:^FS\n" +
-                "^FO250," + (height + 210) + "^FB320,1,0,R,0^FDJet A-1^FS\n" +
+                "^FO250," + (height + 210) + "^FB320,1,0,R,0^FD"+(pCode == null ? "JET A-1" : pCode)+"^FS\n" +
                 "^FO0," + (height + 240) + "^FB250,1,0,L,0^FDRefueling Method^FS\n" +
                 "^FO240," + (height + 240) + "^FB10,1,0,C,0^FD:^FS\n" +
                 "^FO250," + (height + 240) + "^FB320,1,0,R,0^FD" + (isFHS ? "FHS" : "Refueler") + "^FS  \n" +
@@ -528,7 +566,7 @@ public class ReceiptModel extends BaseModel {
         builder.append("\n");
         builder.append(String.format("A/C Type         : %-16s A/C reg     : %s\n", this.aircraftType, this.aircraftCode));
         builder.append(String.format("Flight No.       : %-16s Route       : %s\n", this.flightCode, this.routeName));
-        builder.append(String.format("Cert No.         : %-16s Product Name: %s\n", this.qualityNo, this.productName));
+        builder.append(String.format("Cert No.         : %-16s Product Name: %s\n", this.qualityNo, (this.pCode == null ? "JET A-1" : this.pCode)));
         builder.append(String.format("Start Time       : %-16s End Time    : %s\n", DateUtils.formatDate(this.startTime, "HH:mm dd/MM/yyyy"), DateUtils.formatDate(this.endTime, "HH:mm dd/MM/yyyy")));
         builder.append("Refueling Method : " + (isFHS ? "FHS" : "Refueler") + "\n");
         builder.append("------------------------------------------------------------------\n");
@@ -563,6 +601,10 @@ public class ReceiptModel extends BaseModel {
     private String customerAddress;
     private String taxCode;
     private String productName;
+    private int productId;
+    private String pName;
+    private String pCode;
+
 
     private int flightId;
     private String flightCode;
@@ -674,6 +716,30 @@ public class ReceiptModel extends BaseModel {
 
     public void setProductName(String productName) {
         this.productName = productName;
+    }
+
+    public int getProductId() {
+        return productId;
+    }
+
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    public String getPName() {
+        return pName;
+    }
+
+    public void setPName(String pName) {
+        this.pName = pName;
+    }
+
+    public String getPCode() {
+        return pCode;
+    }
+
+    public void setPCode(String pCode) {
+        this.pCode = pCode;
     }
 
     public int getFlightId() {

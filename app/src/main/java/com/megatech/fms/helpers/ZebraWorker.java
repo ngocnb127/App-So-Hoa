@@ -23,6 +23,9 @@ import com.zebra.sdk.printer.discovery.DiscoveryHandler;
 
 import java.io.File;
 import java.util.Date;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import java.util.Set;
 
 public class ZebraWorker {
 
@@ -52,54 +55,101 @@ public class ZebraWorker {
         return preferences.getString("ZEBRA_MAC_ADDRESS",null);
     }
 
+//    private void findPrinter(ReceiptModel model) {
+//        try {
+//            String macAddress = getAddress();
+//            if (macAddress != null)
+//            {
+//                con = new BluetoothConnection(macAddress);
+//
+//                Logger.appendLog("ZEBRA MAC ADDRESS",macAddress);
+//                if (model!=null)
+//                    print(model);
+//                return;
+//            }
+//            BluetoothDiscoverer.findPrinters(context, new DiscoveryHandler() {
+//                @Override
+//                public void foundPrinter(DiscoveredPrinter discoveredPrinter) {
+//                    printer = discoveredPrinter;
+//
+//                    printerBluetooth = (DiscoveredPrinterBluetooth) printer;
+//                    if (printerBluetooth!=null)
+//                        saveAddress(printerBluetooth.address);
+//
+//
+//
+//                }
+//
+//                @Override
+//                public void discoveryFinished() {
+//                    if (printer != null) {
+//                        con = printer.getConnection();
+//                        if (model != null)
+//                            print(model);
+//                    } else if (model != null)
+//                        onConnectionError();
+//                }
+//
+//                @Override
+//                public void discoveryError(String s) {
+//                    if (model!=null)
+//                        onConnectionError();
+//                }
+//            });
+//        }catch (Exception ex)
+//        {
+//            Logger.appendLog("ZEBRA ERROR",ex.getMessage());
+//            if (model!=null)
+//                onConnectionError();
+//        }
+//    }
+
     private void findPrinter(ReceiptModel model) {
         try {
             String macAddress = getAddress();
-            if (macAddress != null)
-            {
-                con = new BluetoothConnection(macAddress);
 
-                Logger.appendLog("ZEBRA MAC ADDRESS",macAddress);
-                if (model!=null)
+            // B1: Nếu đã lưu địa chỉ MAC, kết nối luôn
+            if (macAddress != null) {
+                con = new BluetoothConnection(macAddress);
+                Logger.appendLog("ZEBRA MAC ADDRESS", macAddress);
+                if (model != null)
                     print(model);
                 return;
             }
-            BluetoothDiscoverer.findPrinters(context, new DiscoveryHandler() {
-                @Override
-                public void foundPrinter(DiscoveredPrinter discoveredPrinter) {
-                    printer = discoveredPrinter;
 
-                    printerBluetooth = (DiscoveredPrinterBluetooth) printer;
-                    if (printerBluetooth!=null)
-                        saveAddress(printerBluetooth.address);
+            // B2: Nếu chưa có địa chỉ MAC, tìm trong thiết bị đã ghép đôi
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null || !adapter.isEnabled()) {
+                onConnectionError();
+                return;
+            }
 
+            Set<BluetoothDevice> bondedDevices = adapter.getBondedDevices();
+            if (bondedDevices == null || bondedDevices.isEmpty()) {
+                onConnectionError();
+                return;
+            }
 
+            // Tạm chọn thiết bị đầu tiên trong danh sách đã ghép
+            for (BluetoothDevice device : bondedDevices) {
+                macAddress = device.getAddress();
+                Logger.appendLog("ZEBRA BONDED PICKED", macAddress);
 
-                }
+                saveAddress(macAddress);
+                con = new BluetoothConnection(macAddress);
+                if (model != null)
+                    print(model);
+                return;
+            }
 
-                @Override
-                public void discoveryFinished() {
-                    if (printer != null) {
-                        con = printer.getConnection();
-                        if (model != null)
-                            print(model);
-                    } else if (model != null)
-                        onConnectionError();
-                }
+            onConnectionError();
 
-                @Override
-                public void discoveryError(String s) {
-                    if (model!=null)
-                        onConnectionError();
-                }
-            });
-        }catch (Exception ex)
-        {
-            Logger.appendLog("ZEBRA ERROR",ex.getMessage());
-            if (model!=null)
+        } catch (Exception ex) {
+            Logger.appendLog("ZEBRA ERROR", ex.getMessage());
+            if (model != null)
                 onConnectionError();
         }
-}
+    }
 
     Context context;
     DiscoveredPrinter printer ;

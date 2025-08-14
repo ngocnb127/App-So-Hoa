@@ -873,24 +873,63 @@ public class RefuelItemData extends BaseModel implements Cloneable {
     public void setWaterSensor(double waterSensor) {
         this.waterSensor = waterSensor;
     }
+    private int productId;
 
-    private double projectedCapacity;
-    private double actualCapacity;
-
-    public double getProjectedCapacity() {
-        return projectedCapacity;
+    public int getProductId() {
+        return productId;
     }
 
-    public void setProjectedCapacity(double projectedCapacity) {
-        this.projectedCapacity = projectedCapacity;
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    private ProductModel productModel;
+
+    public ProductModel getProductModel() {
+        return productModel;
+    }
+
+    public void setProductModel(ProductModel productModel) {
+        this.productModel = productModel;
+    }
+
+
+    private String pCode;
+    private String pName;
+
+    public String getPCode() {
+        return pCode;
+    }
+
+    public void setPCode(String pCode) {
+        this.pCode = pCode;
+    }
+
+    public String getPName() {
+        return pName;
+    }
+
+    public void setPName(String pName) {
+        this.pName = pName;
+    }
+
+    private double ProjectedCapacity;
+    private double ActualCapacity;
+
+    public double getProjectedCapacity() {
+        return ProjectedCapacity;
+    }
+
+    public void setProjectedCapacity(double ProjectedCapacity) {
+        this.ProjectedCapacity = ProjectedCapacity;
     }
 
     public double getActualCapacity() {
-        return actualCapacity;
+        return ActualCapacity;
     }
 
-    public void setActualCapacity(double actualCapacity) {
-        this.actualCapacity = actualCapacity;
+    public void setActualCapacity(double ActualCapacity) {
+        this.ActualCapacity = ActualCapacity;
     }
 
     public RefuelItemData split(double splitAmount)

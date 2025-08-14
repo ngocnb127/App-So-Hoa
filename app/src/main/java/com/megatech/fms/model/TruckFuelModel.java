@@ -22,12 +22,16 @@ public class TruckFuelModel extends BaseModel {
     private int operatorId;
     private String operatorName;
     private double amount; //litter
-    private double accumulatedRefuelAmount;//litter
+    private double AccumulateRefuelAmount;//litter
     private double truckCapacity;
 
     private Date testStartTime;
     private Date testEndTime;
     private boolean testResult = true;
+    private boolean FullVolumn = true;
+
+    private String appearanceCheck = "C&B";
+    private Boolean waterCheck = null;
 
     private double flowRate = 0;
     public TruckFuelModel() {
@@ -35,8 +39,8 @@ public class TruckFuelModel extends BaseModel {
         this.truckId = setting.getTruckId();
         this.truckNo = setting.getTruckNo();
         this.qcNo = FMSApplication.getApplication().getQCNo();
-        this.startTime = this.endTime = this.time = new Date();
-        this.testStartTime = this.testEndTime =  new Date();
+        this.startTime = this.endTime=this.testStartTime= this.testEndTime  = this.time = new Date();
+
 
     }
 
@@ -128,12 +132,12 @@ public class TruckFuelModel extends BaseModel {
         this.amount = amount;
     }
 
-    public double getAccumulatedRefuelAmount() {
-        return accumulatedRefuelAmount;
+    public double getAccumulateRefuelAmount() {
+        return AccumulateRefuelAmount;
     }
 
-    public void setAccumulatedRefuelAmount(double accumulatedRefuelAmount) {
-        this.accumulatedRefuelAmount = accumulatedRefuelAmount;
+    public void setAccumulateRefuelAmount(double AccumulateRefuelAmount) {
+        this.AccumulateRefuelAmount = AccumulateRefuelAmount;
     }
 
     public double getTruckCapacity() {
@@ -191,4 +195,29 @@ public class TruckFuelModel extends BaseModel {
     public void setFlowRate(double flowRate) {
         this.flowRate = flowRate;
     }
+
+    public String getAppearanceCheck() {
+        return appearanceCheck;
+    }
+
+    public void setAppearanceCheck(String appearanceCheck) {
+        this.appearanceCheck = appearanceCheck;
+    }
+    public Boolean isWaterCheck() {
+        return waterCheck;
+    }
+
+    public void setWaterCheck(Boolean waterCheck) {
+        this.waterCheck = waterCheck;
+    }
+
+    public Boolean getFullVolumn() {
+        return FullVolumn;
+    }
+
+    public void setFullVolumn(Boolean FullVolumn) {
+        this.FullVolumn = FullVolumn;
+    }
+
+
 }
