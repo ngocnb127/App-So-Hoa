@@ -10,6 +10,10 @@
             type="com.megatech.fms.model.ReviewModel" />
 
     </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
     <TableLayout
         android:layout_width="match_parent"
@@ -67,7 +71,7 @@
                 android:layout_weight="1"
                 android:text="@string/review_instruction"
                 android:textAlignment="center"
-                android:textSize="38sp"
+                android:textSize="26sp"
                 android:textStyle="bold">
 
             </TextView>
@@ -81,7 +85,7 @@
                 android:layout_weight="1"
                 android:text="@string/review_instruction_en"
                 android:textAlignment="center"
-                android:textSize="40sp"
+                android:textSize="30sp"
                 android:textStyle="bold|italic">
 
             </TextView>
@@ -99,9 +103,10 @@
 
                 <ImageView
                     android:id="@+id/btnWorst"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="144dp"
+                    android:layout_height="132dp"
                     android:layout_gravity="center"
+
                     android:onClick="onClick"
                     android:src="@drawable/verymad"></ImageView>
 
@@ -129,8 +134,8 @@
 
                 <ImageView
                     android:id="@+id/btnBad"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="151dp"
+                    android:layout_height="134dp"
                     android:layout_gravity="center"
                     android:onClick="onClick"
                     android:src="@drawable/mad"></ImageView>
@@ -159,8 +164,8 @@
 
                 <ImageView
                     android:id="@+id/btnNeutral"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="151dp"
+                    android:layout_height="135dp"
                     android:layout_gravity="center"
                     android:onClick="onClick"
                     android:src="@drawable/neutral"></ImageView>
@@ -189,8 +194,8 @@
 
                 <ImageView
                     android:id="@+id/btnGood"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="157dp"
+                    android:layout_height="135dp"
                     android:layout_gravity="center"
                     android:onClick="onClick"
                     android:src="@drawable/good"></ImageView>
@@ -220,7 +225,7 @@
                 <ImageView
                     android:id="@+id/btnBest"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="135dp"
                     android:layout_gravity="center"
                     android:onClick="onClick"
                     android:src="@drawable/best"></ImageView>
@@ -240,15 +245,39 @@
             </LinearLayout>
         </TableRow>
 
-        <TableRow android:visibility="@{reviewItem.worst || reviewItem.bad? View.VISIBLE : View.GONE}">
-
+        <TableRow android:visibility="visible">
             <TableLayout
                 android:layout_marginTop="20dp"
                 android:layout_width="0dp"
                 android:layout_weight="1">
-
+                <TableRow>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:text="Chọn các tiêu chí mà quý khách chưa hài lòng (nếu có – không bắt buộc)"
+                        android:textAlignment="center"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black" />
+                </TableRow>
                 <TableRow>
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="10dp"
+                        android:text="Please select the criteria that you are not satisfied with (if any – not mandatory)"
+                        android:textAlignment="center"
+                        android:textColor="@android:color/black"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </TableRow>
+                <!-- Hàng 1 -->
+                <TableRow>
+                    <!-- REFUELLER_NOT_CLEAN -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -256,13 +285,12 @@
                         android:padding="5dp">
 
                         <CheckBox
-                            android:id="@+id/chkBad1"
+                            android:id="@+id/chkBad64"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="@{reviewItem.badReason1}"
+                            android:checked="@{reviewItem.badReason64}"
                             android:onClick="onClick"
-                            android:tag="1"
-                            ></CheckBox>
+                            android:tag="64" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -272,20 +300,17 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/unsafe_refuelling">
-
-                            </TextView>
+                                android:text="Xe tra nạp chưa sạch sẽ, sơn xe bị bong tróc" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/unsafe_refuelling_en"
-                                android:textStyle="italic">
-
-                            </TextView>
+                                android:text="The refueller was not clean, and its paint was peeling"
+                                android:textStyle="italic" />
                         </LinearLayout>
                     </LinearLayout>
 
+                    <!-- STAFF_UNPROFESSIONAL -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -293,13 +318,12 @@
                         android:padding="5dp">
 
                         <CheckBox
-                            android:id="@+id/chkBad2"
+                            android:id="@+id/chkBad128"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="@{reviewItem.badReason2}"
+                            android:checked="@{reviewItem.badReason128}"
                             android:onClick="onClick"
-                            android:tag="2"
-                            ></CheckBox>
+                            android:tag="128" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -309,23 +333,20 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/inaccurately_perform">
-
-                            </TextView>
+                                android:text="Nhân viên không mặc đúng đồng phục; Thái độ thiếu chuyên nghiệp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/inaccurately_perform_en"
-                                android:textStyle="italic">
-
-                            </TextView>
+                                android:text="Staff did not wear the proper uniform; Service attitude was impolite or unfriendly"
+                                android:textStyle="italic" />
                         </LinearLayout>
                     </LinearLayout>
                 </TableRow>
 
+                <!-- Hàng 2 -->
                 <TableRow>
-
+                    <!-- REFUEL_NOT_ON_TIME_OR_QUALITY -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -333,14 +354,12 @@
                         android:padding="5dp">
 
                         <CheckBox
-                            android:id="@+id/chkBad4"
+                            android:id="@+id/chkBad256"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="@{reviewItem.badReason4}"
+                            android:checked="@{reviewItem.badReason256}"
                             android:onClick="onClick"
-                            android:tag="4"
-                            ></CheckBox>
-
+                            android:tag="256" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -350,98 +369,17 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/not_on_time">
-
-                            </TextView>
+                                android:text="Tra nạp không đúng giờ; không đáp ứng quy trình, số lượng, chất lượng" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/not_on_time_en"
-                                android:textStyle="italic">
-
-                            </TextView>
+                                android:text="Refuelling was not on time; did not fulfill the required procedure, quantity &amp; quality"
+                                android:textStyle="italic" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight=".5"
-                        android:padding="5dp">
-
-                        <CheckBox
-                            android:id="@+id/chkBad8"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="@{reviewItem.badReason8}"
-                            android:onClick="onClick"
-                            android:tag="8"
-                            ></CheckBox>
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/inappropriate_attitude">
-
-                            </TextView>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/inappropriate_attitude_en"
-                                android:textStyle="italic">
-
-                            </TextView>
-                        </LinearLayout>
-                    </LinearLayout>
-                </TableRow>
-
-                <TableRow>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight=".5"
-                        android:padding="5dp">
-
-                        <CheckBox
-                            android:id="@+id/chkBad16"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="@{reviewItem.badReason16}"
-                            android:onClick="onClick"
-                            android:tag="16"
-                            ></CheckBox>
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/inaccurate_amount">
-
-                            </TextView>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/inaccurate_amount_en"
-                                android:textStyle="italic">
-
-                            </TextView>
-                        </LinearLayout>
-                    </LinearLayout>
-
+                    <!-- OTHER -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -454,8 +392,7 @@
                             android:layout_height="wrap_content"
                             android:checked="@{reviewItem.badReason32}"
                             android:onClick="onClick"
-                            android:tag="32"
-                            ></CheckBox>
+                            android:tag="32" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -465,22 +402,19 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/other_reason">
-
-                            </TextView>
+                                android:text="Lý do khác" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/other_reason_en"
-                                android:textStyle="italic">
-
-                            </TextView>
+                                android:text="Other reason"
+                                android:textStyle="italic" />
                         </LinearLayout>
                     </LinearLayout>
                 </TableRow>
-                <TableRow android:visibility="@{reviewItem.badReason32? View.VISIBLE: View.GONE}" >
 
+                <!-- Ô nhập lý do khác -->
+                <TableRow android:visibility="@{reviewItem.badReason32? View.VISIBLE: View.GONE}">
                     <EditText
                         android:id="@+id/txtOtherReason"
                         android:layout_width="0dp"
@@ -490,10 +424,12 @@
                         android:onClick="onClick"
                         android:padding="5dp"
                         android:focusable="false"
-                        android:hint="@string/input_other_reason"></EditText>
-
+                        android:hint="Nhập lý do khác / Input other reason" />
                 </TableRow>
             </TableLayout>
         </TableRow>
+
+
     </TableLayout>
+    </ScrollView>
 </layout>

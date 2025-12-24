@@ -59,6 +59,7 @@ import com.megatech.fms.databinding.RefuelBm2508Binding;
 import com.megatech.fms.databinding.SelectUserBinding;
 import com.megatech.fms.enums.INVOICE_TYPE;
 import com.megatech.fms.enums.RETURN_UNIT;
+import com.megatech.fms.exceptions.InvalidRefuelTimeException;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.Logger;
@@ -483,11 +484,17 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             }
         } else {
             if (validate(isReturn)) {
-                ReceiptModel model = ReceiptModel.createReceipt(printItems,null, true,null, true);
-                Intent intent = new Intent(this, PrintReceiptActivity.class);
-                intent.putExtra("RECEIPT", model.toJson());
-                //startActivityForResult(intent, RECEIPT_WINDOW);
-                startActivity(intent);
+                try {
+                    ReceiptModel model = ReceiptModel.createReceipt(
+                            printItems, null, true, null, true
+                    );
+                    Intent intent = new Intent(this, PrintReceiptActivity.class);
+                    intent.putExtra("RECEIPT", model.toJson());
+                    startActivity(intent);
+
+                } catch (InvalidRefuelTimeException ex) {
+                    showBusinessError(ex.getMessage().toString());
+                }
             }
         }
     }
@@ -583,10 +590,17 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
     private void showReceiptPreview(String oldNumber, String[] replacedReceipts, boolean createNew) {
         //ReceiptModel model = ReceiptModel.createReceipt(printItems,oldNumber, createNew);
-        ReceiptModel model = ReceiptModel.createReceipt(printItems,replacedReceipts,false, oldNumber, createNew);
-        Intent intent = new Intent(this, PrintReceiptActivity.class);
-        intent.putExtra("RECEIPT", model.toJson());
-        startActivityForResult(intent, RECEIPT_WINDOW);
+        try {
+            ReceiptModel model = ReceiptModel.createReceipt(
+                    printItems, replacedReceipts, false, oldNumber, createNew
+            );
+            Intent intent = new Intent(this, PrintReceiptActivity.class);
+            intent.putExtra("RECEIPT", model.toJson());
+            startActivityForResult(intent, RECEIPT_WINDOW);
+
+        } catch (InvalidRefuelTimeException ex) {
+            showBusinessError(ex.getMessage());
+        }
     }
 
     private void reprintReceipt() {
@@ -1032,6 +1046,25 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 m_Title = getString(R.string.update_end_meter);
                 showEditDialog(id, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, true);
 
+                break;
+
+            case R.id.btnLeave:
+                Button btnLeave = (Button) v;
+                btnLeave.setEnabled(false);
+                btnLeave.setVisibility(View.GONE);
+
+                // Ghi lại thời gian hiện tại
+                Date nowLeave = new Date();
+                refuelData.setLeaveTime(nowLeave);
+
+                // Hiển thị label
+                TextView lblLeaveTime = findViewById(R.id.lblLeaveTime);
+                String leaveTimeStr = DateUtils.formatDate(nowLeave, "dd/MM/yyyy HH:mm:ss");
+                lblLeaveTime.setText("Rời đi: " + leaveTimeStr);
+                lblLeaveTime.setVisibility(View.VISIBLE);
+
+                // Lưu xuống server/local DB
+                updateBinding();
                 break;
         }
 

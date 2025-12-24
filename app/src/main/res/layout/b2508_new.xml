@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
@@ -88,7 +89,8 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{mItem.flightCode}' />
+                android:text='@{mItem.flightCode}'
+                tools:ignore="TouchTargetSizeCheck" />
 
             <TextView
                 style="?android:attr/textAppearanceMedium"
@@ -130,7 +132,8 @@
                 android:layout_width="0dp"
                 android:layout_height="34dp"
                 android:layout_weight=".25"
-                android:padding="5dp"></Spinner>
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck"></Spinner>
 
             <TextView
                 style="?android:attr/textAppearanceMedium"
@@ -146,8 +149,14 @@
                 android:layout_width="0dp"
                 android:layout_height="34dp"
                 android:layout_weight=".25"
-                android:padding="5dp"></Spinner>
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck"></Spinner>
         </TableRow>
+
+
+
+
+
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -173,7 +182,8 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{DateUtils.formatDate(mItem.time,"HH:mm")}' />
+                android:text='@{DateUtils.formatDate(mItem.time,"HH:mm")}'
+                tools:ignore="TouchTargetSizeCheck" />
 
             <TextView
                 style="?android:attr/textAppearanceMedium"
@@ -194,7 +204,8 @@
                 android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}' />
+                android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}'
+                tools:ignore="TouchTargetSizeCheck" />
         </TableRow>
 
         <TableRow
@@ -224,6 +235,156 @@
                 android:padding="5dp"
                 android:text="@{mItem.aircraftType}"></TextView>
 
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EEEEEE"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:text=" Điều kiện / Circumstances"
+                android:padding="5dp"
+                android:textColor="#000000" />
+        </TableRow>
+
+        <!-- Hàng 1 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:text="APU đang nổ / APU operating" />
+
+            <CheckBox
+                android:id="@+id/section6_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_1}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="GPU đang hoạt động / GPU operating" />
+
+            <CheckBox
+                android:id="@+id/section6_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_2}"
+                android:onClick="onClick"
+                android:focusable="false" />
+        </TableRow>
+
+        <!-- Hàng 2 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Điều hòa tàu bay đang hoạt động / AC operating" />
+
+            <CheckBox
+                android:id="@+id/section6_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_3}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Trong nhà chứa tàu bay / In hangar" />
+
+            <CheckBox
+                android:id="@+id/section6_4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_5}"
+                android:onClick="onClick"
+                android:focusable="false" />
+        </TableRow>
+
+        <!-- Hàng 3 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Bảo dưỡng càng chính / MLG under maintenance" />
+
+            <CheckBox
+                android:id="@+id/section6_5"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_4}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:minHeight="48dp"
+                android:text="Một động cơ tàu bay đang hoạt động /One Aircraft Engine Running" />
+
+            <CheckBox
+                android:id="@+id/section6_6"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:checked="@={mItem.section6_6}"
+                android:focusable="false"
+                android:minHeight="48dp"
+                android:onClick="onClick" />
         </TableRow>
 
 
@@ -330,15 +491,16 @@
             android:background="#ffffff"
             android:padding="5dp">
 
-
+            <!-- Label chính -->
             <TextView
                 style="?android:attr/textAppearanceMedium"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight=".25"
                 android:padding="5dp"
-                android:text="Lượng nhiên liệu tra nạp(Gallon)"></TextView>
+                android:text="Lượng nhiên liệu tra nạp (Gallon)" />
 
+            <!-- Giá trị gallon -->
             <TextView
                 android:id="@+id/b2508_new_fuelOnBoardGalon"
                 style="?android:attr/textAppearanceMedium"
@@ -347,12 +509,23 @@
                 android:layout_weight=".25"
                 android:drawableStart="@drawable/ic_edit"
                 android:focusable="false"
-                android:hint="@string/touch_to_edit"
                 android:onClick="onClick"
                 android:padding="5dp"
-                android:text='@{String.format("%.2f",mItem.fuelOnBoardGallon)}'></TextView>
+                android:text='@{String.format("%.2f", mItem.fuelOnBoardGallon)}' />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text='@{mItem.densityDisplayText}'
+                android:textColor="@android:color/holo_red_dark"
+                android:textStyle="bold"/>
+
 
         </TableRow>
+
+
+
+
 
         <TableRow
             android:layout_width="match_parent"

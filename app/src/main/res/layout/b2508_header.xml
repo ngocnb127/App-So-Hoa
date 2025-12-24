@@ -110,6 +110,19 @@
                 android:text="@string/fuelUplift"
                 android:textStyle="bold"></TextView>
 
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/fuelUpliftUSG"
+                android:textStyle="bold"></TextView>
+
         </LinearLayout>
 
         <View

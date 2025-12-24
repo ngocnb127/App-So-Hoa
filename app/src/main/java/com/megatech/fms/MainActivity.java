@@ -82,7 +82,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
 
         super.onResume();
         TabLayout tbl = findViewById(R.id.main_tablayout);
-        tbl.getTabAt(0).setText(currentApp.getTruckNo());
+        tbl.getTabAt(0).setText(currentApp.getTruckNo()   );
         if (btnSync != null)
             btnSync.setVisibility(View.VISIBLE);
         showShiftInfo();

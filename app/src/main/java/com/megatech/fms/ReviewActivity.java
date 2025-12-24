@@ -358,11 +358,10 @@ public class ReviewActivity extends UserBaseActivity implements View.OnClickList
             case R.id.txtOtherReason:
                 showInputOther();
                 break;
-            case R.id.chkBad1:
-            case R.id.chkBad2:
-            case R.id.chkBad4:
-            case R.id.chkBad8:
-            case R.id.chkBad16:
+            case R.id.chkBad64:
+            case R.id.chkBad128:
+            case R.id.chkBad256:
+
             case R.id.chkBad32:
                 int val = Integer.parseInt( v.getTag().toString());
                 if (((CheckBox)v).isChecked())

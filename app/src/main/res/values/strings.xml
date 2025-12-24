@@ -100,13 +100,14 @@
         "For example, position the FAB to one side of stream of a cards so the FAB won’t interfere "
         "when a user tries to pick up one of cards.\n\n"
     </string>
-    <string name="lcr_ip_address">Địa chỉ IP thiết bị LCR</string>
+    <string name="lcr_ip_address">Địa chỉ IP Đồng hồ</string>
     <string name="connection_check">Kiểm tra kết nối LCR</string>
     <string name="lcr_connection_error">Lỗi kết nối thiết bị LCR</string>
     <string name="lcr_connection_ok">Kết nối thiết bị thành công</string>
     <string name="setting">Cài đặt</string>
     <string name="refuel">Tra nạp</string>
     <string name="fuelUplift">Lượng nhiên liệu tra nạp</string>
+    <string name="fuelUpliftUSG">Lượng nhiên liệu tra nạp USG</string>
     <string name="refuel_check">Kiểm tra</string>
     <string name="start">Bắt đầu</string>
     <string name="pause">Tạm dừng</string>
@@ -525,6 +526,7 @@
     <string name="change_charter_confirm">Bạn thực sự muốn thay đổi tên in hóa đơn?</string>
     <string name="re_print">Chỉ In lại phiếu</string>
     <string name="thermal_printer_type">Loại máy in nhiệt</string>
+    <string name="device_type">Loại đồng hồ</string>
     <string name="max_flowrate">Lưu lượng tối đa</string>
     <string name="projected_capacity">Tải dầu dự kiến</string>
     <string name="actual_capacity">Tải dầu thực tế</string>

@@ -5,6 +5,7 @@ import static com.megatech.fms.model.RefuelItemData.GALLON_TO_LITTER;
 import com.megatech.fms.BuildConfig;
 import com.megatech.fms.FMSApplication;
 import com.megatech.fms.enums.RETURN_UNIT;
+import com.megatech.fms.exceptions.InvalidRefuelTimeException;
 import com.megatech.fms.helpers.DateUtils;
 
 import java.time.Year;
@@ -24,6 +25,36 @@ public class ReceiptModel extends BaseModel {
     }
 
     public static ReceiptModel createReceipt(List<RefuelItemData> refuels, String[] replacedReceipts, boolean isReturn, String oldNumber, boolean createNew) {
+
+        // =================================================
+        // 🔴 VALIDATE TIME CHO TỪNG REFUEL ITEM (>= 3 PHÚT)
+        // =================================================
+        for (RefuelItemData item : refuels) {
+
+            Date start = item.getStartTime();
+            Date end   = item.getEndTime();
+
+            if (start == null || end == null) {
+                throw new InvalidRefuelTimeException(
+                        "Thời gian bắt đầu và kết thúc không hợp lệ, vui lòng kiểm tra lại"
+                );
+            }
+
+            long diffMs = end.getTime() - start.getTime();
+            long diffMinutes = diffMs / (60 * 1000);
+
+            if (diffMinutes < 3) {
+                throw new InvalidRefuelTimeException(
+                        "Thời gian bắt đầu và kết thúc không hợp lệ, vui lòng kiểm tra lại"
+                );
+            }
+        }
+
+        // =================================================
+        // ⬇️ TỪ ĐÂY TRỞ ĐI MỚI ĐƯỢC PHÉP TẠO RECEIPT
+        // =================================================
+
+
         ReceiptModel model = null;
 
         TruckModel  setting  = FMSApplication.getApplication().getSetting();
@@ -31,6 +62,9 @@ public class ReceiptModel extends BaseModel {
         String receiptCode = setting.getReceiptCode();
         int receiptCount = setting.getReceiptCount();
         receiptCount ++;
+
+
+
 
         if (refuels.size() > 0) {
             RefuelItemData refuel = refuels.get(0);

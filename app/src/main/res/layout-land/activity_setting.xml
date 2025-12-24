@@ -276,7 +276,46 @@
         </RadioGroup>
 
     </TableRow>
+        <TableRow
+            android:id="@+id/row_Device_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp">
 
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="right"
+                android:text="@string/device_type"
+                android:textSize="@dimen/medium_text"
+                android:visibility="visible" />
+
+            <RadioGroup
+                android:id="@+id/group_device_type"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rad_LCR"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="LCR"
+                    android:textSize="@dimen/medium_text" />
+
+                <RadioButton
+                    android:id="@+id/rad_TCS"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="TCS"
+                    android:textSize="@dimen/medium_text" />
+            </RadioGroup>
+
+        </TableRow>
 
 </LinearLayout>
 </layout>

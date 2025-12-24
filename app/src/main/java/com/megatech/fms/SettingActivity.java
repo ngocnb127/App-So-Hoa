@@ -95,6 +95,22 @@ public class SettingActivity extends UserBaseActivity {
             settingModel.setThermalPrinterType(TruckModel.THERMAL_PRINTER_TYPE.ZQ511);
         }
 
+        // --- Xử lý Device Type (LCR / TCS) ---
+        RadioButton radLCR = findViewById(R.id.rad_LCR);
+        RadioButton radTCS = findViewById(R.id.rad_TCS);
+        findViewById(R.id.row_Device_type).setVisibility(View.VISIBLE);
+
+        // Gán giá trị ban đầu theo settingModel
+        TruckModel.DEVICE_TYPE deviceType = settingModel.getDeviceType();
+        if (deviceType == TruckModel.DEVICE_TYPE.TCS) {
+            radTCS.setChecked(true);
+            radLCR.setChecked(false);
+        } else {
+            // Mặc định là LCR
+            radLCR.setChecked(true);
+            radTCS.setChecked(false);
+            settingModel.setDeviceType(TruckModel.DEVICE_TYPE.LCR);
+        }
 
 
         getDeviceIMEI();
@@ -190,6 +206,15 @@ public class SettingActivity extends UserBaseActivity {
 
                     settingModel.setThermalPrinterType(rad.isChecked()? TruckModel.THERMAL_PRINTER_TYPE.ZQ511: TruckModel.THERMAL_PRINTER_TYPE.ZQ520);
                 }
+
+                // --- Lưu loại thiết bị (LCR / TCS) ---
+                RadioButton radLCR = findViewById(R.id.rad_LCR);
+                RadioButton radTCS = findViewById(R.id.rad_TCS);
+                if (radTCS.isChecked())
+                    settingModel.setDeviceType(TruckModel.DEVICE_TYPE.TCS);
+                else
+                    settingModel.setDeviceType(TruckModel.DEVICE_TYPE.LCR);
+
                 EditText editText = findViewById(R.id.txtCurrentAmount);
                 float currentAmount = Float.parseFloat(editText.getText().toString());
                 settingModel.setCurrentAmount(currentAmount);

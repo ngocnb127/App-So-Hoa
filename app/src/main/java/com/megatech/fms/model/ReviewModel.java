@@ -121,6 +121,18 @@ public class ReviewModel extends BaseModel{
     {
         return badReason(32);
     }
+    public boolean isBadReason64()
+    {
+        return badReason(64);
+    }
+    public boolean isBadReason128()
+    {
+        return badReason(128);
+    }
+    public boolean isBadReason256()
+    {
+        return badReason(256);
+    }
 
     private String imagePath;
 

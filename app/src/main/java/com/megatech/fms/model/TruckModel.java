@@ -227,7 +227,10 @@ public class TruckModel extends BaseModel {
         isFHS = FHS;
     }
 
-    private THERMAL_PRINTER_TYPE thermalPrinterType = THERMAL_PRINTER_TYPE.ZQ520;
+
+    private THERMAL_PRINTER_TYPE thermalPrinterType = THERMAL_PRINTER_TYPE.ZQ511; // ✅ đổi mặc định sang ZQ511
+    private DEVICE_TYPE deviceType = DEVICE_TYPE.LCR; // ✅ thêm DEVICE_TYPE với mặc định là LCR
+
 
     public THERMAL_PRINTER_TYPE getThermalPrinterType() {
         return thermalPrinterType;
@@ -237,9 +240,23 @@ public class TruckModel extends BaseModel {
         this.thermalPrinterType = thermalPrinterType;
     }
 
+    // 🔸 Getter / Setter cho DEVICE_TYPE
+    public DEVICE_TYPE getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(DEVICE_TYPE deviceType) {
+        this.deviceType = deviceType;
+    }
+
     public enum THERMAL_PRINTER_TYPE
     {
         ZQ520,
         ZQ511
+    }
+    public enum DEVICE_TYPE
+    {
+        LCR,
+        TCS
     }
 }

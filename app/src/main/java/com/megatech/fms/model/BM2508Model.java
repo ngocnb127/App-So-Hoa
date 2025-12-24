@@ -3,6 +3,45 @@ package com.megatech.fms.model;
 import java.util.Date;
 
 public class BM2508Model extends BaseModel {
+    public static final double GALLON_TO_LITTER = 3.7854;
+    // ===== Density (NGHIỆP VỤ CHUẨN) =====
+    private double density;   // giá trị density đang dùng
+    private DensitySource densitySource;
+
+    // ===== Enum =====
+    public enum DensitySource {
+        LATEST,        // lấy từ LCR / cấu hình mới nhất
+        DEFAULT_08     // fallback 0.8
+    }
+
+    // ===== Getter =====
+    public double getDensity() {
+        return density;
+    }
+
+    public DensitySource getDensitySource() {
+        return densitySource;
+    }
+
+    // ===== Setter NGHIỆP VỤ =====
+    public void applyLatestDensity(double latestDensity) {
+
+        // ✅ Density Jet A-1 hợp lệ ~0.75–0.85
+        if (latestDensity >= 0.7 && latestDensity <= 0.9) {
+            this.density = latestDensity;
+            this.densitySource = DensitySource.LATEST;
+        } else {
+            applyDefaultDensity();
+        }
+    }
+
+
+
+    public void applyDefaultDensity() {
+        this.density = 0.8;
+        this.densitySource = DensitySource.DEFAULT_08;
+    }
+    // ===== Enum =====
 
     private Integer AirportId = 0;
     private Integer FlightId = 0;
@@ -37,13 +76,39 @@ public class BM2508Model extends BaseModel {
     private String TextAirlineSignature;
     private String TextUserSkypecSignature;
 
-
+    // 🔹 Bổ sung mới (mục 6)
+    private Boolean Section6_1;
+    private Boolean Section6_2;
+    private Boolean Section6_3;
+    private Boolean Section6_4;
+    private Boolean Section6_5;
+    private Boolean Section6_6;
 
     private String UrlImageAirline;
 
 
 
     private String UrlImageSkypec;
+
+
+    // --- Getter & Setter ---
+    public Boolean getSection6_1() { return Section6_1; }
+    public void setSection6_1(Boolean section6_1) { Section6_1 = section6_1; }
+
+    public Boolean getSection6_2() { return Section6_2; }
+    public void setSection6_2(Boolean section6_2) { Section6_2 = section6_2; }
+
+    public Boolean getSection6_3() { return Section6_3; }
+    public void setSection6_3(Boolean section6_3) { Section6_3 = section6_3; }
+
+    public Boolean getSection6_4() { return Section6_4; }
+    public void setSection6_4(Boolean section6_4) { Section6_4 = section6_4; }
+
+    public Boolean getSection6_5() { return Section6_5; }
+    public void setSection6_5(Boolean section6_5) { Section6_5 = section6_5; }
+
+    public Boolean getSection6_6() { return Section6_6; }
+    public void setSection6_6(Boolean section6_6) { Section6_6 = section6_6; }
 
     public String getUrlImageAirline() {
         return UrlImageAirline;
@@ -109,6 +174,7 @@ public class BM2508Model extends BaseModel {
 
     public void setFuelUplift(double FuelUplift) {
         this.FuelUplift = FuelUplift;
+        recalcFuelOnBoardGallon();
     }
     public String getStaffName() {
         return StaffName;
@@ -314,6 +380,50 @@ public class BM2508Model extends BaseModel {
     public void setUserSkypecSignatureGalleryPath(String userSkypecSignatureGalleryPath) {
         this.userSkypecSignatureGalleryPath = userSkypecSignatureGalleryPath;
     }
+
+    public void recalcFuelOnBoardGallon() {
+
+        if (!"KGs".equalsIgnoreCase(Unit)) {
+            return;
+        }
+
+        if (FuelUplift <= 0) {
+            FuelOnBoardGallon = 0;
+            return;
+        }
+
+        // ⚠️ chỉ fallback khi density CHƯA BAO GIỜ được set
+        if (density <= 0 && densitySource == null) {
+            applyDefaultDensity();
+        }
+
+        double volumeLiter = Math.round(FuelUplift / density);
+        FuelOnBoardGallon = Math.round(volumeLiter / GALLON_TO_LITTER);
+    }
+
+
+    // ===== UI helper cho DataBinding =====
+    public boolean isUseLatestDensity() {
+        return densitySource == DensitySource.LATEST;
+    }
+
+    public boolean isUseDefaultDensity() {
+        return densitySource == DensitySource.DEFAULT_08;
+    }
+    // ===== UI helper cho DataBinding =====
+    public String getDensityDisplayText() {
+
+        if (densitySource == DensitySource.LATEST) {
+            return String.format(
+                    "Đang áp dụng tỷ trọng mới nhất (%.3f)",
+                    density
+            );
+        }
+
+        return "Đang áp dụng tỷ trọng mặc định (0.800)";
+    }
+
+
 
 
 }

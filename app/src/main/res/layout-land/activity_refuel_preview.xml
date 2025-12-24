@@ -524,6 +524,35 @@
                         android:visibility="gone"
                         app:layout_constraintStart_toEndOf="@id/guideline_center_left"
                         app:layout_constraintTop_toBottomOf="@id/refuel_preview_product" />
+
+                    <!-- Nút Rời đi -->
+                    <TextView
+                        style="?android:attr/textAppearanceMedium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:padding="3dp"
+                        android:text="Rời đi" />
+
+                    <Button
+                        android:id="@+id/btnLeave"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:text="Rời đi"
+                        android:onClick="onClick"
+                        android:visibility="@{mItem.leaveTime == null ? View.VISIBLE : View.GONE}" />
+
+                    <TextView
+                        android:id="@+id/lblLeaveTime"
+                        style="?android:attr/textAppearanceMedium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:padding="3dp"
+                        android:text='@{mItem.leaveTime != null ? String.format("Rời đi: %s", DateUtils.formatDate(mItem.leaveTime,"dd/MM/yyyy HH:mm:ss")) : ""}'
+                        android:visibility="@{mItem.leaveTime != null ? View.VISIBLE : View.GONE}" />
+
                 </TableRow>
 
                 <TableRow

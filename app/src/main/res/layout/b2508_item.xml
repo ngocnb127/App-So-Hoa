@@ -94,6 +94,18 @@
         android:text='@{String.valueOf(mItem.fuelUplift)}'></TextView>
 
 
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{String.valueOf(mItem.fuelOnBoardGallon)}'></TextView>
+
+
 
 </LinearLayout>
 </layout>

@@ -894,4 +894,13 @@ public class DataHelper {
 
         return repo.getBM2505ContainerList();
     }
+
+    public static Double getLatestDensityFromLocal() {
+        return repo.getLatestDensityFromLocal();
+    }
+
+
+
+
+
 }

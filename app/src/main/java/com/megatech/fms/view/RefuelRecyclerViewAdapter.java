@@ -1,5 +1,6 @@
 package com.megatech.fms.view;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -11,9 +12,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckedTextView;
 import android.widget.Filter;
 import android.widget.Filterable;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +31,7 @@ import com.megatech.fms.RefuelPreviewActivity;
 import com.megatech.fms.UserBaseActivity;
 import com.megatech.fms.databinding.CardviewRefuelItemBinding;
 import com.megatech.fms.helpers.DataHelper;
+import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
 
@@ -37,6 +41,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
 
 public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecyclerViewAdapter.MyViewHolder> implements Filterable {
 
@@ -240,6 +246,8 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
             this.binding = binding;
         }
 
+
+
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
 
@@ -256,8 +264,10 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
         public void bind(RefuelItemData itemData) {
             binding.setMItem(itemData);
             mData = itemData;
-
             binding.executePendingBindings();
+
+
+
             Date d = new Date();
             long t = d.getTime() - mData.getRefuelTime().getTime();
             long m = t / (1000 * 60);
@@ -278,7 +288,54 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
                 mRefuelTime.setTextColor(color);
             }
 
+            // TIẾP CẬN
+            binding.btnApproach.setOnClickListener(v -> {
+                itemData.setApproachTime(new Date());
+                itemData.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
+                saveAndUpdate(itemData);
+            });
+
+            // RỜI ĐI
+            binding.btnLeave.setOnClickListener(v -> {
+                itemData.setLeaveTime(new Date());
+                itemData.setStatus(REFUEL_ITEM_STATUS.DONE);
+                saveAndUpdate(itemData);
+            });
+
         }
+
+        private void saveAndUpdate(RefuelItemData item) {
+
+            new Thread(() -> {
+                try {
+                    Logger.appendLog("FMS", "Posting refuel update...");
+                    DataHelper.postRefuel(item, true);
+
+                } catch (Exception ex) {
+                    Logger.appendLog("ERR", ex.getMessage());
+                }
+
+                // Cập nhật UI
+                ((Activity) ctx).runOnUiThread(() -> {
+                    binding.invalidateAll();
+                    notifyDataSetChangedSafe();
+                });
+
+            }).start();
+        }
+
+        private void notifyDataSetChangedSafe() {
+            try {
+                if (getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    RefuelRecyclerViewAdapter.this.notifyItemChanged(getAdapterPosition());
+                } else {
+                    RefuelRecyclerViewAdapter.this.notifyDataSetChanged();
+                }
+            } catch (Exception ignored) {}
+        }
+
+
+
 
         private void postData(RefuelItemData itemData) {
             new AsyncTask<Void, Void, RefuelItemData>() {
@@ -307,6 +364,12 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
             }
         }
     }
+
+
+
+
+
+
 
 
 }

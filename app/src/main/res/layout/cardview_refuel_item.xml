@@ -68,6 +68,8 @@
                 </LinearLayout>
 
 
+
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -113,7 +115,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="start"
-                        android:text="@{mItem.aircraftCode}"
+                        android:text='@{mItem.sortOrder &lt; 10 ? mItem.aircraftCode + " (" + String.valueOf(mItem.sortOrder)+")" : mItem.aircraftCode}'
                         android:textColor="@color/colorBrown"
                         android:textSize="@dimen/large_text"
                         android:textStyle="bold" />
@@ -215,6 +217,57 @@
 
 
                 </LinearLayout>
+                <!-- Nút thao tác ⋮ lớn bên phải -->
+                <!-- Khối nút Tiếp cận / Rời đi / Đã rời đi -->
+
+
+                <!-- Khối nút Tiếp cận / Rời đi / Đã rời đi -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical|end"
+                    android:paddingEnd="12dp">
+
+                    <!-- 1. Nút TIẾP CẬN : khi chưa tiếp cận -->
+                    <Button
+                        android:id="@+id/btnApproach"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="Tiếp cận"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:paddingHorizontal="16dp"
+                        android:backgroundTint="@color/colorPrimary"
+                        android:textColor="@android:color/white"
+                        android:visibility='@{mItem.approachTime == null ? View.VISIBLE : View.GONE}' />
+
+                    <!-- 2. Nút RỜI ĐI : đã tiếp cận nhưng chưa rời đi -->
+                    <Button
+                        android:id="@+id/btnLeave"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="Rời đi"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:paddingHorizontal="16dp"
+                        android:backgroundTint="@color/colorBrown"
+                        android:textColor="@android:color/white"
+                        android:visibility='@{mItem.approachTime != null &amp;&amp; mItem.leaveTime == null ? View.VISIBLE : View.GONE}' />
+
+                    <!-- 3. Label ĐÃ RỜI ĐI : leaveTime != null -->
+                    <TextView
+                        android:id="@+id/txtLeft"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ĐÃ RỜI ĐI"
+                        android:textColor="@color/colorRed"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:visibility='@{mItem.leaveTime != null ? View.VISIBLE : View.GONE}' />
+                </LinearLayout>
+
+
+
 
                 <LinearLayout
                     android:layout_width="0dp"

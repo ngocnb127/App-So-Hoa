@@ -117,7 +117,7 @@ public class ReceiptAPI extends  BaseAPI{
         }
         catch (Exception ex)
         {
-            Logger.appendLog("ReceiptAPI2", ex.getMessage());
+            Logger.appendLog("BM2508-1", ex.getMessage());
         }
         return null;
     }

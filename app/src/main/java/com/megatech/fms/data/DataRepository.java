@@ -1,8 +1,11 @@
 package com.megatech.fms.data;
 
 import android.database.Cursor;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.CloseGuard;
 
+import androidx.annotation.Nullable;
 import androidx.sqlite.db.SimpleSQLiteQuery;
 
 import com.megatech.fms.data.entity.Airline;
@@ -25,6 +28,7 @@ import com.megatech.fms.data.entity.TruckFuel;
 import com.megatech.fms.data.entity.User;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.HttpClient;
+import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.model.AirlineModel;
 import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.BM2505ContainerModel;
@@ -41,10 +45,13 @@ import com.megatech.fms.model.TruckFuelModel;
 import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class DataRepository {
 
@@ -688,4 +695,97 @@ public class DataRepository {
             db.ProductDao().update(model);
         }
     }
+
+    public RefuelItemData getLatestRefuelItemByEndTime() {
+
+        RefuelItem item = db
+                .refuelItemDao()
+                .getLatestByEndTime();
+
+        if (item != null) {
+            return item.toRefuelItemData();
+        }
+
+        return null;
+    }
+
+
+    public Double getLatestDensityFromLocal() {
+
+        try {
+            String json = db.refuelItemDao().getLatestRefuelItemJson();
+
+            // 🔍 DEBUG 1: kiểm tra raw json
+            android.util.Log.d("DENSITY_SQL", "raw json = " + json);
+
+            if (json == null || json.isEmpty()) {
+                android.util.Log.d("DENSITY_SQL", "json is NULL or EMPTY");
+                return null;
+            }
+
+            JSONObject obj = new JSONObject(json);
+
+            // 🔍 DEBUG 2: log toàn bộ keys
+            android.util.Log.d("DENSITY_SQL", "json keys = " + obj.names());
+
+            double density = obj.optDouble("Density", -1);
+
+            // 🔍 DEBUG 3: log density parse ra
+            android.util.Log.d("DENSITY_SQL", "parsed Density = " + density);
+
+            // validate nghiệp vụ Jet A-1
+            if (density > 0.7 && density < 0.9) {
+                return density;
+            }
+
+            android.util.Log.d("DENSITY_SQL", "density out of range, fallback");
+            return null;
+
+        } catch (Exception e) {
+            android.util.Log.e("DENSITY_SQL", "error", e);
+            return null;
+        }
+    }
+    public interface DensityCallback {
+        void onResult(@Nullable Double density);
+    }
+
+    public void loadLatestDensityAsync(DensityCallback callback) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Double result = null;
+
+            try {
+                String json = db.refuelItemDao().getLatestRefuelItemJson();
+
+                Logger.appendLog("DENSITY_SQL", "raw json=" + json);
+
+                if (json != null) {
+                    JSONObject obj = new JSONObject(json);
+                    double d = obj.optDouble("Density", -1);
+
+                    Logger.appendLog("DENSITY_SQL", "parsed density=" + d);
+
+                    if (d > 0.7 && d < 0.9) {
+                        result = d;
+                    }
+                }
+
+            } catch (Exception e) {
+                Logger.appendLog("DENSITY_SQL", "error=" + e.getMessage());
+            }
+
+            Double finalResult = result;
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                callback.onResult(finalResult);
+            });
+        });
+    }
+
+
+
+
+
+
+
 }

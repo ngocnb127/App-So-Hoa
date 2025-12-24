@@ -661,8 +661,8 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
 
             if ((model.getSellerSignaturePath() != null && !model.getSellerSignaturePath().isEmpty()
                     && model.getSignaturePath() != null && !model.getSignaturePath().isEmpty())
-                    || model.isCaptured()) {
-
+                    || model.isCaptured())
+            {
                 showConfirmMessage(R.string.e_invoice_confirm, new Callable<Void>() {
                     @Override
                     public Void call() throws Exception {

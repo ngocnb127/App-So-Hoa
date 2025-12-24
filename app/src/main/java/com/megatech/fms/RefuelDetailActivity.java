@@ -14,6 +14,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -46,6 +47,9 @@ import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
+import com.megatech.fms.sdk_tcs.sdk_tcs.IDevice;
+import com.megatech.fms.sdk_tcs.sdk_tcs.model.DeviceDataView;
+import com.megatech.fms.sdk_tcs.sdk_tcs.tcs.TcsDevice;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -60,6 +64,7 @@ import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 public class RefuelDetailActivity extends UserBaseActivity implements View.OnClickListener {
 
@@ -78,6 +83,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         ERROR,
         CONNECTING
     }
+    IDevice tcsDevice;
+    boolean checkTCS = true;
 
     private RefuelItemData mItem;
     private Activity activity;
@@ -90,6 +97,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     private int endRetry = 0;
 
     private String deviceSerial;
+    private boolean askedApproachConfirm = false;
+    private boolean approachPopupShown = false;
+
 
     private void setTextBoxValue(int id, Object value) {
         setTextBoxValue(id, value, "%s");
@@ -101,10 +111,17 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     }
 
     private void reconnect() {
-
         setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
+        TruckModel settingModel = currentApp.getSetting();
 
-        reader.doConnectDevice();
+        if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+            if (tcsDevice != null) {
+                tcsDevice.connect();
+                tcsDevice.runTask();
+            }
+        } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
+            reader.doConnectDevice();
+        }
     }
 
     private String m_Text = "";
@@ -114,6 +131,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private LCRReader reader = null;
     private LCRDataModel model;
+    static DeviceDataView tcsData;
     private boolean deviceIsReady = false;
     private boolean deviceIsError = false;
     private boolean conditionIsReady = false;
@@ -148,6 +166,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         //btnTest = findViewById(R.id.btnTest);
         //btnTest.setVisibility(View.VISIBLE);
         storedIP = currentApp.getDeviceIP();
+        //deviceType = currentApp.setThermalDeviceType();
 
         deviceSerial = currentApp.getSetting().getDeviceSerial();
 
@@ -169,36 +188,53 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     }
 
     private void setConnectionCheckmark(CONNECTION_STATUS status) {
+        TruckModel settingModel = currentApp.getSetting();
         runOnUiThread(() -> {
             switch (status) {
                 case OK:
                     findViewById(R.id.progressBar).setVisibility(View.GONE);
                     ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr)).setChecked(true);
-                    ((TextView) findViewById(R.id.lbl_connection_status)).setText(getString(R.string.lcr_connection_ok));
-                    ((TextView) findViewById(R.id.lbl_connection_status)).setTextColor(getResources().getColor(R.color.colorDarkGreen, getTheme()));
-                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr)).setCheckMarkDrawable(R.drawable.ic_checked_circle);
+                    ((TextView) findViewById(R.id.lbl_connection_status))
+                            .setText(getString(R.string.lcr_connection_ok));
+                    ((TextView) findViewById(R.id.lbl_connection_status))
+                            .setTextColor(getResources().getColor(R.color.colorDarkGreen, getTheme()));
+                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr))
+                            .setCheckMarkDrawable(R.drawable.ic_checked_circle);
                     btnReconnect.setVisibility(View.INVISIBLE);
-                    //btnStart.setEnabled(true);
-                    //btnForceStop.setVisibility(View.INVISIBLE);
                     break;
+
                 case CONNECTING:
                     CheckedTextView chkTxt = findViewById(R.id.refuel_detail_chk_connect_lcr);
-                    if (chkTxt != null)
-                        chkTxt.setCheckMarkDrawable(null);
+                    if (chkTxt != null) chkTxt.setCheckMarkDrawable(null);
                     findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
 
-                    ((TextView) findViewById(R.id.lbl_connection_status)).setText(getString(R.string.lcr_connection_connecting));
+                    if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+                        ((TextView) findViewById(R.id.lbl_connection_status))
+                                .setText("Đang kết nối thiết bị TCS");
+                    } else {
+                        ((TextView) findViewById(R.id.lbl_connection_status))
+                                .setText(getString(R.string.lcr_connection_connecting));
+                    }
+
                     ((TextView) findViewById(R.id.lbl_connection_status)).setTextColor(Color.BLACK);
                     btnReconnect.setVisibility(View.VISIBLE);
                     btnRestart.setVisibility(View.VISIBLE);
                     btnReconnect.setEnabled(false);
-                    //btnRestart.setEnabled(false);
                     break;
+
                 case ERROR:
                     findViewById(R.id.progressBar).setVisibility(View.GONE);
-                    ((TextView) findViewById(R.id.lbl_connection_status)).setText(getString(R.string.lcr_connection_error));
+                    if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+                        ((TextView) findViewById(R.id.lbl_connection_status))
+                                .setText("Lỗi kết nối thiết bị TCS");
+                    } else {
+                        ((TextView) findViewById(R.id.lbl_connection_status))
+                                .setText(getString(R.string.lcr_connection_error));
+                    }
+
                     ((TextView) findViewById(R.id.lbl_connection_status)).setTextColor(Color.RED);
-                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr)).setCheckMarkDrawable(R.drawable.ic_error);
+                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr))
+                            .setCheckMarkDrawable(R.drawable.ic_error);
                     btnReconnect.setVisibility(View.VISIBLE);
                     btnRestart.setVisibility(View.VISIBLE);
                     btnForceStop.setVisibility(View.VISIBLE);
@@ -209,27 +245,29 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     break;
             }
         });
-
-
     }
 
-    private void showConfirmDialog(int id) {
 
+    private void showConfirmDialog(int id) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.app_name);
         builder.setMessage(id == R.id.btnStart ? R.string.start_confirm : R.string.stop_confirm);
+        TruckModel settingModel = currentApp.getSetting();
 
         builder.setPositiveButton(getString(id == R.id.btnStart ? R.string.start : R.string.stop), (dialog, id12) -> {
-            Logger.appendLog(id == R.id.btnStart ? "ConfirFm start " : "Confirm stop");
+            Logger.appendLog(id == R.id.btnStart ? "Confirm start " : "Confirm stop");
             if (id == R.id.btnStop) {
-                stop();
+                if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+                    stopTCS();
+                } else {
+                    stop();
+                }
             } else if (id == R.id.btnStart) {
                 start();
             }
             dialog.dismiss();
         });
         builder.setNegativeButton(getString(R.string.back), (dialog, id1) -> dialog.dismiss());
-
         builder.create().show();
     }
 
@@ -289,28 +327,88 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
 
     }
+    public REFUEL_STATUS statusStartTCS = REFUEL_STATUS.NONE;
+    Runnable OnConnected = () -> {
+        Log.d("TCS", "OnConnected");
+        setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
+        if (tcsDevice.isConnect()){
+            setConnectionCheckmark(CONNECTION_STATUS.OK);
+        }
+    };
+
+    Runnable OnDisconnected= () -> {
+        Log.d("TCS", "OnDisconnected");
+        refuel_status = REFUEL_STATUS.NONE;
+        setRefuelStatus(REFUEL_STATUS.NONE);
+        statusStartTCS = REFUEL_STATUS.NONE;
+        deviceIsReady = false;
+        deviceIsError = true;
+        setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+    };
+
+    Runnable OnStartedDelivery= () -> {
+        Log.d("TCS", "OnStartedDelivery");
+        statusStartTCS = REFUEL_STATUS.STARTED;
+        refuel_status = REFUEL_STATUS.STARTED;
+        setRefuelStatus(REFUEL_STATUS.STARTED);
+    };
+
+    Runnable OnStoppedDelivery= () -> {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        Log.d("TCS", "OnStoppedDelivery");
+        refuel_status = REFUEL_STATUS.ENDING;
+        setRefuelStatus(REFUEL_STATUS.ENDING);
+        refuel_status = REFUEL_STATUS.ENDED;
+        setRefuelStatus(REFUEL_STATUS.ENDED);
+        statusStartTCS = REFUEL_STATUS.ENDED;
+        doStopTCS();
+    };
+
+    Runnable OnRecivedData = () -> {
+        if (statusStartTCS == REFUEL_STATUS.STARTED){
+            tcsData = tcsDevice.getDeviceDataView();
+            updateRefuelDataTCS();
+            Log.d("TCS", "Data: " + tcsData.getConnectState() + " - " + tcsData.getGrossQtyRound() + " - " + tcsData.getGrossTotalRound());
+        }
+
+    };
 
     private void initReader() {
-        Logger.appendLog(LOG_TAG, "Init LCR Reader");
-        reader = LCRReader.create(this, storedIP, 10001, false);
-        if (reader.isLCR600())
-            btnStart.setVisibility(View.VISIBLE);
+        Logger.appendLog(LOG_TAG, "Init Reader");
+        TruckModel settingModel = currentApp.getSetting();
 
-        addListeners();
-        deviceIsReady = reader.getConnected();
-        if (deviceIsReady) {
-            setConnectionCheckmark(CONNECTION_STATUS.OK);
-            //reader.requestSerial();
-        } else
-            reader.doConnectDevice();
+        if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
+            reader = LCRReader.create(this, storedIP, 10001, false);
+            if (reader.isLCR600()) btnStart.setVisibility(View.VISIBLE);
+            addListeners();
+            deviceIsReady = reader.getConnected();
 
-        this.model = new LCRDataModel();
-        model.setUserId(currentUser.getUserId());
+            if (deviceIsReady) setConnectionCheckmark(CONNECTION_STATUS.OK);
+            else reader.doConnectDevice();
 
+            this.model = new LCRDataModel();
+            model.setUserId(currentUser.getUserId());
 
-        if (reader.isAlreadyStarted())
-            onStarted();
+            if (reader.isAlreadyStarted()) onStarted();
+
+        } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+            tcsDevice = new TcsDevice(storedIP, 10001, OnConnected, OnDisconnected,
+                    OnRecivedData, OnStartedDelivery, OnStoppedDelivery);
+            tcsDevice.connect();
+            tcsDevice.runTask();
+
+            addListenersTCS();
+            deviceIsReady = tcsDevice.isConnect();
+
+            if (deviceIsReady) setConnectionCheckmark(CONNECTION_STATUS.OK);
+            else setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
+        }
     }
+
 
     private void clearListeners() {
         if (reader != null) {
@@ -343,6 +441,20 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         setTextBoxValue(R.id.refuelitem_projected_capacity, mItem.getProjectedCapacity(), "%.0f");
         setTextBoxValue(R.id.refuelitem_actual_capacity, mItem.getActualCapacity(), "%.0f");
+
+        Button btnApproach = findViewById(R.id.btnApproach);
+        TextView lblApproach = findViewById(R.id.lblApproachTime);
+
+        if (mItem.getApproachTime() != null) {
+            // Đã có thời gian tiếp cận → hiển thị label, ẩn nút
+            lblApproach.setText("Đã Tiếp cận: " + DateUtils.formatDate(mItem.getApproachTime(), "dd/MM/yyyy HH:mm"));
+            lblApproach.setVisibility(View.VISIBLE);
+            btnApproach.setVisibility(View.GONE);
+        } else {
+            // Chưa có → hiển thị nút, ẩn label
+            lblApproach.setVisibility(View.GONE);
+            btnApproach.setVisibility(View.VISIBLE);
+        }
 
         activity = this;
         if (mItem.isAlert()) {
@@ -378,7 +490,6 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                         //((TextView) findViewById(R.id.refuelitem_detail_airline)).setText(item.getName());
                         mItem.setAirlineId(item.getId());
                         mItem.setProductName(item.getProductName());
-
                         mItem.setAirlineModel(item);
                         if (mItem.isInternational() && item.isInternational())
                             mItem.setPrice(item.getPrice());
@@ -420,6 +531,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 ((TextView) findViewById(R.id.refuelitem_detail_departure)).setText(simpleDateFormat.format(mItem.getDepartureTime()));
 
         }
+
+
+        showApproachConfirmIfNeeded();
+
         closeProgressDialog();
     }
 
@@ -439,6 +554,16 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         } else {
             //send END DELIVERY command to LCR
             reader.end();
+            setRefuelStatus(REFUEL_STATUS.ENDING);
+        }
+
+    }
+    private void stopTCS() {
+        if (deviceIsError) {
+            showForceStopDialog();
+        } else {
+            //send END DELIVERY command to LCR
+            tcsDevice.disConnect();
             setRefuelStatus(REFUEL_STATUS.ENDING);
         }
 
@@ -781,6 +906,25 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             case R.id.refuelitem_detail_operator:
                 showSelectUser();
                 break;
+
+            case R.id.btnApproach:
+                // Ghi nhận thời gian tiếp cận
+                Date now = new Date();
+                mItem.setApproachTime(now);
+
+                // Cập nhật hiển thị
+                TextView lblApproach = findViewById(R.id.lblApproachTime);
+                lblApproach.setText("Tiếp cận: " + DateUtils.formatDate(now, "dd/MM/yyyy HH:mm"));
+                lblApproach.setVisibility(View.VISIBLE);
+
+                // Ẩn nút sau khi bấm
+                v.setVisibility(View.GONE);
+
+                // Lưu dữ liệu lại local
+                new Thread(() -> {
+                    DataHelper.postRefuel(mItem, false);
+                }).start();
+                break;
         }
 
     }
@@ -812,6 +956,12 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private void cancelRefuel() {
         mItem.setStatus(REFUEL_ITEM_STATUS.NONE);
+        TruckModel settingModel = currentApp.getSetting();
+
+        if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS && tcsDevice != null) {
+            tcsDevice.disConnect();
+        }
+
         cancelled = true;
         if (mItem.getId() == 0 && mItem.getLocalId() == 0)
             finish();
@@ -1070,6 +1220,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         });
     }
 
+    private void addListenersTCS() {
+        if (inputDlg != null)
+            dialogBinding.invalidateAll();
+    }
     private void onStopped() {
         //if (!isActive) return;
 
@@ -1343,7 +1497,49 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         }
         //Log.e("REFUEL", "Update refuel data");
     }
+    private void updateRefuelDataTCS() {
+        TruckModel settingModel = currentApp.getSetting();
+        //if (mItem != null && mItem.getStatus() != REFUEL_ITEM_STATUS.DONE && mItem.getStatus() != REFUEL_ITEM_STATUS.NONE) {
+        if (statusStartTCS == REFUEL_STATUS.STARTED && mItem != null) {
+            if (tcsData.getGrossQtyRound() > 0) {
+                mItem.setRealAmount(tcsData.getGrossQtyRound());
+                mItem.setGallon(tcsData.getGrossQtyRound());
+            }
+            mItem.setTemperature(tcsData.getTemperature());
 
+            if (mItem.getManualTemperature() <= 0)
+                mItem.setManualTemperature(tcsData.getTemperature());
+
+            if (mItem.getStatus() != REFUEL_ITEM_STATUS.NONE)
+                mItem.setDeviceStartTime(new Date());
+            if (started)
+                mItem.setDeviceEndTime(new Date());
+            //mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
+            if (tcsData.getGrossTotalRound() > 0) {
+                //mItem.setStartNumber(model.getStartMeterNumber());
+                mItem.setStartNumber(tcsData.getGrossTotalRound() - tcsData.getGrossQtyRound());
+                mItem.setEndNumber(tcsData.getGrossTotalRound());
+                mItem.setOriginalEndMeter(tcsData.getGrossTotalRound());
+            }
+
+            mItem.setWaterSensor(0);
+
+            runOnUiThread(() -> {
+                TextView txtGrossQty = findViewById(R.id.txtGrossQty);
+                txtGrossQty.setText(String.format("%.0f", tcsData.getGrossQtyRound()));
+
+                ((TextView) findViewById(R.id.txtStartMeter)).setText(String.format("%,.0f", tcsData.getGrossTotalRound() - tcsData.getGrossQtyRound()));
+                ((TextView) findViewById(R.id.txtEndMeter)).setText(String.format("%,.0f", tcsData.getGrossTotalRound()));
+
+                TextView txtTemp = findViewById(R.id.txtTemp);
+                txtTemp.setText(String.format("%.2f", tcsData.getTemperature()));
+
+                ((TextView) findViewById(R.id.txtWaterSensor)).setText(String.format("%,.0f", 0.0)); // ← Sửa ở đây
+            });
+            saveData();
+        }
+        //Log.e("REFUEL", "Update refuel data");
+    }
     private void doStop() {
         //Logger.appendLog("RFW", "doStop");
         setRefuelStatus(REFUEL_STATUS.ENDED);
@@ -1388,7 +1584,51 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
 
     }
+    private void doStopTCS() {
+        //Logger.appendLog("RFW", "doStop");
 
+        tcsDevice.disConnect();
+        setRefuelStatus(REFUEL_STATUS.ENDED);
+        started = false;
+
+        try {
+            if (mItem != null) {
+
+                mItem.setEndTime(new Date());
+                if (Math.abs(mItem.getEndTime().getTime() - mItem.getStartTime().getTime()) > 1000 * 60 * 60 * 24)
+                    mItem.setStartTime(mItem.getEndTime());
+
+                if (mItem.getDeviceEndTime() != null && mItem.getDeviceStartTime() != null && !mItem.isCompleted()) {
+                    long dateDiff = mItem.getDeviceEndTime().getTime() - mItem.getDeviceStartTime().getTime();
+                    if (dateDiff > 0)
+                        mItem.setStartTime(new Date(mItem.getEndTime().getTime() - dateDiff));
+                }
+
+                if (mItem.getManualTemperature() == 0)
+                    mItem.setManualTemperature(tcsData.getTemperature());
+                if (mItem.getOriginalEndMeter() == 0)
+                    mItem.setOriginalEndMeter(tcsData.getGrossTotalRound());
+                boolean isExtract = mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.EXTRACT;
+                currentApp.setCurrentAmount(currentApp.getCurrentAmount() + (float) (isExtract ? mItem.getRealAmount() : -mItem.getRealAmount()));
+                mItem.setStatus(REFUEL_ITEM_STATUS.DONE);
+                if (!BuildConfig.FHS) {
+                    if (mItem.getTruckId() != currentApp.getTruckId() && mItem.getReceiptNumber() != null && !mItem.getReceiptNumber().isEmpty()) {
+                        mItem.setReceiptNumber(null);
+                    }
+                    mItem.setTruckId(currentApp.getTruckId());
+                    mItem.setTruckNo(currentApp.getTruckNo());
+                }
+                //mItem.setStartNumber(mItem.getEndNumber() - mItem.getRealAmount());
+            }
+
+            //Logger.appendLog("RFW", "end doStop");
+            postData();
+        } catch (Exception e) {
+            this.saveLog(LogEntryModel.LOG_TYPE.ERROR_LOG, " doStop Error: " + e.getLocalizedMessage());
+        }
+
+
+    }
     private enum REFUEL_STATUS {
         NONE,
         STARTING,
@@ -1478,6 +1718,45 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             openConfirm();
     }
 
+    private void showApproachConfirmIfNeeded() {
+        if (mItem == null) return;
+        if (mItem.getApproachTime() != null) return;
+        if (approachPopupShown) return;
+
+        approachPopupShown = true;
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage("Chuyến này chưa ghi nhận tiếp cận. Bạn có muốn ghi nhận thời điểm tiếp cận lúc này không?")
+                .setPositiveButton("Có", (dialog, which) -> {
+                    Date now = new Date();
+                    mItem.setApproachTime(now);
+
+                    TextView lblApproach = findViewById(R.id.lblApproachTime);
+                    Button btnApproach = findViewById(R.id.btnApproach);
+
+                    if (lblApproach != null) {
+                        lblApproach.setText(
+                                "Tiếp cận: " + DateUtils.formatDate(now, "dd/MM/yyyy HH:mm")
+                        );
+                        lblApproach.setVisibility(View.VISIBLE);
+                    }
+
+                    if (btnApproach != null) {
+                        btnApproach.setVisibility(View.GONE);
+                    }
+
+                    // Lưu lại
+                    new Thread(() -> DataHelper.postRefuel(mItem, false)).start();
+
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Không", (dialog, which) -> dialog.dismiss())
+                .setCancelable(false)
+                .show();
+    }
+
+
     private boolean isActive = false;
 
     @Override
@@ -1543,4 +1822,5 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         int FIELD_ALL_DATA = 30;
         int FIELD_ALL_METER = 12;
     }
+
 }

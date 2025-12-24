@@ -90,4 +90,19 @@ public interface RefuelItemDao {
     @Query("Select * from RefuelItem where flightId = :flightId  AND truckId  = :truckId and status !=3")
     RefuelItem getByFlightAndTruck(Integer flightId, int truckId);
 
+    @Query("SELECT * FROM RefuelItem WHERE jsonData LIKE '%\"Density\":%' ORDER BY EndTime DESC LIMIT 1")
+    RefuelItem getLatestByEndTime();
+
+    @Query(
+            "SELECT jsonData " +
+                    "FROM RefuelItem " +
+                    "WHERE jsonData LIKE '%\"Density\"%' " +
+                    "ORDER BY EndTime DESC " +
+                    "LIMIT 1"
+    )
+    String getLatestRefuelItemJson();
+
+
+
+
 }

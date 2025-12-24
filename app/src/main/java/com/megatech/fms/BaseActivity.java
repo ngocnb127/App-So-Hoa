@@ -245,6 +245,10 @@ public class BaseActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    public void showBusinessError(String message) {
+        showErrorMessage(R.string.error, message, R.drawable.ic_warning);
+    }
+
     public void showErrorMessage(int titleId, int messageId, int iconId) {
         if (isActive)
             new AlertDialog.Builder(this)

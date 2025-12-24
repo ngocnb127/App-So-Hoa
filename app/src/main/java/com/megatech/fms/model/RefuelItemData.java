@@ -183,6 +183,10 @@ public class RefuelItemData extends BaseModel implements Cloneable {
             itemData.setGallon(0);
             itemData.setVolume(0);
 
+            itemData.setApproachTime(null);
+            itemData.setLeaveTime(null);
+
+
             return itemData;
         }
         catch (Exception ex)
@@ -875,6 +879,8 @@ public class RefuelItemData extends BaseModel implements Cloneable {
     }
     private int productId;
 
+
+
     public int getProductId() {
         return productId;
     }
@@ -896,6 +902,15 @@ public class RefuelItemData extends BaseModel implements Cloneable {
 
     private String pCode;
     private String pName;
+    private int sortOrder;
+
+    public int getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 
     public String getPCode() {
         return pCode;
@@ -915,6 +930,27 @@ public class RefuelItemData extends BaseModel implements Cloneable {
 
     private double ProjectedCapacity;
     private double ActualCapacity;
+
+//cập nhật tiếp cận và rời đi
+    private Date approachTime = null;
+    private Date leaveTime = null;
+
+    public Date getApproachTime() {
+        return approachTime;
+    }
+
+    public void setApproachTime(Date approachTime) {
+        this.approachTime = approachTime;
+    }
+
+    public Date getLeaveTime() {
+        return leaveTime;
+    }
+
+    public void setLeaveTime(Date leaveTime) {
+        this.leaveTime = leaveTime;
+    }
+    //--cập nhật tiếp cận và rời đi
 
     public double getProjectedCapacity() {
         return ProjectedCapacity;

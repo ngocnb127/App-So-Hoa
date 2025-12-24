@@ -554,6 +554,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
+                <Button
+                    android:id="@+id/btnApproach"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tiếp cận"
+                    android:onClick="onClick"
+                    app:layout_constraintBottom_toTopOf="@id/lblApproachTime"
+                    app:layout_constraintStart_toStartOf="@id/lbl_connection_status"
+                    app:layout_constraintEnd_toEndOf="@id/lbl_connection_status"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:id="@+id/lblApproachTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thời gian tiếp cận"
+                    android:textStyle="italic"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toTopOf="@id/lbl_connection_status"
+                    app:layout_constraintStart_toStartOf="@id/lbl_connection_status"
+                    app:layout_constraintEnd_toEndOf="@id/lbl_connection_status"
+                    android:layout_marginBottom="4dp"/>
+
+
                 <TextView
                     android:id="@+id/lbl_connection_status"
                     style="?android:attr/textAppearanceMedium"

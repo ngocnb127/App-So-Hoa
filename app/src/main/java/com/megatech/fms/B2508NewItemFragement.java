@@ -36,9 +36,12 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.DialogFragment;
 
 import com.bumptech.glide.Glide;
+import com.megatech.fms.data.AppDatabase;
+import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.databinding.B2505NewBinding;
 import com.megatech.fms.databinding.B2508NewBinding;
 import com.megatech.fms.helpers.DataHelper;
+import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
@@ -242,16 +245,26 @@ public class B2508NewItemFragement extends DialogFragment {
         }
         spngc7.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                BM2508Model.ResultModel Result = (BM2508Model.ResultModel) adapterView.getItemAtPosition(i);
-                model.setUnit(Result.getName());
+            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
+
+                BM2508Model.ResultModel result =
+                        (BM2508Model.ResultModel) adapterView.getItemAtPosition(position);
+
+                model.setUnit(result.getName());
+
+                // 🔥 PHẢI GỌI
+                recalcFuelOnBoardGallonByUI();
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
+            public void onNothingSelected(AdapterView<?> adapterView) {}
         });
+
+        applyLatestDensityAsync();
+
+
+
+
 //        model.setUrlImageAirline("");
 //        model.setUrlImageSkypec("");
 //        ImageView imgAirline = view.findViewById(R.id.imageAirline);
@@ -607,5 +620,73 @@ public class B2508NewItemFragement extends DialogFragment {
             }
         });
     }
+    private void recalcFuelOnBoardGallonByUI() {
+
+        if (model == null || binding == null) return;
+
+        String unit = model.getUnit();
+        double fuelUplift = model.getFuelUplift();
+
+        if (unit == null || fuelUplift <= 0) {
+            model.setFuelOnBoardGallon(0);
+            binding.invalidateAll();
+            return;
+        }
+
+        if ("KGs".equalsIgnoreCase(unit)) {
+
+            // ✅ CHỈ fallback nếu CHƯA CÓ density
+            if (model.getDensity() <= 0) {
+                model.applyDefaultDensity();
+            }
+
+            model.recalcFuelOnBoardGallon();
+
+        } else if ("USG".equalsIgnoreCase(unit)) {
+
+            model.setFuelOnBoardGallon(Math.round(fuelUplift));
+
+        }
+
+        binding.invalidateAll();
+        Logger.appendLog(
+                "DENSITY_UI",
+                "density=" + model.getDensity()
+                        + ", source=" + model.getDensitySource()
+        );
+    }
+
+    private void applyLatestDensityAsync() {
+
+        DataRepository repo = DataRepository.getInstance(
+                AppDatabase.getInstance(requireContext())
+        );
+
+        repo.loadLatestDensityAsync(density -> {
+
+            android.util.Log.d("DENSITY_UI", "callback density=" + density);
+
+            if (density != null) {
+                model.applyLatestDensity(density);
+            } else {
+                model.applyDefaultDensity();
+            }
+
+            android.util.Log.d(
+                    "DENSITY_UI",
+                    "afterApply density=" + model.getDensity()
+                            + ", source=" + model.getDensitySource()
+            );
+
+            model.recalcFuelOnBoardGallon();
+            binding.invalidateAll();
+        });
+    }
+
+
+
+
+
+
 
 }

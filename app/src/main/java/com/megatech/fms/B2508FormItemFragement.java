@@ -236,33 +236,45 @@ public class B2508FormItemFragement extends DialogFragment {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
-                if (activityb25.modelb2508.getUserSkypecSignaturePath() != null){
+
+                // ✅ Lấy đường dẫn chữ ký từ Activity gốc (nếu có)
+                if (activityb25.modelb2508.getUserSkypecSignaturePath() != null)
                     model.setUserSkypecSignaturePath(activityb25.modelb2508.getUserSkypecSignaturePath());
-                }
-                if (activityb25.modelb2508.getAirlineSignaturePath() != null){
+
+                if (activityb25.modelb2508.getAirlineSignaturePath() != null)
                     model.setAirlineSignaturePath(activityb25.modelb2508.getAirlineSignaturePath());
+
+                // ❌ KHÔNG set null, vì mục đích là upload ảnh
+                // model.setUserSkypecSignaturePath(null);
+                // model.setAirlineSignaturePath(null);
+
+                // ✅ Chỉ upload ảnh chữ ký lên server, không chạm dữ liệu khác
+                try {
+                    com.megatech.fms.helpers.ReceiptAPI client = new com.megatech.fms.helpers.ReceiptAPI();
+                    client.postMultipartBM2508(model);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
-                model.setUserSkypecSignaturePath(null);
-                model.setUserSkypecSignaturePath(null);
-                DataHelper.postBM2508(model);
+
+                // ✅ Lưu local để đảm bảo lần sau mở lại vẫn có ảnh
+                com.megatech.fms.data.AppDatabase db = com.megatech.fms.data.AppDatabase.getInstance(getContext());
+                com.megatech.fms.data.DataRepository repo = com.megatech.fms.data.DataRepository.getInstance(db);
+                com.megatech.fms.data.entity.BM2508 entity = com.megatech.fms.data.entity.BM2508.fromModel(model);
+                repo.insertBM2508(entity);
+
                 return null;
             }
 
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
-                if (activityb25 instanceof B2508Activity)
-                {
+                if (activityb25 != null)
                     activityb25.loaddata();
-                }
                 dlg.dismiss();
             }
-
-
         }.execute();
-
-
     }
+
 
 
     private void openFlightSelect() {
