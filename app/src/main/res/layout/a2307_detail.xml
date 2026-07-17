@@ -1,0 +1,2667 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.CheckTrucksModel" />
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/toolbar_height"
+                android:background="@color/colorPrimary"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/a2307_new_back"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.1"
+                    android:drawableStart="@drawable/ic_exit"
+                    android:onClick="onClick"
+                    android:text="@string/back" />
+
+            </androidx.appcompat.widget.Toolbar>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="3dp"
+                    ></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="0dp"
+                    android:textColor="@android:color/black"
+                    android:text="PHIẾU BẢO DƯỠNG HÀNG NGÀY - CA LÀM VIỆC : "></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:textColor="@android:color/black"
+                    android:focusable="false"
+                    android:text="@{mItem.shiftName}"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:padding="3dp"
+                    ></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:text='@{"Biển số xe: " + mItem.truckNo}'></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".01"
+                    android:text="Giờ: "></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".02"
+                    android:focusable="false"
+                    android:text='@{DateUtils.formatDate(mItem.Hours,"HH:mm")}' />
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".04"
+                    android:focusable="false"
+                    android:text='@{"Ngày: " + DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}' />
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".06"
+                    android:text="Số giờ/km hoạt động của xe:"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:focusable="false"
+                    android:text="@{mItem.KmNumber}"></TextView>
+            </TableRow>
+<!--            <TableRow-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:background="#ffffff"-->
+<!--                android:padding="5dp">-->
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/airport"></TextView>-->
+
+<!--                <Spinner-->
+<!--                    android:id="@+id/a2307_new_airport"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="34dp"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:enabled="false"-->
+<!--                    android:padding="5dp"></Spinner>-->
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/shift"></TextView>-->
+
+<!--                <Spinner-->
+<!--                    android:id="@+id/a2307_new_shift"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="34dp"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:enabled="false"-->
+<!--                    android:padding="5dp"></Spinner>-->
+<!--            </TableRow>-->
+<!--            <TableRow-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:background="#efefef"-->
+<!--                android:padding="5dp">-->
+
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/truck_no"></TextView>-->
+
+<!--                <Spinner-->
+<!--                    android:id="@+id/a2307_new_truck_no"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="34dp"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:enabled="false"-->
+<!--                    android:clickable="false"-->
+<!--                    android:padding="5dp"></Spinner>-->
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/hour_km"></TextView>-->
+
+<!--                <TextView-->
+<!--                    android:id="@+id/a2307_new_km_number"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:focusable="false"-->
+<!--                    android:hint="@string/notNote"-->
+<!--                    android:onClick="onClick"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@{mItem.KmNumber}"></TextView>-->
+
+<!--            </TableRow>-->
+<!--            <TableRow-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:background="#ffffff"-->
+<!--                android:padding="5dp">-->
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/hour"></TextView>-->
+
+<!--                <TextView-->
+<!--                    android:id="@+id/a2307_new_time"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:focusable="false"-->
+<!--                    android:hint="@string/notNote"-->
+<!--                    android:onClick="onClick"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text='@{DateUtils.formatDate(mItem.Hours,"HH:mm")}' />-->
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/date"></TextView>-->
+
+<!--                <TextView-->
+<!--                    android:id="@+id/a2307_new_DateCreated"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:focusable="false"-->
+<!--                    android:hint="@string/notNote"-->
+<!--                    android:onClick="onClick"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}' />-->
+<!--            </TableRow>-->
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="Hạng mục kiểm tra"></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="KQ"></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text=""></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="Ghi chú"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result7"></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result7}"></TextView>
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote7 != true? "" : @string/gc}'></TextView>
+                <TextView
+                    android:id="@+id/a2307_new_Note7"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note7}"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result8"></TextView>
+
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result8}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote8 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note8"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note8}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result1"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result1}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote1 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note1"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note1}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result2"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result2}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote2 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note2"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note2}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result32"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result32}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote32 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note32}"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result44"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result44}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote44 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note44"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note44}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result28"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result28}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote28 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note28}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result17"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result17}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote17 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note17"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note17}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result4"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result4}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote4 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note4}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result3"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result3}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote3 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note3"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note3}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result45"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result45}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote45 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note45"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note45}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result37"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result37}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote37 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note37"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note37}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result23"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result23}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote23 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note23"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note23}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result21"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result21}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote21 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note21"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note21}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result50"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result50}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote50 != true? "JIG" : @string/gcdetail}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note50"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note50}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result12"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result12}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote12 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note12}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result13"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result13}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote13 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note13}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result14"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="14dp"
+                    android:text="@{mItem.result32}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote14 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note14}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result15"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result15}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote15 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note15"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note15}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result16"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result16}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote16 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note16"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note16}"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result19"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result19}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote19 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note19"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note19}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result18"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result18}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote18 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note18"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note18}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result5"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result5}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote5 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note5"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note5}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result6"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result6}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote6 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note6"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note6}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result20"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result20}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote20 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note20"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note20}"></TextView>
+
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result9"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result9}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote9 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note9"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note9}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result10"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result10}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote10 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note10"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note10}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result41"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result41}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote41 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note41"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note41}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result11"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result11}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote11 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note11"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note11}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result40"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result40}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote40 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note40"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note40}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result46"></TextView>
+
+
+                <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+               android:layout_weight=".03"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="@{mItem.result46}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote46 != true? "" : @string/gc}'></TextView>
+                <TextView
+                    android:id="@+id/a2307_new_Note46"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note46}"></TextView>
+
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result47"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result47}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote47 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note47"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note47}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result48"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result48}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote48 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note48"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note48}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result49"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result49}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote49 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note49"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note49}"></TextView>
+
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="@string/titleA2307Result"></TextView>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result25"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result25}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote25 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note25"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note25}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result26"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result26}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote26 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note26"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note26}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result27"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result27}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote27 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note27"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note27}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result29"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result29}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote29 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note29"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note29}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result30"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result30}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote30 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note30"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note30}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result31"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result31}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote31 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note31"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note31}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result33"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result33}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote33 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note33"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note33}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result34"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result34}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote34 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note34"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note34}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result35"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result35}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote35 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note35"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note35}"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result36"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result36}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote36 != true? "" : @string/gc}'></TextView>
+
+
+                <TextView
+                    android:id="@+id/a2307_new_Note36"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note36}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result42"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result42}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote42 != true? "" : @string/gc}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note42"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note42}"></TextView>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="@string/notedetail1"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="@string/notedetail2"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="@string/notedetail3"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:text="@string/notedetail" />
+
+                <TextView
+                    android:id="@+id/a2307_new_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".75"
+                    android:hint="@string/notNote"
+                    android:focusable="false"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note43}" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginStart="180dp"
+                    android:text="@string/driver2307"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:textColor="@android:color/black"
+                    android:text="@string/textNV2307"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:textColor="@android:color/black"
+                    android:text="@string/textUser2307"></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:layout_marginStart="180dp"
+                    android:textColor="@android:color/black"
+                    android:text="@{mItem.userActivedName}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:textColor="@android:color/black"
+                    android:text="@{mItem.userActived2Name}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:textColor="@android:color/black"
+                    android:text="@{mItem.userActived3Name}"></TextView>
+
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="BM23.07A/NLHK"></TextView>
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar2"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/toolbar_height"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/a2307_new_back2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.1"
+                    android:drawableStart="@drawable/ic_exit"
+                    android:onClick="onClick"
+                    android:text="@string/back" />
+            </androidx.appcompat.widget.Toolbar>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+        </LinearLayout>
+    </ScrollView>
+</layout>

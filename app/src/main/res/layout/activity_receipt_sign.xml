@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:tools="http://schemas.android.com/tools"
+
+    tools:context=".ReceiptSignActivity">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableStart="@android:drawable/ic_menu_save"
+                android:onClick="onClick"
+
+
+                android:text="@string/save" />
+
+
+
+            <Button
+                android:id="@+id/btnClear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+
+                android:text="@string/clear" />
+
+        </androidx.appcompat.widget.Toolbar>
+        <android.gesture.GestureOverlayView
+            android:id="@+id/gesture"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gestureColor="#000000"
+            android:uncertainGestureColor="#000000"
+            android:background="#FFFFFF"
+            android:fadeDuration="5000"
+            android:fadeOffset="5000"
+            android:gestureStrokeType="multiple"
+            >
+
+        </android.gesture.GestureOverlayView>
+    </LinearLayout>
+
+</layout>

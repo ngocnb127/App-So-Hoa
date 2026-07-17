@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2505Model" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/b2505_new_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.1"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+
+            <Button
+                android:id="@+id/b2505_new_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="16dp"
+                android:onClick="onClick"
+                android:text="@string/save" />
+        </androidx.appcompat.widget.Toolbar>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                ></TextView>
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_weight=".75"
+
+
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rad_flight"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="@{mItem.reportType == 0}"
+                    android:onClick="onClick"
+                    android:text="@string/flight"></RadioButton>
+
+                <RadioButton
+                    android:id="@+id/rad_other"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="@{mItem.reportType != 0}"
+                    android:onClick="onClick"
+                    android:text="@string/other"></RadioButton>
+            </RadioGroup>
+        </TableRow>
+
+        <TableRow
+            android:visibility="@{mItem.reportType == 0? View.GONE: View.VISIBLE}"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/bm2505_container_type"></TextView>
+            <Spinner
+                android:id="@+id/bm2505_container_list"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_weight=".25"
+
+                >
+
+            </Spinner>
+            <TextView   style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/bm2505_depot"></TextView>
+            <TextView android:id="@+id/bm2505_new_depot"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_weight=".25"
+                android:hint="@string/touch_to_edit"
+                android:drawableStart="@drawable/ic_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@={mItem.depot}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:visibility="@{mItem.reportType != 0? View.GONE: View.VISIBLE}"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/flight_code"></TextView>
+
+            <!--<com.toptoche.searchablespinnerlibrary.SearchableSpinner
+                android:id="@+id/b2505_new_flight_spinner"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_weight=".25"
+                android:layout_height="34dp"
+                android:padding="5dp"
+
+                ></com.toptoche.searchablespinnerlibrary.SearchableSpinner>-->
+            <TextView
+                android:id="@+id/b2505_new_flight"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{mItem.flightCode}' />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/aircraft_code" />
+
+            <TextView
+                android:id="@+id/b2505_new_aircraft"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+
+                android:focusable="false"
+
+                android:padding="5dp"
+                android:text="@{mItem.aircraftCode}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/time"></TextView>
+
+            <TextView
+                android:id="@+id/b2505_new_time"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.time,"HH:mm")}' />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/bm2505_checker"></TextView>
+
+            <Spinner
+                android:id="@+id/b2505_new_operator"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"></Spinner>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/tank_no"></TextView>
+
+            <TextView
+                android:id="@+id/b2505_new_tank_no"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.tankNo}"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/Cert_no" />
+
+            <TextView
+                android:id="@+id/b2505_new_rtc_no"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.rTCNo}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:visibility="gone"
+                android:text="@string/temperature"></TextView>
+            <!--Ẩn đi Nhiệt độ-->
+            <TextView
+                android:id="@+id/b2505_new_temperature"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:visibility="gone"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.temperature)}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/max_flowrate"></TextView>
+
+            <TextView
+                android:id="@+id/b2505_new_max_flowrate"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.maxFlowRate)}'></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:visibility="gone"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/density" />
+
+            <TextView
+                android:id="@+id/b2505_new_density"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.0f",mItem.density)}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/density_15"></TextView>
+
+            <TextView
+                android:id="@+id/b2505_new_density15"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.4f",mItem.density15)}'></TextView>
+
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:visibility="gone"
+            android:padding="5dp">
+<!--Ẩn đi-->
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/difference" />
+
+            <TextView
+                android:id="@+id/b2505_new_density_diff"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.4f",mItem.densityDiff)}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/evaluation" />
+
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:checked='@={mItem.densityCheck}'
+                    android:text="P"></RadioButton>
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:checked='@={!mItem.densityCheck}'
+                    android:text="F"></RadioButton>
+
+            </RadioGroup>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/appearance_check" />
+
+            <TableLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25">
+
+                <TableRow>
+
+                    <RadioGroup
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".25"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/b2505_new_appearance_cb"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight=".5"
+                            android:checked='@{mItem.appearanceCheck.equals("C&amp;B")}'
+                            android:text="C&amp;B" />
+
+                        <RadioButton
+                            android:id="@+id/b2505_new_appearance_other"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight=".5"
+                            android:checked='@{!mItem.appearanceCheck.equals("C&amp;B")}'
+                            android:onClick="onClick"
+                            android:text="@string/other" />
+                    </RadioGroup>
+                </TableRow>
+
+                <TableRow>
+
+                    <TextView
+                        android:id="@+id/b2505_new_appearance"
+                        style="?android:attr/textAppearanceMedium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".25"
+                        android:drawableStart="@drawable/ic_edit"
+                        android:focusable="false"
+                        android:hint="@string/touch_to_edit"
+                        android:onClick="onClick"
+                        android:padding="5dp"
+                        android:text='@{mItem.appearanceCheck}'
+                        android:visibility='@{mItem.appearanceCheck.equals("C&amp;B")?View.GONE:View.VISIBLE}' />
+                </TableRow>
+            </TableLayout>
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/water_check" />
+
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                app:waterCheck="@={mItem.waterCheck}"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radioButtonP"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="P"></RadioButton>
+
+                <RadioButton
+                    android:id="@+id/radioButtonF"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="F"></RadioButton>
+
+                <RadioButton
+                    android:id="@+id/radioButtonNA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="N/A"></RadioButton>
+
+
+            </RadioGroup>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/pressure_diff" />
+
+            <TextView
+                android:id="@+id/b2505_new_pressure_diff"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.pressureDiff}" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/hose_pressure" />
+
+
+            <TextView
+                android:id="@+id/b2505_new_hose_pressure"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.hosePressure}" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="@string/note" />
+
+            <TextView
+                android:id="@+id/b2505_new_note"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".75"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.note}" />
+        </TableRow>
+    </LinearLayout>
+
+</layout>

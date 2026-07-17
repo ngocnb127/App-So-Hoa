@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2508Model" />
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/b2508_new_back_form"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.1"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+
+            <Button
+                android:id="@+id/b2508_new_save_form"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="16dp"
+                android:onClick="onClick"
+                android:text="@string/save" />
+           <!-- <Button
+                android:id="@+id/btnCapture"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableStart="@{mItem.captured?@drawable/ic_camera_check: @android:drawable/ic_menu_camera}"
+                android:onClick="onClick"
+
+                android:text="@{mItem.captured?@string/view_image:@string/capture}" />
+-->
+        </androidx.appcompat.widget.Toolbar>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="3dp"
+                ></TextView>
+
+
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="1dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05"
+                android:padding="1dp"
+                ></TextView>
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="0dp"
+                android:textColor="@android:color/black"
+                android:text="PHIẾU XÁC NHẬN YÊU CẦU SỐ LƯỢNG JET A-1 "></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="1dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05"
+                android:padding="1dp"
+                ></TextView>
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".08"
+                android:padding="0dp"
+                android:textColor="@android:color/black"
+                android:text="(JET A-1 Order Confirmation)"></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="1dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="1dp"
+                ></TextView>
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05"
+                android:padding="0dp"
+                android:textColor="@android:color/black"
+                android:text="SÂN BAY/Airport : "></TextView>
+<!--            <Spinner-->
+<!--                android:id="@+id/b2508_new_airport_form"-->
+<!--                style="?android:attr/textAppearanceMedium"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="34dp"-->
+<!--                android:layout_weight=".1"-->
+<!--                android:textColor="@android:color/black"-->
+<!--                android:padding="5dp"></Spinner>-->
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05"
+                android:padding="0dp"
+                android:text="@{mItem.airportName}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Ngày/Date:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_DateCreated_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}' />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Giờ/Time:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_time_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.time,"HH:mm")}' />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Xe tra nạp/Refueler No:"></TextView>
+
+            <TextView
+                android:id="@+id/b250853543"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:padding="5dp"
+                android:text="@{mItem.truckNo}"></TextView>
+
+<!--            <Spinner-->
+<!--                android:id="@+id/b2508_new_truck_no_form"-->
+<!--                style="?android:attr/textAppearanceMedium"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="34dp"-->
+<!--                android:layout_weight=".25"-->
+<!--                android:padding="5dp"></Spinner>-->
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Số hiệu chuyến bay/Flight No:" />
+
+            <TextView
+                android:id="@+id/b2508_new_flightNo_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:padding="5dp"
+                android:text="@{mItem.flightNo}"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Loại tàu bay/Aircraft Type:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_aircraftType_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.aircraftType}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Nắp thùng dầu/Cover:"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Có xích"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover1_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover1}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:enabled="false"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Không xích"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover2_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover2}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:enabled="false"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Có bất thường"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover3_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover3}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:enabled="false"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Cài đặt/Select:"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Automatic"></TextView>
+
+            <CheckBox
+                android:id="@+id/automatic_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.automatic}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:enabled="false"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Other"></TextView>
+
+            <CheckBox
+                android:id="@+id/other_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.other}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:enabled="false"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text=""></TextView>
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text=""></TextView>
+
+
+
+
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Đơn vị/Unit:"></TextView>
+
+            <TextView
+                android:id="@+id/ettr432243"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:padding="5dp"
+                android:text="@{mItem.unit}"></TextView>
+<!--            <Spinner-->
+<!--                android:id="@+id/b2508_unit_form"-->
+<!--                style="?android:attr/textAppearanceMedium"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="25dp"-->
+<!--                android:layout_weight=".25"-->
+<!--                android:padding="5dp"></Spinner>-->
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:text="Lượng nhiên liệu tra nạp/Fuel Uplift:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_fuelUplift_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.fuelUplift)}'></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Lượng trước tra nạp/Before Fueling:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_beforeFueling_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.beforeFueling)}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:text="Tổng nhiên liệu chuyến bay/Fuel On Board:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_fuelOnBoard_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.fuelOnBoard)}'></TextView>
+
+        </TableRow>
+
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Ghi chú nạp thêm/Fueling additional note:"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_note_form"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{mItem.note}'></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:text="*Phiếu này dùng để tham khảo, không có giá trị trong thanh toán/ This form is estimated value and for refarenea only,
+not valid for billing."></TextView>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:textColor="@android:color/black"
+                android:layout_marginStart="180dp"
+                android:text="ĐẠI DIỆN HÀNG HÀNG KHÔNG"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:textColor="@android:color/black"
+                android:text="NHÂN VIÊN CỦA SKYPEC"></TextView>
+
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/AirlineSign"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="210dp"
+                android:text='@{mItem.TextAirlineSignature}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/UserSkypecSign"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="80dp"
+                android:text='@{mItem.TextUserSkypecSignature}'></TextView>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/urlImageAirline"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="210dp"
+                android:text='Chưa có ảnh'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:id="@+id/urlImageSkypec"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="0dp"
+                android:layout_marginStart="80dp"></TextView>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="3dp">
+
+            <ImageView
+                android:id="@+id/ImageAirlineSign"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+
+            <ImageView
+                android:id="@+id/ImageUserSkypecSign"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:adjustViewBounds="true"
+                android:layout_marginEnd="150dp"
+                android:padding="0dp" />
+        </TableRow>
+<!--        <TableRow-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:background="#ffffff"-->
+<!--            android:padding="3dp">-->
+
+
+<!--            <TextView-->
+<!--                android:id="@+id/AirlineSign"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_gravity="end"-->
+<!--                android:layout_weight=".25"-->
+<!--                android:padding="0dp"-->
+<!--                android:textColor="@android:color/black"-->
+<!--                android:layout_marginStart="80dp"-->
+<!--                android:onClick="onClick"-->
+<!--                android:text="Chữ ký" />-->
+<!--            <Button-->
+<!--                android:id="@+id/UserSkypecSign"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_gravity="end"-->
+<!--                android:layout_weight=".25"-->
+<!--                android:padding="0dp"-->
+<!--                android:layout_marginStart="80dp"-->
+<!--                android:onClick="onClick"-->
+<!--                android:text="Chữ ký" />-->
+
+
+<!--        </TableRow>-->
+    </LinearLayout>
+    </ScrollView>
+</layout>

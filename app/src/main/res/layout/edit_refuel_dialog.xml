@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData"></variable>
+    </data>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="400dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TableRow android:id="@+id/fhs_refueler">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="@string/refueler" />
+                <Spinner android:id="@+id/fhs_refueler_spinner"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:spinnerMode="dialog"
+
+                    >
+
+                </Spinner>
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="@string/real_amount" />
+
+                <EditText
+                    android:id="@+id/dialog_volume"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:ems="10"
+                    android:inputType="numberDecimal"
+                    android:selectAllOnFocus="true"
+                    android:text='@{String.format("%,.0f",mItem.realAmount)}' />
+            </TableRow>
+
+
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/dialog_lbl_Meter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+
+                    android:text="@string/end_meter" />
+
+                <EditText
+                    android:id="@+id/dialog_meter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:ems="10"
+                    android:inputType="numberDecimal"
+                    android:selectAllOnFocus="true"
+                    android:text='@{String.format("%,.0f",mItem.endNumber)}' />
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/dialog_lblDensity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="@string/temperature" />
+
+                <EditText
+                    android:id="@+id/dialog_temperature"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:ems="10"
+                    android:inputType="numberDecimal"
+                    android:selectAllOnFocus="true"
+                    android:text='@{String.format("%,.2f",mItem.Temperature)}' />
+            </TableRow>
+
+            <TableRow android:visibility="gone">
+
+                <TextView
+
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:text="@string/endTime" />
+
+                <EditText
+                    android:id="@+id/dialog_endtime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".5"
+                    android:ems="10"
+                    android:focusable="false"
+                    android:onClick="onClick"
+                    android:text='@{DateUtils.formatDate(mItem.endTime,"HH:mm")}' />
+            </TableRow>
+        </TableLayout>
+    </LinearLayout>
+</layout>

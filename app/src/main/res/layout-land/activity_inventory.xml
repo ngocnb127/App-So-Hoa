@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".InventoryActivity">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:background="@color/colorPrimary"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:drawableStart="@drawable/ic_exit"
+            android:onClick="onClick"
+            android:text="@string/back" />
+
+        <Button
+            android:id="@+id/btnUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginStart="16dp"
+            android:text="@string/save" />
+    </androidx.appcompat.widget.Toolbar>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/margin_start">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+
+            android:text="@string/current_amount" />
+
+        <TextView
+            android:id="@+id/lblInventory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.75"
+            android:textSize="@dimen/medium_text"
+            android:textStyle="bold" />
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/margin_start">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:labelFor="@+id/txtInventory"
+
+            android:text="@string/added_amount"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
+        <EditText
+            android:id="@+id/txtInventory"
+            android:layout_width="0dp"
+            android:layout_height="46dp"
+            android:layout_weight="0.25"
+
+            android:digits="0123456789."
+            android:inputType="number" />
+
+        <Spinner
+            android:id="@+id/inventory_unit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.15"
+            android:entries="@array/unit_array" />
+
+        <TextView
+            android:id="@+id/lblQualityControlNo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:labelFor="@+id/txtQualityControlNo"
+            android:text="@string/qc_no" />
+
+
+        <EditText
+            android:id="@+id/txtQualityControlNo"
+            android:layout_width="0dp"
+            android:layout_height="46dp"
+            android:layout_weight="0.25"
+
+
+            android:inputType="textCapCharacters" />
+    </TableRow>
+
+</LinearLayout>

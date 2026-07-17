@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- ===== TOOLBAR ===== -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:background="@color/colorPrimary"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_exit"
+            android:onClick="onClick"
+            android:text="@string/back" />
+
+        <TextView
+            style="?android:attr/textAppearanceLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="BM2504"
+            android:textColor="@color/colorWhite" />
+
+        <Button
+            android:id="@+id/btnNew"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@android:drawable/ic_menu_add"
+            android:onClick="onClick"
+            android:text="@string/add_new" />
+
+        <Button
+            android:id="@+id/btnDelete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:drawableStart="@android:drawable/ic_menu_delete"
+            android:onClick="onClick"
+            android:text="@string/delete" />
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- ===== INFO HEADER ===== -->
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TableRow android:padding="10dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight=".15"
+                android:text="@string/truck_no"
+                android:textSize="@dimen/large_text" />
+
+            <TextView
+                android:id="@+id/b2504_truck_no"
+                android:layout_width="0dp"
+                android:layout_weight=".25"
+                android:textSize="@dimen/large_text" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight=".1"
+                android:text="@string/date"
+                android:textSize="@dimen/large_text" />
+
+            <TextView
+                android:id="@+id/b2504_date"
+                android:layout_width="0dp"
+                android:layout_weight=".3"
+                android:drawableStart="@drawable/ic_calendar"
+                android:clickable="true"
+                android:onClick="onClick"
+                android:textSize="@dimen/large_text" />
+        </TableRow>
+
+    </TableLayout>
+
+    <!-- ===== LIST HEADER ===== -->
+    <include layout="@layout/b2504_header" />
+
+    <!-- ===== LIST ===== -->
+    <ListView
+        android:id="@+id/b2504_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>

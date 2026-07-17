@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2503Model" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp">
+
+        <!-- checkbox -->
+        <CheckBox
+            android:id="@+id/b2503_item_chk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".05"
+            android:focusable="false"
+            android:focusableInTouchMode="false" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="32dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- time -->
+        <TextView
+            android:padding="5dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".15"
+            android:text='@{DateUtils.formatDate(mItem.date,"dd/MM/yyyy HH:mm")}' />
+
+
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="32dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- flight -->
+        <TextView
+            android:padding="5dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".15"
+            android:text='@{mItem.flightNo}' />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="32dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- aircraft -->
+        <TextView
+            android:padding="5dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".2"
+            android:text='@{mItem.acReg}' />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="32dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- buyer -->
+        <TextView
+            android:padding="5dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3"
+            android:text='@{String.valueOf(mItem.value) + " " + mItem.unitText}' />
+
+
+    </LinearLayout>
+
+</layout>

@@ -1,0 +1,2960 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.CheckTrucksModel" />
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/toolbar_height"
+                android:background="@color/colorPrimary"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/a2307_new_back"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.1"
+                    android:drawableStart="@drawable/ic_exit"
+                    android:onClick="onClick"
+                    android:text="@string/back" />
+
+
+                <Button
+                    android:id="@+id/a2307_new_save"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginStart="16dp"
+                    android:onClick="onClick"
+                    android:text="@string/save" />
+            </androidx.appcompat.widget.Toolbar>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/airport"></TextView>
+
+                <Spinner
+                    android:id="@+id/a2307_new_airport"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight=".25"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/shift"></TextView>
+
+                <Spinner
+                    android:id="@+id/a2307_new_shift"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight=".25"
+                    android:padding="5dp"></Spinner>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/truck_no"></TextView>
+
+                <Spinner
+                    android:id="@+id/a2307_new_truck_no"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight=".25"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/hour_km"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_km_number"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.KmNumber}"></TextView>
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/hour"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_time"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{DateUtils.formatDate(mItem.Hours,"HH:mm")}' />
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/date"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_DateCreated"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}' />
+
+<!--                <TextView-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"-->
+<!--                    android:text="@string/bm2505_checker"></TextView>-->
+
+<!--                <Spinner-->
+<!--                    android:id="@+id/a2307_new_operator"-->
+<!--                    style="?android:attr/textAppearanceMedium"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="34dp"-->
+<!--                    android:layout_weight=".25"-->
+<!--                    android:padding="5dp"></Spinner>-->
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result7"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note7"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note7}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result7"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote7"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote7}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result8"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note8"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note8}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result8"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote8"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote8}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result1"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note1"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note1}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result1"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote1"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote1}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result2"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note2"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note2}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result2"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote2"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote2}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result32"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note32}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote32}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result44"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note44"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note44}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result44"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote44"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote44}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result28"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note28}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote28}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result17"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note17"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note17}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result17"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote17"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote17}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result4"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note4}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote4}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result3"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note3"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note3}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result3"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote3"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote3}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result45"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note45"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note45}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result45"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote45"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote45}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result37"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note37"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note37}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result37"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote37"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote37}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result23"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note23"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note23}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result23"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote23"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote23}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result21"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note21"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note21}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result21"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote21"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote21}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result50"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note50"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note50}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result50"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote50"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote50}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result12"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note12}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote12}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result13"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note13}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote13}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result14"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note14}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote14"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote14}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result15"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note15"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note15}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result15"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote15"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote15}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result16"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note16"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note16}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result16"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote16"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote16}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result19"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note19"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note19}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result19"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote19"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote19}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result18"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note18"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note18}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result18"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote18"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote18}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result5"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note5"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note5}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result5"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote5"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote5}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result6"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note6"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note6}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result6"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote6"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote6}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result20"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note20"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note20}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result20"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote20"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote20}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result9"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note9"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note9}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result9"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote9"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote9}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result10"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note10"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note10}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result10"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote10"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote10}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result41"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note41"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note41}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result41"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote41"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote41}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result11"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note11"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note11}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result11"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote11"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote11}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result40"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note40"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note40}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result40"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote40"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote40}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result46"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note46"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note46}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result46"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote46"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote46}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result47"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note47"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note47}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result47"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote47"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote47}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result48"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note48"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note48}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result48"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote48"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote48}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result49"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note49"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note49}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result49"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote49"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote49}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="5dp"
+                    android:text="@string/titleA2307Result"></TextView>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result25"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note25"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note25}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result25"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote25"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote25}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result26"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note26"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note26}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result26"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote26"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote26}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result27"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note27"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note27}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result27"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote27"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote27}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result29"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note29"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note29}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result29"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote29"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote29}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result30"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note30"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note30}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result30"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote30"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote30}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result31"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note31"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note31}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result31"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote31"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote31}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result33"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note33"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note33}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result33"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote33"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote33}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result34"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note34"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note34}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result34"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote34"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote34}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result35"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note35"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note35}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result35"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote35"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote35}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result36"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note36"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note36}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result36"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote36"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote36}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result42"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note42"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note42}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result42"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote42"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote42}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="Nhận xét và yêu cầu" />
+
+                <TextView
+                    android:id="@+id/a2307_new_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".75"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note43}" />
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar2"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/toolbar_height"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/a2307_new_back2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.1"
+                    android:drawableStart="@drawable/ic_exit"
+                    android:onClick="onClick"
+                    android:text="@string/back" />
+
+
+                <Button
+                    android:id="@+id/a2307_new_save2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginStart="16dp"
+                    android:onClick="onClick"
+                    android:text="@string/save" />
+            </androidx.appcompat.widget.Toolbar>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:padding="3dp">
+                <TextView style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    ></TextView>
+
+
+            </TableRow>
+        </LinearLayout>
+    </ScrollView>
+</layout>

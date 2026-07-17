@@ -1,0 +1,446 @@
+package com.megatech.fms.view;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.CheckedTextView;
+import android.widget.Filter;
+import android.widget.Filterable;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.megatech.fms.FMSApplication;
+import com.megatech.fms.R;
+import com.megatech.fms.RefuelDetailActivity;
+import com.megatech.fms.RefuelPreviewActivity;
+import com.megatech.fms.UserBaseActivity;
+import com.megatech.fms.databinding.CardviewRefuelItemBinding;
+import com.megatech.fms.helpers.DataHelper;
+import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.model.REFUEL_ITEM_STATUS;
+import com.megatech.fms.model.RefuelItemData;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
+
+public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecyclerViewAdapter.MyViewHolder> implements Filterable {
+
+    private final UserBaseActivity mContext;
+
+    private final List<RefuelItemData> mData;
+
+    private List<RefuelItemData> mDataFiltered;
+
+    private Timer timer ;
+
+    public RefuelRecyclerViewAdapter(UserBaseActivity mContext, List<RefuelItemData> mData) {
+        this.mContext = mContext;
+        // ✅ FIX 1: Initialize with empty list if null is passed
+        this.mData = (mData != null) ? mData : new ArrayList<>();
+        // ✅ FIX 2: Ensure mDataFiltered is never null
+        this.mDataFiltered = (mData != null) ? mData : new ArrayList<>();
+        /*timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+
+            }
+        }, 0, 1000);*/
+
+    }
+
+
+    @NonNull
+    @Override
+    public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        //View view;
+        LayoutInflater inflater = LayoutInflater.from(mContext);
+        //view = inflater.inflate(R.layout.cardview_refuel_item,parent,false);
+        //return new MyViewHolder(view);
+        CardviewRefuelItemBinding itemBinding = CardviewRefuelItemBinding.inflate(inflater, parent, false);
+        return new MyViewHolder(itemBinding);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
+        // ✅ FIX 3: Check both null and size before accessing
+        if (mDataFiltered != null && mDataFiltered.size() > 0) {
+            RefuelItemData model = mDataFiltered.get(position);
+
+            //holder.itemView.setOnClickListener(subClick);
+
+            holder.bind(model);
+
+//
+            holder.itemView.setOnClickListener(mOnClickListener);
+            holder.itemView.setTag(mDataFiltered.get(position));
+        } else
+            Log.e("Error", "Out of bound or null data");
+    }
+
+    @Override
+    public int getItemCount() {
+        // ✅ FIX 4: CRITICAL - Add null check and safe size() call
+        return (mDataFiltered != null) ? mDataFiltered.size() : 0;
+    }
+
+    int REQUEST_CODE = 5546;
+    int dlgResult = 0;
+    private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+
+            Bundle arguments = new Bundle();
+            RefuelItemData item = (RefuelItemData) v.getTag();
+            Context context = v.getContext();
+            if (item.getFlightStatus() == RefuelItemData.FLIGHT_STATUS.CANCELLED) {
+                Toast.makeText(mContext, R.string.cancelled_alert, Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (item.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                if (!item.getTruckNo().equals(FMSApplication.getApplication().getTruckNo())) {
+                    RefuelItemData exactItem = findCorrectItem(item);
+                    if (exactItem !=null)
+                        showRefuel(exactItem);
+                    else {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle(R.string.app_name)
+                                .setMessage(R.string.assigned_to_another_truck)
+                                .setPositiveButton(R.string.refuel, (dialog, which) -> {
+                                    dialog.dismiss();
+                                    showRefuel(item);
+                                })
+                                .setNegativeButton(R.string.back, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dlgResult = -1;
+                                        dialog.dismiss();
+                                    }
+                                });
+                        builder.create().show();
+
+                        if (dlgResult != 0)
+                            return;
+                    }
+                } else
+                    showRefuel(item);
+            } else if (item.getStatus() == REFUEL_ITEM_STATUS.DONE)
+                showPreview(item);
+
+
+        }
+    };
+
+    private RefuelItemData findCorrectItem(RefuelItemData item) {
+        // ✅ FIX 5: Add null check before calling stream
+        if (mData == null) return null;
+
+        return mData.stream().filter(rf->rf.getFlightId() == item.getFlightId() &&
+                rf.getTruckId() == FMSApplication.getApplication().getTruckId() &&
+                (rf.getStatus() == REFUEL_ITEM_STATUS.NONE || rf.getStatus() == REFUEL_ITEM_STATUS.PROCESSING)
+
+        ).findFirst().orElse(null);
+    }
+
+    private void showRefuel(RefuelItemData item) {
+        Intent intent = new Intent(mContext, RefuelDetailActivity.class);
+        intent.putExtra("REFUEL_ID", item.getId());
+        intent.putExtra("REFUEL_LOCAL_ID", item.getLocalId());
+        intent.putExtra("REFUEL_UNIQUE_ID", item.getUniqueId());
+        intent.putExtra("FLIGHT_ID", item.getFlightId());
+        mContext.startActivityForResult(intent, REQUEST_CODE);
+    }
+
+    private void showPreview(RefuelItemData item) {
+        Intent intent = new Intent(mContext, RefuelPreviewActivity.class);
+        intent.putExtra("REFUEL_ID", item.getId());
+        intent.putExtra("REFUEL_LOCAL_ID", item.getLocalId());
+        intent.putExtra("REFUEL_UNIQUE_ID", item.getUniqueId());
+        mContext.startActivityForResult(intent, REQUEST_CODE);
+    }
+
+    /**
+     * ✅ FIX 6: Public method to safely update data
+     */
+    public void setData(List<RefuelItemData> newData) {
+        this.mData.clear();
+        if (newData != null) {
+            this.mData.addAll(newData);
+        }
+        this.mDataFiltered = new ArrayList<>(this.mData);
+        notifyDataSetChanged();
+    }
+
+    @Override
+    public Filter getFilter() {
+        return new Filter() {
+            @Override
+            protected FilterResults performFiltering(CharSequence charSequence) {
+                String charString = charSequence.toString().toLowerCase();
+
+                List<RefuelItemData> filteredList = new ArrayList<>();
+
+                // ✅ LUÔN filter từ mData gốc, không phải mDataFiltered
+                if (mData != null && !mData.isEmpty()) {
+                    for (RefuelItemData row : mData) {
+                        if (row.getFlightCode().toLowerCase().contains(charString) ||
+                                row.getAircraftCode().toLowerCase().contains(charString)) {
+                            filteredList.add(row);
+                        }
+                    }
+                }
+
+                FilterResults filterResults = new FilterResults();
+                filterResults.values = filteredList;
+                return filterResults;
+            }
+
+            @Override
+            protected void publishResults(CharSequence constraint, FilterResults results) {
+                if (results.values != null) {
+                    mDataFiltered = (ArrayList<RefuelItemData>) results.values;
+                } else {
+                    mDataFiltered = new ArrayList<>();
+                }
+                notifyDataSetChanged();
+            }
+        };
+    }
+
+    public class MyViewHolder extends RecyclerView.ViewHolder {
+        TextView mFlightCode;
+        TextView mAircraftCode;
+        TextView mParkingLot;
+        TextView mRefuelTime;
+        CheckedTextView mCheck;
+        CheckedTextView mSync;
+        private CardviewRefuelItemBinding binding;
+        UserBaseActivity ctx;
+
+        public MyViewHolder(CardviewRefuelItemBinding binding, @NonNull View itemView) {
+            super(itemView);
+            this.binding = binding;
+        }
+
+        public MyViewHolder(CardviewRefuelItemBinding binding) {
+            super(binding.getRoot());
+            mSync = binding.getRoot().findViewById(R.id.refuel_item_sync);
+            mRefuelTime = binding.getRoot().findViewById(R.id.refuel_item_refuel_time);
+
+            ctx = (UserBaseActivity)binding.getRoot().getContext();
+            mSync.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    RefuelItemData itemData = binding.getMItem();
+                    if (itemData != null) {
+                        ctx.setProgressDialog();
+                        postData(itemData);
+                    }
+                }
+            });
+            this.binding = binding;
+        }
+
+
+
+        public MyViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            mFlightCode = itemView.findViewById(R.id.refuel_item_flightCode);
+            mAircraftCode = itemView.findViewById(R.id.refuel_item_aircraftCode);
+            mParkingLot = itemView.findViewById(R.id.refuel_item_parlingLot);
+            mCheck = itemView.findViewById(R.id.refuel_item_chk);
+            mSync = itemView.findViewById(R.id.refuel_item_sync);
+            mRefuelTime = itemView.findViewById(R.id.refuel_item_refuel_time);
+
+        }
+
+        RefuelItemData mData ;
+        public void bind(RefuelItemData itemData) {
+            binding.setMItem(itemData);
+            mData = itemData;
+            binding.executePendingBindings();
+
+
+
+            Date d = new Date();
+            long t = d.getTime() - mData.getRefuelTime().getTime();
+            long m = t / (1000 * 60);
+            int bgColor = Color.WHITE;
+            int color = Color.BLACK;
+            if (m > -70 && m <= -10) {
+                color = Color.WHITE;
+                bgColor = Color.rgb(00,80,00);
+            } else if (m > -10 && m <= 10) {
+                color = Color.BLUE;
+                bgColor = Color.rgb(255, 165, 0);
+            } else if (m > 10) {
+                color = Color.WHITE;
+                bgColor = Color.RED;
+            }
+            if (mData.getStatus() == REFUEL_ITEM_STATUS.NONE) {
+                mRefuelTime.setBackgroundColor(bgColor);
+                mRefuelTime.setTextColor(color);
+            }
+
+            // TIẾP CẬN
+            binding.btnApproach.setOnClickListener(v -> {
+                itemData.setApproachTime(new Date());
+                saveAndUpdate(itemData);
+            });
+
+            // RỜI ĐI
+            binding.btnLeave.setOnClickListener(v -> {
+
+                Context context = itemView.getContext();
+                if (!(context instanceof Activity)) return;
+                Activity activity = (Activity) context;
+
+                // ===== LẤY GALLON AN TOÀN =====
+                double gallon = 0;
+                try {
+                    gallon = itemData.getGallon();
+                } catch (Exception ignored) {}
+
+                // ===== TRƯỜNG HỢP CHƯA TRA NẠP =====
+                if (gallon <= 0) {
+                    if (activity.isFinishing()) return;
+
+                    new AlertDialog.Builder(activity)
+                            .setTitle(R.string.app_name)
+                            .setMessage("Chuyến này chưa tra nạp?")
+                            .setCancelable(false)
+
+                            // 🔴 HUỶ TIẾP CẬN
+                            .setPositiveButton("Huỷ tiếp cận", (dialog, which) -> {
+                                dialog.dismiss();
+
+                                // reset dữ liệu
+                                itemData.setApproachTime(null);
+                                itemData.setLeaveTime(null);
+                                itemData.setLocalModified(true);
+
+                                // 🚀 DB + SYNC CHẠY BACKGROUND
+                                new Thread(() -> {
+                                    DataHelper.postRefuel(itemData, false);
+
+                                    // 🔄 UPDATE UI
+                                    activity.runOnUiThread(() -> {
+                                        int pos = getAdapterPosition();
+                                        if (pos != RecyclerView.NO_POSITION) {
+                                            notifyItemChanged(pos);
+                                        }
+                                    });
+                                }).start();
+                            })
+
+                            // 🟡 TRỞ VỀ
+                            .setNegativeButton("Trở về", (dialog, which) -> dialog.dismiss())
+                            .show();
+
+                    return;
+                }
+
+                // ===== CÓ TRA NẠP → RỜI ĐI BÌNH THƯỜNG =====
+                itemData.setLeaveTime(new Date());
+                itemData.setLocalModified(true);
+
+                new Thread(() -> {
+                    DataHelper.postRefuel(itemData, false);
+
+                    activity.runOnUiThread(() -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            notifyItemChanged(pos);
+                        }
+                    });
+                }).start();
+            });
+
+
+
+
+        }
+
+        private void saveAndUpdate(RefuelItemData item) {
+
+            new Thread(() -> {
+                try {
+                    Logger.appendLog("FMS", "Posting refuel update...");
+                    DataHelper.postRefuel(item, false);
+
+                } catch (Exception ex) {
+                    Logger.appendLog("ERR", ex.getMessage());
+                }
+
+                // Cập nhật UI
+                ((Activity) ctx).runOnUiThread(() -> {
+                    binding.invalidateAll();
+                    notifyDataSetChangedSafe();
+                });
+
+            }).start();
+        }
+
+        private void notifyDataSetChangedSafe() {
+            try {
+                if (getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    RefuelRecyclerViewAdapter.this.notifyItemChanged(getAdapterPosition());
+                } else {
+                    RefuelRecyclerViewAdapter.this.notifyDataSetChanged();
+                }
+            } catch (Exception ignored) {}
+        }
+
+
+
+
+        private void postData(RefuelItemData itemData) {
+            new AsyncTask<Void, Void, RefuelItemData>() {
+                @Override
+                protected RefuelItemData doInBackground(Void... voids) {
+                    return DataHelper.postRefuel(itemData, true);
+                }
+
+                @Override
+                protected void onPostExecute(RefuelItemData itemData) {
+                    postDataCompleted(itemData);
+                    super.onPostExecute(itemData);
+
+                }
+            }.execute();
+        }
+
+        private void postDataCompleted(RefuelItemData itemData) {
+            ctx.closeProgressDialog();
+            if (itemData == null || itemData.isLocalModified())
+                ctx.showErrorMessage(R.string.sync_error_title, R.string.sync_error);
+            else {
+                ctx.showMessage(R.string.sync, R.string.sync_completed_message, R.drawable.ic_checked_circle, null);
+                binding.getMItem().setLocalModified(false);
+                binding.invalidateAll();
+            }
+        }
+    }
+}

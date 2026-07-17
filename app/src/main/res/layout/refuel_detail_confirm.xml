@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.FLIGHT_STATUS" />
+
+        <import type="com.megatech.fms.enums.INVOICE_TYPE" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.REFUEL_ITEM_TYPE" />
+
+        <import type="com.megatech.fms.model.REFUEL_ITEM_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.CURRENCY" />
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData"></variable>
+    </data>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TableLayout
+            android:padding="8dp"
+            android:id="@+id/tblRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="0"
+            app:layout_constraintTop_toTopOf="parent">
+
+
+            <TableRow
+                android:padding="8dp"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="Giờ bắt đầu tra nạp" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_start_time"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{DateUtils.formatDate(mItem.startTime,"dd/MM/yyyy HH:mm")}'
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+
+                    android:text="Giờ kết thúc tra nạp" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_end_time"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{DateUtils.formatDate(mItem.endTime,"dd/MM/yyyy HH:mm")}'
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+
+            <TableRow
+                android:padding="8dp"
+                android:background="#efefef"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+                <TextView
+                    android:id="@+id/textView12"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="Nhiệt độ" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_Temperature"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%.2f",mItem.manualTemperature)}'
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/textView13"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/density" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_Density"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%.4f",mItem.density)}'
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+
+            <TableRow
+                android:padding="8dp"
+                android:background="#ffffff"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/start_meter" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_start_meter"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%,.0f",mItem.startNumber)}'
+                    android:textIsSelectable="true" />
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    android:text="@string/end_meter" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_end_meter"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+
+                    android:drawableStart="@drawable/ic_edit"
+                    android:ems="10"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%,.0f",mItem.endNumber)}'
+                    android:textIsSelectable="true" />
+
+
+            </TableRow>
+
+            <TableRow
+                android:padding="8dp"
+                android:background="#efefef"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+
+                <TextView
+                    android:id="@+id/lblQCNo"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/qc_no" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_qc_no"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{mItem.qualityNo}'
+                    android:textIsSelectable="true" />
+
+
+                <TextView
+                    android:id="@+id/textView4"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="3dp"
+                    android:text="Sản lượng thực tế" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_real_amount"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+
+                    android:drawableStart="@drawable/ic_edit"
+                    android:ems="10"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%,.0f",mItem.realAmount)}'
+                    android:textIsSelectable="true" />
+
+
+            </TableRow>
+
+            <TableRow
+                android:padding="8dp"
+                android:background="#ffffff"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+                <TextView
+
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/driver" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_driver"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{mItem.driverName}'
+                    android:textIsSelectable="true" />
+
+                <TextView
+
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/operator" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_operator"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{mItem.operatorName}'
+                    android:textIsSelectable="true" />
+            </TableRow>
+
+            <TableRow
+                android:padding="8dp"
+                android:background="#efefef"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/return_amount" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_return"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{String.format("%.0f",mItem.returnAmount)}'
+                    android:textIsSelectable="true" />
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:padding="3dp"
+                    android:text="@string/weight_note" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_weight_note"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:drawableLeft="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{mItem.weightNote}'
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/refuel_confirm_invoice_number"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.25"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="3dp"
+                    android:text='@{mItem.invoiceNumber}'
+                    android:textIsSelectable="true"
+                    android:visibility="gone" />
+            </TableRow>
+
+            <TableRow android:padding="8dp">
+                <Button
+                    android:id="@+id/btnConfirm"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.2"
+                    android:padding="5px"
+                    android:text="@string/confirm" />
+            </TableRow>
+
+        </TableLayout>
+
+
+    </LinearLayout>
+</layout>

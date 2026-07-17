@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.FLIGHT_STATUS" />
+
+        <import type="com.megatech.fms.enums.INVOICE_TYPE" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.REFUEL_ITEM_TYPE" />
+
+        <import type="com.megatech.fms.model.REFUEL_ITEM_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.CURRENCY" />
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData"></variable>
+    </data>
+
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/bgInfo"
+            android:padding="5dp">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/back"></Button>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/check_form"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/large_text"
+                android:textStyle="bold"></TextView>
+
+            <Button
+                android:id="@+id/btnDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/delete"
+                android:visibility="@{mItem.bM2508Result == null? View.GONE : View.VISIBLE}"></Button>
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/save"></Button>
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="@string/flightCode" />
+
+            <TextView
+                android:id="@+id/refuel_preview_flightCode"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="@{mItem.flightCode}"
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="@string/aircraft_type" />
+
+            <TextView
+                android:id="@+id/refuel_preview_aircraftType"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+
+                android:padding="3dp"
+                android:text="@{mItem.aircraftType}"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="@string/aircraftCode" />
+
+            <TextView
+                android:id="@+id/refuel_preview_aircraftCode"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+
+                android:padding="3dp"
+                android:text="@{mItem.aircraftCode}"
+                android:textIsSelectable="true" />
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="Bãi đỗ" />
+
+            <TextView
+                android:id="@+id/refuel_preview_parking"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+
+                android:padding="3dp"
+
+                android:text="@{mItem.parkingLot}"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+                android:text="Giờ bắt đầu tra nạp" />
+
+            <TextView
+                android:id="@+id/refuel_preview_starttime"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+
+                android:padding="3dp"
+                android:text='@{DateUtils.formatDate(mItem.startTime,"dd/MM/yyyy HH:mm")}'
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:padding="3dp"
+
+                android:text="Giờ kết thúc tra nạp" />
+
+            <TextView
+                android:id="@+id/refuel_preview_endtime"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+
+                android:onClick="onClick"
+                android:padding="3dp"
+                android:text='@{DateUtils.formatDate(mItem.endTime,"dd/MM/yyyy HH:mm")}'
+                android:textIsSelectable="true" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp"
+
+                android:text="@string/bonding_cable"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|top"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/fueling_hose"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|top"
+                android:layout_weight="1"
+                android:gravity="center|top"
+                android:padding="5dp"
+                android:text="@string/fueling_cap"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|top"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/ladder"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp">
+
+                <CheckBox
+                    android:id="@+id/chk_bonding_cable"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked='@{mItem.BM2508BondingCable}'
+                    android:scaleX="2"
+                    android:scaleY="2" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp">
+
+                <CheckBox
+                    android:id="@+id/chk_fueling_hose"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked='@{mItem.BM2508FuelingHose}'
+                    android:scaleX="2"
+                    android:scaleY="2" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp">
+
+                <CheckBox
+                    android:id="@+id/chk_fueling_cap"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked='@{mItem.BM2508FuelingCap}'
+                    android:scaleX="2"
+                    android:scaleY="2" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="5dp">
+
+                <CheckBox
+                    android:id="@+id/chk_ladder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked='@{mItem.BM2508Ladder}'
+                    android:scaleX="2"
+                    android:scaleY="2" />
+            </LinearLayout>
+        </TableRow>
+
+    </TableLayout>
+
+</layout>

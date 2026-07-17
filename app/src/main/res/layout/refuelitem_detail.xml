@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardCornerRadius="2dp"
+    app:cardUseCompatPadding="true"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mã chuyến bay"
+        android:padding="5dp"
+        style="?android:attr/textAppearanceLarge"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/new_refuel_flightCode"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        android:padding="5dp"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:context=".RefuelItemDetailFragment" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Số hiệu tàu bay"
+        style="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_aircraftCode" />
+    <TextView
+        android:id="@+id/refuelitem_detail_aircraftCode"
+        style="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/new_refuel_flightCode" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Bãi đỗ"
+        style="?android:attr/textAppearanceLarge"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_parking" />
+    <TextView
+        android:id="@+id/refuelitem_detail_parking"
+        style="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_aircraftCode" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Giờ hạ cánh"
+        style="?android:attr/textAppearanceLarge"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_arrival" />
+    <TextView
+        android:id="@+id/refuelitem_detail_arrival"
+        style="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_parking" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Giờ cất cánh"
+        style="?android:attr/textAppearanceLarge"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_departure" />
+    <TextView
+        android:id="@+id/refuelitem_detail_departure"
+        style="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_arrival" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Sản lượng dự kiến"
+        style="?android:attr/textAppearanceLarge"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_estimateAmount" />
+
+    <TextView
+        android:id="@+id/refuelitem_detail_estimateAmount"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="0.00"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_departure" />
+    <TextView
+        android:id="@+id/textView4"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Sản lượng thực tế"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_realAmount" />
+
+
+
+    <TextView
+        android:id="@+id/refuelitem_detail_realAmount"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="0.00"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_estimateAmount" />
+    <TextView
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:text="Giờ tra nạp"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        app:layout_constraintTop_toTopOf="@id/refuelitem_detail_startTime" />
+
+    <TextView
+        android:id="@+id/refuelitem_detail_startTime"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+        app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_realAmount" />
+
+    <Button
+        android:id="@+id/refuelitem_detail_bntreffuel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/refuel"
+        android:layout_marginBottom="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/guideline_left"
+        tools:ignore="InvalidId" />
+
+    <Button
+        android:id="@+id/refuelitem_detail_bntprint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:text="@string/print_order"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/refuelitem_detail_bntreffuel"
+        tools:ignore="InvalidId" />
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".47" />
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_bottom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".9" />
+</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

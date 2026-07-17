@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<TableRow>
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="43dp"
+        android:layout_gravity="center"
+        android:layout_weight="1"
+        android:text="@string/thankyou"
+        android:textAlignment="center"
+        android:textSize="@dimen/large_text"
+        android:textStyle="bold"></TextView>
+</TableRow>
+    <TableRow>
+        <TextView android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textAlignment="center"
+            android:textStyle="italic"
+            android:textSize="@dimen/large_text"
+            android:text="@string/thankyou_e"></TextView>
+    </TableRow>
+    <TableRow>
+        <ImageView android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_okay"
+            ></ImageView>
+    </TableRow>
+</TableLayout>

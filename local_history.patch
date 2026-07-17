@@ -1,0 +1,1107 @@
+Index: app/src/main/java/com/megatech/fms/RefuelDetailActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/megatech/fms/RefuelDetailActivity.java	(date 1619069215223)
++++ app/src/main/java/com/megatech/fms/RefuelDetailActivity.java	(date 1619069215223)
+@@ -1,24 +1,18 @@
+ package com.megatech.fms;
+ 
+-import androidx.cardview.widget.CardView;
+-import androidx.databinding.DataBindingUtil;
+-
++import android.annotation.SuppressLint;
+ import android.app.Activity;
+ import android.app.AlertDialog;
+-import android.content.Context;
++import android.app.Dialog;
++import android.app.TimePickerDialog;
+ import android.content.DialogInterface;
+ import android.content.Intent;
+ import android.graphics.Color;
+ import android.graphics.drawable.Drawable;
+ import android.os.AsyncTask;
+ import android.os.Bundle;
+-import android.text.InputType;
+ import android.util.Log;
+-import android.view.Gravity;
+-import android.view.KeyEvent;
+ import android.view.View;
+-import android.view.inputmethod.EditorInfo;
+-import android.view.inputmethod.InputMethodManager;
+ import android.widget.AdapterView;
+ import android.widget.ArrayAdapter;
+ import android.widget.Button;
+@@ -26,34 +20,55 @@
+ import android.widget.EditText;
+ import android.widget.Spinner;
+ import android.widget.TextView;
+-import android.widget.Toast;
++import android.widget.TimePicker;
+ 
+-import com.google.gson.FieldNamingPolicy;
+-import com.google.gson.Gson;
+-import com.google.gson.GsonBuilder;
++import androidx.databinding.DataBindingUtil;
++
+ import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.LCR_COMMAND;
+ import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.LCR_DEVICE_CONNECTION_STATE;
+-import com.megatech.fms.data.entity.RefuelItem;
+ import com.megatech.fms.databinding.ActivityRefuelDetailBinding;
++import com.megatech.fms.databinding.EditRefuelDialogBinding;
++import com.megatech.fms.databinding.SelectUserBinding;
+ import com.megatech.fms.helpers.DataHelper;
++import com.megatech.fms.helpers.DateUtils;
++import com.megatech.fms.helpers.LCRReader;
+ import com.megatech.fms.helpers.Logger;
+ import com.megatech.fms.model.AirlineModel;
+ import com.megatech.fms.model.LCRDataModel;
+ import com.megatech.fms.model.REFUEL_ITEM_STATUS;
+ import com.megatech.fms.model.RefuelItemData;
+-import com.megatech.fms.helpers.HttpClient;
+-import com.megatech.fms.helpers.LCRReader;
+-import com.megatech.fms.helpers.PrintWorker;
+ 
+-import java.text.NumberFormat;
+-import java.text.ParseException;
+ import java.text.SimpleDateFormat;
+-import java.util.ArrayList;
++import java.time.Duration;
++import java.util.Calendar;
+ import java.util.Date;
+ import java.util.List;
++import java.util.Objects;
++import java.util.Timer;
++import java.util.TimerTask;
+ 
+ public class RefuelDetailActivity extends UserBaseActivity implements View.OnClickListener {
+ 
++    private List<AirlineModel> airlines = null;
++
++    private Button btnReconnect;
++    private Button btnRestart;
++    private Button btnForceStop;
++    private Button btnBack;
++    private String TAG = "REFUEL_SCREEN";
++
++    private enum CONNECTION_STATUS {
++        OK,
++        ERROR,
++        CONNECTING
++    }
++
++    private RefuelItemData mItem;
++    private Activity activity;
++    private boolean isEditing = false;
++    private boolean restartRequest = false;
++    ActivityRefuelDetailBinding binding;
++
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+@@ -65,40 +80,33 @@
+ 
+         btnReconnect = findViewById(R.id.btnReconnect);
+         btnRestart = findViewById(R.id.btnRestart);
++        btnForceStop = findViewById(R.id.btnForceStop);
+         btnBack = findViewById(R.id.btnBack);
+         btnStart = findViewById(R.id.btnStart);
+ 
+         String storedIP = currentApp.getDeviceIP();
+-        reader = LCRReader.create(this,storedIP,10001,false );
++        reader = LCRReader.create(this, storedIP, 10001, false);
+         //reader =  new LCRReader(this, storedIP);
+         addListeners();
+ 
++        if (reader.isStarted())
++            onStarted();
+         this.model = new LCRDataModel();
+         model.setUserId(currentUser.getUserId());
+         deviceIsReady = reader.getConnected();
+         //check if LCR status is started
+-        if (reader.isStarted())
+-            onStarted();
++
+         if (deviceIsReady)
+         {
+            setConnectionCheckmark(CONNECTION_STATUS.OK);
+         }
+-        //binding = DataBindingUtil.setContentView(activity, R.layout.activity_refuel_detail, null);
+-        //binding.setMItem(mItem);
++        //shiftBinding = DataBindingUtil.setContentView(activity, R.layout.activity_refuel_detail, null);
++        //shiftBinding.setMItem(mItem);
+ 
+         Logger.appendLog("Start refueling");
+         loaddata();
+     }
+ 
+-    @Override
+-    protected void onResume() {
+-        super.onResume();
+-    }
+-
+-    private Button btnReconnect;
+-    private Button btnRestart;
+-    private  Button btnBack;
+-
+     private void setConnectionCheckmark(CONNECTION_STATUS status) {
+ 
+         switch (status) {
+@@ -109,7 +117,7 @@
+                 ((TextView) findViewById(R.id.lbl_connection_status)).setTextColor(getResources().getColor(R.color.colorDarkGreen));
+                 ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr)).setCheckMarkDrawable(R.drawable.ic_checked_circle);
+                 btnReconnect.setVisibility(View.INVISIBLE);
+-                //btnRestart.setVisibility(View.INVISIBLE);
++                btnForceStop.setVisibility(View.VISIBLE);
+                 break;
+             case CONNECTING:
+                 CheckedTextView chkTxt = findViewById(R.id.refuel_detail_chk_connect_lcr);
+@@ -130,74 +138,56 @@
+                 ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr)).setCheckMarkDrawable(R.drawable.ic_error);
+                 btnReconnect.setVisibility(View.VISIBLE);
+                 btnRestart.setVisibility(View.VISIBLE);
++                btnForceStop.setVisibility(View.VISIBLE);
+                 btnReconnect.setEnabled(true);
+                 btnRestart.setEnabled(true);
++                btnForceStop.setEnabled(true);
+                 setEnableButton(started);
+                 break;
+         }
+ 
+     }
+ 
+-    private enum CONNECTION_STATUS
+-    {
+-        OK,
+-        ERROR,
+-        CONNECTING
+-    }
+-    private RefuelItemData mItem;
+-    private Activity activity;
+-    private boolean isEditing = false;
+-    private List<AirlineModel> airlines = null;
+-    ActivityRefuelDetailBinding binding;
+-
+     private void loaddata() {
+ 
+-        new Thread( new Runnable(){
+-            @Override
+-            public void run() {
+-                airlines = DataHelper.getAirlines();
+-                Bundle b = getIntent().getExtras();
+-                Integer id = b.getInt("REFUEL_ID", 0);
+-                Integer localId = b.getInt("REFUEL_LOCAL_ID", 0);
+-                String mData = b.getString("REFUEL", "");
+-                Logger.appendLog("Start loading Item : " + id.toString());
+-                RefuelItemData  itemData = null;
+-                if (mData != null && !mData.equals("")) {
+-                    itemData = RefuelItemData.fromJson(mData);
+-                }
+-                if (itemData == null)
+-                    itemData = DataHelper.getRefuelItem(id,localId);
++        new Thread(() -> {
++            airlines = DataHelper.getAirlines();
++            Bundle b = getIntent().getExtras();
++            Integer id = b.getInt("REFUEL_ID", 0);
++            Integer localId = b.getInt("REFUEL_LOCAL_ID", 0);
++            String mData = b.getString("REFUEL", "");
++            Logger.appendLog("Start loading Item : " + id.toString());
++            RefuelItemData itemData = null;
++            if (mData != null && !mData.equals("")) {
++                itemData = RefuelItemData.fromJson(mData);
++            }
++            if (itemData == null)
++                itemData = DataHelper.getRefuelItem(id, localId);
+ 
+-                if (itemData!=null)
+-                    mItem = itemData;
+-                    Logger.appendLog("Flight Code: "+ mItem.getFlightCode());
+-                    runOnUiThread(new Runnable() {
+-                        @Override
+-                        public void run() {
+-                            if (!isFinishing())
+-                                showData();
+-                        }
+-                    });
++            if (itemData != null)
++                mItem = itemData;
++            Logger.appendLog("Flight Code: " + mItem.getFlightCode());
++            runOnUiThread(() -> {
++                if (!isFinishing())
++                    showData();
++            });
+ 
+-            }
+         }).start();
+ 
+ 
+-
+     }
+ 
+-    private void showData()
+-    {
+-        //binding.setMItem(mItem);
++    private void showData() {
++        //shiftBinding.setMItem(mItem);
+ 
+         setTextBoxValue(R.id.refuelitem_detail_aircraftCode, mItem.getAircraftCode());
+         setTextBoxValue(R.id.refuelitem_detail_Density, mItem.getDensity(), "%.4f");
+         setTextBoxValue(R.id.refuelitem_detail_flightCode, mItem.getFlightCode());
+         setTextBoxValue(R.id.refuelitem_detail_parking, mItem.getParkingLot());
+         setTextBoxValue(R.id.refuelitem_detail_qc_no, mItem.getQualityNo());
+-        setTextBoxValue(R.id.refuelitem_detail_estimateAmount, mItem.getEstimateAmount(),"%.0f");
+-        setTextBoxValue(R.id.refuelitem_detail_Temperature, mItem.getTemperature(),"%.2f");
+-        setTextBoxValue(R.id.refuelitem_detail_realAmount, mItem.getRealAmount(),"%.0f");
++        setTextBoxValue(R.id.refuelitem_detail_estimateAmount, mItem.getEstimateAmount(), "%.0f");
++        setTextBoxValue(R.id.refuelitem_detail_Temperature, mItem.getTemperature(), "%.2f");
++        setTextBoxValue(R.id.refuelitem_detail_realAmount, mItem.getRealAmount(), "%.0f");
+         setTextBoxValue(R.id.refuelitem_detail_aircraftCode, mItem.getAircraftCode());
+         setTextBoxValue(R.id.refuelitem_detail_aircraftCode, mItem.getAircraftCode());
+         setTextBoxValue(R.id.refuelitem_detail_aircraftCode, mItem.getAircraftCode());
+@@ -209,18 +199,10 @@
+                     .setTitle(R.string.app_name)
+                     .setMessage(R.string.inventory_alert)
+                     .setIcon(R.drawable.ic_warning)
+-                    .setPositiveButton(R.string.btn_continue, new DialogInterface.OnClickListener() {
+-                        @Override
+-                        public void onClick(DialogInterface dialog, int which) {
+-                            dialog.dismiss();
+-                        }
+-                    })
+-                    .setNegativeButton(R.string.btn_stop, new DialogInterface.OnClickListener() {
+-                        @Override
+-                        public void onClick(DialogInterface dialog, int which) {
+-                            dialog.dismiss();
+-                            finish();
+-                        }
++                    .setPositiveButton(R.string.btn_continue, (dialog, which) -> dialog.dismiss())
++                    .setNegativeButton(R.string.btn_stop, (dialog, which) -> {
++                        dialog.dismiss();
++                        finish();
+                     })
+                     .create()
+                     .show();
+@@ -230,7 +212,7 @@
+         if (mItem != null) {
+ 
+ 
+-            ArrayAdapter<AirlineModel> spinnerAdapter = new ArrayAdapter<AirlineModel>(activity,R.layout.support_simple_spinner_dropdown_item,airlines);
++            ArrayAdapter<AirlineModel> spinnerAdapter = new ArrayAdapter<>(activity, R.layout.support_simple_spinner_dropdown_item, airlines);
+             spinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
+ 
+ 
+@@ -250,9 +232,9 @@
+                         mItem.setAirlineModel(item);
+                         mItem.setPrice(item.getPrice());
+                         mItem.setUnit(item.getUnit());
+-                        mItem.setTaxRate(!mItem.isInternational() && item.isInternational()?0.1:0);
++                        mItem.setTaxRate(!mItem.isInternational() && item.isInternational() ? 0.1 : 0);
+                         mItem.setCurrency(item.getCurrency());
+-                        setTextBoxValue(R.id.refuelitem_detail_airline,item.getName());
++                        setTextBoxValue(R.id.refuelitem_detail_airline, item.getName());
+                         break;
+                     }
+                 }
+@@ -265,7 +247,7 @@
+                     mItem.setPrice(selected.getPrice());
+                     mItem.setCurrency(selected.getCurrency());
+                     mItem.setUnit(selected.getUnit());
+-                    mItem.setTaxRate(!mItem.isInternational() && selected.isInternational()?0.1:0);
++                    mItem.setTaxRate(!mItem.isInternational() && selected.isInternational() ? 0.1 : 0);
+                     mItem.setProductName(selected.getProductName());
+                     mItem.setAirlineModel(selected);
+                 }
+@@ -276,31 +258,52 @@
+                 }
+             });
+ 
+-            if (mItem.getArrivalTime() != new Date(Long.MIN_VALUE))
++            if (!Objects.equals(mItem.getArrivalTime(), new Date(Long.MIN_VALUE)))
+                 ((TextView) findViewById(R.id.refuelitem_detail_arrival)).setText(simpleDateFormat.format(mItem.getArrivalTime()));
+-            if (mItem.getDepartureTime() != new Date(Long.MIN_VALUE))
++            if (!Objects.equals(mItem.getDepartureTime(), new Date(Long.MIN_VALUE)))
+                 ((TextView) findViewById(R.id.refuelitem_detail_departure)).setText(simpleDateFormat.format(mItem.getDepartureTime()));
+ 
+         }
+ 
+     }
+-    private void setTextBoxValue(int id, Object value)
+-    {
++
++    private void setTextBoxValue(int id, Object value) {
+         setTextBoxValue(id, value, "%s");
+     }
++
+     private void setTextBoxValue(int id, Object value, String pattern) {
+         if (value != null)
+             ((TextView) findViewById(id)).setText(String.format(pattern, value));
+     }
+ 
++    private void reconnect() {
++
++        setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
++
++        reader.doConnectDevice();
++    }
++
++    private String m_Text = "";
+ 
+-    private String TAG = "REFUEL_SCREEN";
++
++    ///Reader define
++
++    private LCRReader reader = null;
++    private LCRDataModel model;
++    private boolean deviceIsReady = false;
++    private boolean deviceIsError = false;
++    private boolean conditionIsReady = false;
++    private boolean inventoryIsReady = false;
++    private boolean startButtonPress = false;
++    private boolean started = false;
++
++    private Button btnStart;
++
+     public void onClick(View v) {
+         int id = v.getId();
+-        Logger.appendLog("Click: "+ v.toString());
++        Logger.appendLog("Click: " + v.toString());
+         switch (id) {
+-            case  R.id.btnTest:
+-                setButtonText(REFUEL_STATUS.STARTED);
++            case R.id.btnTest:
+                 reader.requestData();
+                 break;
+             case R.id.btnStart:
+@@ -313,10 +316,16 @@
+                 break;
+             case R.id.btnRestart:
+                 //reader.initLCR();
++                if (started)
++                    currentApp.saveCurrentRefuel(mItem.getId(), mItem.getLocalId());
+                 showRestart();
+                 break;
++            case R.id.btnForceStop:
++                showForceStopDialog();
++                break;
++
+             case R.id.refuelitem_detail_aircraftCode:
+-                m_Title = getString(R.string.update_aircraftCode);
++                String m_Title = getString(R.string.update_aircraftCode);
+                 //showEditDialog(id, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+ 
+                 break;
+@@ -372,92 +381,71 @@
+             case R.id.btnBack:
+                 finish();
+                 break;
++            case R.id.dialog_endtime:
+ 
+-        }
++                    showEndTimePicker();
+ 
++                break;
++        }
+ 
+     }
+ 
+-    private void reconnect() {
+-
+-        setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
++    private void showEndTimePicker() {
++        Calendar cal = Calendar.getInstance();
++        cal.setTime(mItem.getEndTime());
++        TimePickerDialog timePicker = new TimePickerDialog(this,android.R.style.Theme_Material_Light_Dialog
++                , new TimePickerDialog.OnTimeSetListener() {
++            @Override
++            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+ 
+-        reader.doConnectDevice();
+-    }
++                cal.set(Calendar.HOUR_OF_DAY, hourOfDay);
++                cal.set(Calendar.MINUTE, minute);
++                //mItem.setEndTime(cal.getTime());
++                ((EditText)inputDlg.findViewById(R.id.dialog_endtime)).setText(DateUtils.formatDate(cal.getTime(),"HH:mm"));
++            }
++        },cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true);
++        timePicker.show();
+ 
+-    private String m_Title = "";
+-    private String m_Text = "";
++    }
+ 
++    @SuppressLint("StaticFieldLeak")
++    private void restartReader() {
+ 
++        Log.e("REFUEL","restart reader");
+ 
++        new Thread(()->{ reader.restart();}).start();
+ 
+-    ///Reader define
+ 
+-    private LCRReader reader = null;
+-    private LCRDataModel model;
+-    private boolean deviceIsReady = false;
+-    private boolean deviceIsError = false;
+-    private boolean conditionIsReady = false;
+-    private  boolean inventoryIsReady = false;
+-    private boolean startButtonPress = false;
+-    private boolean started = false;
+-
+-    private Button btnStart;
++    }
+ 
+     private void showForceStopDialog() {
+         AlertDialog.Builder builder = new AlertDialog.Builder(this);
+         builder.setTitle(R.string.app_name);
+         builder.setMessage( R.string.force_stop_confirm);
+ 
+-        builder.setPositiveButton(getString(R.string.stop), new DialogInterface.OnClickListener() {
+-            public void onClick(DialogInterface dialog, int id) {
+-
+-                doStop();
+-                dialog.dismiss();
+-            }
+-        });
+-        builder.setNegativeButton(getString(R.string.back), new DialogInterface.OnClickListener() {
+-            public void onClick(DialogInterface dialog, int id) {
+-                dialog.dismiss();
+-                btnStart.setText(R.string.stop);
+-                setEnableButton(true);
+-            }
+-        });
+-
+-        builder.create().show();
+-
+-    }
++        builder.setPositiveButton(getString(R.string.stop), (dialog, id) -> {
+ 
+-    private void showConfirmDialog(int id) {
+ 
+-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+-        builder.setTitle(R.string.app_name);
+-        builder.setMessage(id == R.id.btnStart ? R.string.start_confirm : R.string.stop_confirm);
+-
+-        int senderId = id;
+-        builder.setPositiveButton(getString(senderId == R.id.btnStart ? R.string.start : R.string.stop), new DialogInterface.OnClickListener() {
+-            public void onClick(DialogInterface dialog, int id) {
+-                Logger.appendLog(senderId == R.id.btnStart ? "Confirm start ": "Confirm stop");
+-                if (senderId == R.id.btnStop) {
+-                    stop();
+-                } else if (senderId == R.id.btnStart) {
+-                    start();
+-                }
+-                dialog.dismiss();
+-            }
++            dialog.dismiss();
++            showDataInput();
+         });
+-        builder.setNegativeButton(getString(R.string.back), new DialogInterface.OnClickListener() {
+-            public void onClick(DialogInterface dialog, int id) {
+-                dialog.dismiss();
+-            }
++        builder.setNegativeButton(getString(R.string.back), (dialog, id) -> {
++            dialog.dismiss();
++
+         });
+ 
+-        builder.create().show();
++        Dialog dlg = builder.create();
++        dlg.show();
++        ((TextView)dlg.findViewById(android.R.id.message)).setTextSize(18);
++        ((TextView)dlg.findViewById(android.R.id.button1)).setTextSize(18);
++        ((TextView)dlg.findViewById(android.R.id.button2)).setTextSize(18);
++
+     }
+ 
+     private void setButtonText(REFUEL_STATUS status)
+     {
+         int btnText = R.string.start;
++        int color = R.color.bgPrimary;
+         switch (status) {
+             case NONE:
+                 btnText = R.string.start;
+@@ -480,52 +468,79 @@
+         btnStart.setText(btnText);
+     }
+ 
++    private void showConfirmDialog(int id) {
++
++        AlertDialog.Builder builder = new AlertDialog.Builder(this);
++        builder.setTitle(R.string.app_name);
++        builder.setMessage(id == R.id.btnStart ? R.string.start_confirm : R.string.stop_confirm);
++
++        builder.setPositiveButton(getString(id == R.id.btnStart ? R.string.start : R.string.stop), (dialog, id12) -> {
++            Logger.appendLog(id == R.id.btnStart ? "Confirm start " : "Confirm stop");
++            if (id == R.id.btnStop) {
++                stop();
++            } else if (id == R.id.btnStart) {
++                start();
++            }
++            dialog.dismiss();
++        });
++        builder.setNegativeButton(getString(R.string.back), (dialog, id1) -> dialog.dismiss());
++
++        builder.create().show();
++    }
++
++    private void pause() {
++        reader.pause();
++    }
++
+     private void start() {
+ 
+         startButtonPress = true;
+         mItem.setStartTime(new Date());
+         // send START DELIVERY command to LCR
+-        reader.start();
++        //reader.start();
+         setRefuelStatus(REFUEL_STATUS.STARTING);
+ 
+     }
+-    private void pause()
+-    {
+-        reader.pause();
++
++    private void clearListeners() {
++        reader.setConnectionListener(null);
++        reader.setStateListener(null);
++        reader.setFieldDataListener(null);
+     }
++
+     private void stop() {
+         if (deviceIsError){
+             showForceStopDialog();
+         }
+         else {
+             //send END DELIVERY command to LCR
+-            reader.end(restartRequest);
++            //reader.end(restartRequest);
+             setRefuelStatus(REFUEL_STATUS.ENDING);
+         }
+ 
+     }
+-    private void clearListeners() {
+-        reader.setConnectionListener(null);
+-        reader.setStateListener(null);
+-        reader.setFieldDataListener(null);
+-    }
++
+     private void addListeners() {
+ 
+ 
+         reader.setConnectionListener(new LCRReader.LCRConnectionListener() {
+             @Override
+             public void onConnected() {
+-                Logger.appendLog("On Connected");
++                Logger.appendLog("[RFW] onConnected");
+                 deviceIsReady = true;
+                 deviceIsError = false;
+                 setConnectionCheckmark(CONNECTION_STATUS.OK);
+                 setEnableButton(started || (deviceIsReady && conditionIsReady && inventoryIsReady));
+-                if (started)
+-                    reader.requestData();
++                //if (started)
++                //    reader.requestData();
++                if (reader.isStarted())
++                    onStarted();
+             }
+ 
+             @Override
+             public void onError() {
++                Logger.appendLog("[RFW] onConnectionError " );
++
+                 deviceIsReady = false;
+                 deviceIsError = true;
+                setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+@@ -533,12 +548,15 @@
+ 
+             @Override
+             public void onDeviceAdded(boolean failed) {
++                Logger.appendLog("[RFW]  onDeviceAdded - " );
+ 
+                 //reader.doConnectDevice();
+             }
+ 
+             @Override
+             public void onDisconnected() {
++                Logger.appendLog("[RFW]  onDisconnected - " );
++
+                 deviceIsReady = false;
+                 deviceIsError = true;
+                 setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+@@ -546,22 +564,22 @@
+ 
+             @Override
+             public void onCommandError(LCR_COMMAND command) {
++                Logger.appendLog("[RFW]  onCommandError - " + command.toString());
+ 
+             }
+ 
+             @Override
+             public void onConnectionStateChange(LCR_DEVICE_CONNECTION_STATE state) {
+-                Logger.appendLog("On ConnectionStateChange");
++                Logger.appendLog("[RFW]  onConnectionStateChange - " + state.toString());
+ 
+                 if (state == LCR_DEVICE_CONNECTION_STATE.CONNECTING_NETWORK
+                 || state == LCR_DEVICE_CONNECTION_STATE.CONNECTING_DEVICE
+                 || state == LCR_DEVICE_CONNECTION_STATE.RECONNECTING)
+                     setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
+ 
+-                if (state == LCR_DEVICE_CONNECTION_STATE.CONNECTED)
+-                {
++                if (state == LCR_DEVICE_CONNECTION_STATE.DISCONNECTED)
++                    deviceIsError = true;
+ 
+-                }
+             }
+ 
+         });
+@@ -570,12 +588,22 @@
+             @Override
+             public void onDataChanged(LCRDataModel dataModel, LCRReader.FIELD_CHANGE field_change) {
+ 
++                String errorLog = "[RFW]  onDataChanged " + field_change.toString() + ": ";
+                 switch (field_change  )
+                 {
+                     case ENDTIME:
++
++                        field_data_flag =  field_data_flag | FIELD_DATA_FLAG.FIELD_ENDTIME;
++
++                        if (refuel_status == REFUEL_STATUS.ENDED)
++                        {
++
++                        }
++                        errorLog += dataModel.getEndTime();
+                         break;
+ 
+                     case STARTTIME:
++                        field_data_flag =  field_data_flag | FIELD_DATA_FLAG.FIELD_STARTTIME;
+                         if (started && !btnStart.isEnabled()) {
+ 
+                             //Really started after STARTTIME field received
+@@ -583,95 +611,173 @@
+ 
+                             setRefuelStatus(REFUEL_STATUS.STARTED);
+                         }
++                        errorLog += dataModel.getStartTime();
+                         break;
+                     case GROSSQTY:
+-                        runOnUiThread(()->{
++                        field_data_flag =  field_data_flag | FIELD_DATA_FLAG.FIELD_GROSSQTY;
++                        runOnUiThread(() -> {
+                             TextView txtGrossQty = findViewById(R.id.txtGrossQty);
+                             txtGrossQty.setText(String.format("%.0f", dataModel.getGrossQty()));
+                         });
+-
++                        errorLog += dataModel.getGrossQty();
+                         break;
+                     case TOTALIZER:
+-
+-                        runOnUiThread(()->{
++                        field_data_flag =  field_data_flag | FIELD_DATA_FLAG.FIELD_TOTALLIZER;
++                        runOnUiThread(() -> {
+                             ((TextView) findViewById(R.id.txtStartMeter)).setText(String.format("%,.0f", dataModel.getStartMeterNumber()));
+                             ((TextView) findViewById(R.id.txtEndMeter)).setText(String.format("%,.0f", dataModel.getEndMeterNumber()));
+                         });
+-
++                        errorLog += dataModel.getEndMeterNumber();
+                         break;
+                     case TEMPERATURE:
+-                        runOnUiThread(()->{
++                        field_data_flag =  field_data_flag | FIELD_DATA_FLAG.FIELD_TEMPERATURE;
++                        runOnUiThread(() -> {
+                             TextView txtTemp = findViewById(R.id.txtTemp);
+-                            txtTemp.setText(String.format("%.2f",dataModel.getTemperature()));
++                            txtTemp.setText(String.format("%.2f", dataModel.getTemperature()));
+                         });
+-
++                        errorLog += dataModel.getTemperature();
+                         break;
+                 }
+ 
+-
++                Logger.appendLog(errorLog);
+                 model = dataModel;
+ 
++                updateRefuelData();
++
+             }
+ 
+             @Override
+             public void onErrorMessage(String errorMsg) {
+ 
+-                Logger.appendLog(errorMsg);
++                Logger.appendLog("[LCR]:" + errorMsg);
++            }
++
++            @Override
++            public void onFieldAddSucess(String field_name) {
++
+             }
+         });
+ 
+         reader.setStateListener(new LCRReader.LCRStateListener() {
+             @Override
+             public void onEndDelivery() {
+-
++                Logger.appendLog("[RFW]  onEndDelivery" );
+             }
+ 
+             @Override
+             public void onStart() {
+                 //reader.requestData();
+                 //setEnableButton(false);
+-                Logger.appendLog("Device OnStart");
++                Logger.appendLog("[RFW]  onStart");
+                 onStarted();
+ 
+             }
+ 
+             @Override
+             public void onStop() {
+-                Logger.appendLog("Device OnStop");
+-                if (restartRequest)
+-                {
+-                    restartRequest = false;
+-                    start();
++                Logger.appendLog("[RFW]  onStop");
++                onStopped();
++            }
++        });
++    }
++
++    private void onStopped() {
++
++
++
++        if (started) {
++            refuel_status = REFUEL_STATUS.ENDING;
++            setRefuelStatus(refuel_status);
++        }
++        if (started && endRetry <3) {
++            endRetry++;
++            //wait 5s to receive END TIME and last GROSSQTY, TOTALIZER, TEMPERATURE data
++            Timer tmrStop = new Timer();
++            tmrStop.schedule(new TimerTask() {
++                @Override
++                public void run() {
++                    // if not receive ENDTIME within 5s, restart LCR service
++                    if ((field_data_flag & FIELD_DATA_FLAG.FIELD_ENDTIME) > 0 ) {
++                        tmrStop.cancel();
++                        doStop();
++
++                    }
+                 }
+-                else if (started )
+-                    doStop();
+-            }
+-        });
++            }, 1000 * 5, 1000*3);
++        }
++        else if (started)
++        {
++            showDataInput();
++        }
++    }
++    Dialog inputDlg;
++    private void showDataInput() {
++
++        AlertDialog.Builder builder = new AlertDialog.Builder(this);
++        EditRefuelDialogBinding binding = DataBindingUtil.inflate(this.getLayoutInflater(), R.layout.edit_refuel_dialog, null, false);
++        binding.setMItem(mItem);
++        builder.setView(binding.getRoot());
++        builder.setTitle(R.string.app_name)
++                .setPositiveButton(R.string.save, new DialogInterface.OnClickListener() {
++                    @Override
++                    public void onClick(DialogInterface dialog, int id) {
++                        AlertDialog v = (AlertDialog)dialog;
++                        mItem.setEndNumber(Float.parseFloat(((EditText) v.findViewById(R.id.dialog_meter)).getText().toString().replaceAll(",","")));
++                        mItem.setRealAmount(Float.parseFloat(((EditText) v.findViewById(R.id.dialog_volume)).getText().toString().replaceAll(",","")));
++                        mItem.setTemperature(Float.parseFloat(((EditText) v.findViewById(R.id.dialog_temperature)).getText().toString().replaceAll(",","")));
++                        mItem.setManualTemperature(Float.parseFloat(((EditText) v.findViewById(R.id.dialog_temperature)).getText().toString().replaceAll(",","")));
++                        dialog.dismiss();
++                        doStop();
++                    }
++                })
++                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
++                    public void onClick(DialogInterface dialog, int id) {
++                        dialog.dismiss();
++                    }
++                });
++
++        inputDlg = builder.create();
++        inputDlg.show();
+     }
+ 
++    private int endRetry = 0;
+     private void onStarted() {
+-        reader.requestData();
+-        if (!startButtonPress) {
+-            // if LCR status is started before clicking button, confirm to continue
+-            continueRefuel();// showContinueConfirm();
+-        } else {
++        if (!started) {
++            reader.requestData();
++            field_data_flag = FIELD_DATA_FLAG.FIELD_NOT_DEFINED;
++            tmrCheckData = new Timer();
++            TimerTask tmrTask = new TimerTask() {
++                @Override
++                public void run() {
++
++                    if (!reader.isDeviceError()) {
++                        if ((field_data_flag & FIELD_DATA_FLAG.FIELD_GROSSQTY) == 0
++                                || (field_data_flag & FIELD_DATA_FLAG.FIELD_TOTALLIZER) == 0) {
++                            tmrCheckData.cancel();
++                            restartReader();
++                        }
++
++                    }
++                    field_data_flag = FIELD_DATA_FLAG.FIELD_NOT_DEFINED;
++                }
++            };
++            //tmrCheckData.schedule(tmrTask,1000*10);
++
+ 
+             started = true;
+ 
+             setRefuelStatus(REFUEL_STATUS.STARTED);
+-            new Thread(new Runnable() {
+-                @Override
+-                public void run() {
+-                    if (mItem!=null) {
+-                        mItem.setStartTime(new Date());
+-                        mItem.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
+-                        DataHelper.postRefuel(mItem);
+-                    }
++            new Thread(() -> {
++                if (mItem != null) {
++                    mItem.setStartTime(new Date());
++                    mItem.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
++                    DataHelper.postRefuel(mItem);
++
+                 }
+             }).start();
+ 
+-        }
+ 
++        }
+ 
+     }
+ 
+@@ -687,18 +793,17 @@
+                         restartRefuel();
+                     }
+                 })*/
+-                .setPositiveButton(R.string.refuel_continue, new DialogInterface.OnClickListener() {
+-                    @Override
+-                    public void onClick(DialogInterface dialog, int which) {
++                .setPositiveButton(R.string.refuel_continue, (dialog, which) -> {
+ 
+-                        Logger.appendLog("Confirm continue refuel");
+-                        continueRefuel();
+-                    }
++                    Logger.appendLog("Confirm continue refuel");
++                    continueRefuel();
+                 })
+                 .create()
+                 .show();
+     }
+ 
++    private REFUEL_STATUS refuel_status = REFUEL_STATUS.NONE;
++
+     private void continueRefuel() {
+ 
+ 
+@@ -707,26 +812,32 @@
+ 
+     }
+ 
+-    private  REFUEL_STATUS refuel_status = REFUEL_STATUS.NONE;
+-
+     private void setRefuelStatus(REFUEL_STATUS status) {
+         runOnUiThread(() -> {
+-
++            TextView lblrefuelStatus = findViewById(R.id.lbl_refuel_status);
+             refuel_status = status;
+             setButtonText(status);
+             btnBack.setEnabled(refuel_status == REFUEL_STATUS.NONE);
++
+             switch (status) {
+ 
+                 case STARTING:
+                 case ENDING:
++                    lblrefuelStatus.setText(R.string.refuel_ending);
++                    lblrefuelStatus.setBackgroundColor(getResources().getColor(R.color.bgPrimary));
++                    break;
+                 case ENDED:
+-                    setEnableButton(false);
++                    lblrefuelStatus.setText(R.string.refuel_ended);
++                    lblrefuelStatus.setBackgroundColor(getResources().getColor(R.color.bgInfo));
++                    //setEnableButton(false);
+                     break;
+ 
+ 
+                 case STARTED:
+                     started = status == REFUEL_STATUS.STARTED;
+-                    setEnableButton(true);
++                    lblrefuelStatus.setText(R.string.refuel_processing);
++                    lblrefuelStatus.setBackgroundColor(getResources().getColor(R.color.bgSuccess));
++                    //setEnableButton(true);
+                     break;
+                 default:
+                     break;
+@@ -736,50 +847,69 @@
+         });
+     }
+ 
+-    boolean restartRequest = false;
+     private void restartRefuel() {
+         // turn on restart flag
+         restartRequest = true;
+         // call stop with restart flag ON
+         stop();
+     }
+-
+-    private void doStop() {
+-
+-        setRefuelStatus(REFUEL_STATUS.ENDED);
+-
+-
+-        try{
+-            if (mItem!=null) {
+-                mItem.setRealAmount( model.getGrossQty());
+-                mItem.setGallon(model.getGrossQty());
+-                mItem.setTemperature(model.getTemperature());
+-                mItem.setManualTemperature(model.getTemperature());
+-                mItem.setDeviceStartTime(model.getStartTime());
+-                mItem.setDeviceEndTime(model.getEndTime());
+-                mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
+-                mItem.setEndNumber(model.getEndMeterNumber());
++    private  void updateRefuelData()
++    {
++        if (mItem!=null) {
++            mItem.setRealAmount(model.getGrossQty());
++            mItem.setGallon(model.getGrossQty());
++            mItem.setTemperature(model.getTemperature());
++            mItem.setManualTemperature(model.getTemperature());
++            mItem.setDeviceStartTime(model.getStartTime());
++            mItem.setDeviceEndTime(model.getEndTime());
++            //mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
++            mItem.setStartNumber(model.getStartMeterNumber());
++            mItem.setEndNumber(model.getEndMeterNumber());
++        }
++        Log.e("REFUEL", "Update refuel data");
++    }
++    private void doStop() {
++
++        setRefuelStatus(REFUEL_STATUS.ENDED);
++
++
++        try{
++            if (mItem!=null) {
++                //mItem.setRealAmount( model.getGrossQty());
++               //mItem.setGallon(model.getGrossQty());
++                //mItem.setTemperature(model.getTemperature());
++                //mItem.setManualTemperature(model.getTemperature());
++                //mItem.setDeviceStartTime(model.getStartTime());
++                //mItem.setDeviceEndTime(model.getEndTime());
++                //mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
++                //mItem.setStartNumber(model.getStartMeterNumber());
++                //mItem.setEndNumber(model.getEndMeterNumber());
+                 mItem.setEndTime(new Date());
+-                Boolean isExtract = mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.EXTRACT;
++                long dateDiff = mItem.getDeviceEndTime().getTime()  - mItem.getDeviceStartTime().getTime();
++                mItem.setStartTime(new Date(mItem.getEndTime().getTime() - dateDiff));
++                boolean isExtract = mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.EXTRACT;
+                 currentApp.setCurrentAmount(currentApp.getCurrentAmount() + (isExtract ? model.getGrossQty() : -model.getGrossQty()));
+                 openPreview();
+ 
+             }
+ 
++            Log.e("REFUEL", "doStop");
++
+         }
+-        catch (Exception e)
+-        {}
++        catch (Exception e) {
++            Logger.appendLog(e.getLocalizedMessage());
++        }
+     }
+-    private int PREVIEW_OPEN = 1;
++
+     private void openPreview() {
+ 
+         mItem.setStatus(REFUEL_ITEM_STATUS.DONE);
+         mItem.setTruckNo(currentApp.getTruckNo());
+-        new AsyncTask<Void, Void, RefuelItemData>(){
++        new AsyncTask<Void, Void, RefuelItemData>() {
+             @Override
+             protected RefuelItemData doInBackground(Void... voids) {
+                 mItem = DataHelper.postRefuel(mItem);
+-                return  mItem;
++                return mItem;
+             }
+ 
+             @Override
+@@ -789,21 +919,22 @@
+             }
+         }.execute();
+ 
+-
++        //reader.destroy();
+     }
+ 
+-    private void postRefuelCompleted(RefuelItemData mItem)
+-    {
+-        if (mItem !=null  ) {
++    private void postRefuelCompleted(RefuelItemData mItem) {
++        if (mItem != null) {
+             //Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
+ 
+ 
+             Intent intent = new Intent(this, RefuelPreviewActivity.class);
+             intent.putExtra("REFUEL_ID", mItem.getId());
+             intent.putExtra("REFUEL_LOCAL_ID", mItem.getLocalId());
++            int PREVIEW_OPEN = 1;
+             startActivityForResult(intent, PREVIEW_OPEN);
+         }
+         clearListeners();
++        started = false;
+         finish();
+     }
+     private enum  REFUEL_STATUS
+@@ -814,13 +945,30 @@
+         ENDING,
+         ENDED
+     }
++
++    private int field_data_flag = FIELD_DATA_FLAG.FIELD_NOT_DEFINED;
++    private interface FIELD_DATA_FLAG
++    {
++        public static int FIELD_NOT_DEFINED =0;
++        public static int FIELD_ENDTIME  =1;
++        public static int FIELD_STARTTIME  =2;
++        public static int FIELD_GROSSQTY =4;
++        public static int FIELD_TOTALLIZER  =8;
++        public static int FIELD_TEMPERATURE  =16;
++
++        public static int FIELD_ALL  =31;
++        public static int FIELD_ALL_DATA  =30;
++        public static int FIELD_ALL_METER  =12;
++    }
++    Timer tmrCheckData = new Timer();
++
+     private void setEnableButton(boolean enabled) {
+         findViewById(R.id.btnStart).setEnabled(enabled);
+     }
+ 
+     @Override
+-    protected void onDestroy() {
+-        super.onDestroy();
+-
++    protected void onRestoreInstanceState(Bundle savedInstanceState) {
++        started = false;
++        super.onRestoreInstanceState(savedInstanceState);
+     }
+ }

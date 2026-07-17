@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+        <import type="com.megatech.fms.helpers.DateUtils" />
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.CheckTrucksModel" />
+    </data>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+    android:paddingLeft="10dp"
+    >
+    <CheckBox
+        android:id="@+id/a2307_item_chk"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content" android:layout_weight=".05"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        ></CheckBox>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+
+    <Button
+        android:id="@+id/a2307_detail2307"
+        style="?android:attr/textAppearanceMedium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:textAllCaps="false"
+        android:text="@string/detail" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+
+    <Button
+        android:id="@+id/a2307_driver2307"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:focusable="false"
+        style="?android:attr/textAppearanceSmall"
+        android:textAllCaps="false"
+        android:background='@{mItem.UserActivedId > 0 ? @android:color/white : @android:color/holo_blue_light}'
+        android:textColor='@{mItem.UserActivedId > 0 ? @android:color/black : @android:color/white}'
+        android:focusableInTouchMode="false"
+        android:enabled='@{!(mItem.UserActivedId > 0)}'
+        android:text='@{ mItem.UserActivedId == 0 ||mItem.UserActivedId == null? @string/ok : mItem.userActivedName}' />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+    <Button
+        android:id="@+id/a2307_nvtranap"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".2"
+        android:focusable="false"
+        style="?android:attr/textAppearanceSmall"
+        android:textAllCaps="false"
+        android:focusableInTouchMode="false"
+        android:background='@{mItem.UserActived2Id > 0 ? @android:color/white : @android:color/holo_blue_light}'
+        android:textColor='@{mItem.UserActived2Id > 0 ? @android:color/black : @android:color/white}'
+        android:enabled='@{!(mItem.UserActived2Id > 0)}'
+        android:text='@{ mItem.UserActived2Id == 0 ||mItem.UserActived2Id == null? @string/ok : mItem.userActived2Name}'></Button>
+
+<!--    <View-->
+<!--        android:layout_width="1dp"-->
+<!--        android:layout_height="52dp"-->
+<!--        android:background="@android:color/darker_gray" />-->
+<!--    <Button-->
+<!--        android:id="@+id/a2307_user"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_weight=".2"-->
+<!--        android:focusable="false"-->
+<!--        style="?android:attr/textAppearanceSmall"-->
+<!--        android:textAllCaps="false"-->
+<!--        android:focusableInTouchMode="false"-->
+<!--        android:background='@{mItem.UserActived3Id > 0 ? @android:color/white : @android:color/holo_blue_light}'-->
+<!--        android:textColor='@{mItem.UserActived3Id > 0 ? @android:color/black : @android:color/white}'-->
+<!--        android:enabled='@{!(mItem.UserActived3Id > 0)}'-->
+<!--        android:text='@{ mItem.UserActived3Id == 0 ||mItem.UserActived3Id == null? @string/ok : mItem.userActived3Name}'></Button>-->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{mItem.userActived3Name}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{mItem.userCreatedName}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".1"
+        android:text='@{DateUtils.formatDate(mItem.Hours,"HH:mm")}'></TextView>
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}'></TextView>
+
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".1"
+        android:text='@{mItem.KmNumber}'></TextView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="52dp"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:padding="5dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".1"
+        android:text='@{mItem.truckNo}'></TextView>
+
+<!--    <View-->
+<!--        android:layout_width="1dp"-->
+<!--        android:layout_height="32dp"-->
+<!--        android:background="@android:color/darker_gray" />-->
+
+<!--    <TextView-->
+<!--        android:padding="5dp"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_weight=".2"-->
+<!--        android:text="@{mItem.reportType ==0? mItem.aircraftCode: mItem.depot}"></TextView>-->
+<!--    <View-->
+<!--        android:layout_width="1dp"-->
+<!--        android:layout_height="32dp"-->
+<!--        android:background="@android:color/darker_gray" />-->
+<!--    <TextView-->
+<!--        android:padding="5dp"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_weight=".2"-->
+<!--        android:text="@{mItem.rTCNo}"></TextView>-->
+<!--    <View-->
+<!--        android:layout_width="1dp"-->
+<!--        android:layout_height="32dp"-->
+<!--        android:background="@android:color/darker_gray" />-->
+<!--    <TextView-->
+<!--        android:padding="5dp"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_weight=".2"-->
+<!--        android:text='@{mItem.operatorName}'></TextView>-->
+</LinearLayout>
+</layout>

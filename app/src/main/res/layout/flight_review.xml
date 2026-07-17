@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="reviewItem"
+            type="com.megatech.fms.model.ReviewModel" />
+
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+
+                android:text="@string/save" />
+            <Button
+                android:id="@+id/btnEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+                android:visibility="gone"
+                android:text="@string/review_recreate" />
+
+            <Button
+                android:id="@+id/btnCapture"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+                android:visibility="gone"
+                android:text="@{reviewItem.isCaptured? @string/view_image: @string/capture}" />
+
+        </androidx.appcompat.widget.Toolbar>
+
+        <TableRow>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/review_instruction"
+                android:textAlignment="center"
+                android:textSize="26sp"
+                android:textStyle="bold">
+
+            </TextView>
+        </TableRow>
+
+        <TableRow>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/review_instruction_en"
+                android:textAlignment="center"
+                android:textSize="30sp"
+                android:textStyle="bold|italic">
+
+            </TextView>
+        </TableRow>
+
+        <TableRow>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:background="@{reviewItem.isWorst? @drawable/review_selected: @drawable/review_border}"
+                android:orientation="vertical"
+                android:padding="5dp"
+                android:textAlignment="center">
+
+                <ImageView
+                    android:id="@+id/btnWorst"
+                    android:layout_width="144dp"
+                    android:layout_height="132dp"
+                    android:layout_gravity="center"
+
+                    android:onClick="onClick"
+                    android:src="@drawable/verymad"></ImageView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/verymad"
+                    android:textAlignment="center"></TextView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/verymad_en"
+                    android:textAlignment="center"
+                    android:textStyle="italic"></TextView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:background="@{reviewItem.isBad? @drawable/review_selected: @drawable/review_border}"
+                android:orientation="vertical"
+                android:padding="5dp"
+                android:textAlignment="center">
+
+                <ImageView
+                    android:id="@+id/btnBad"
+                    android:layout_width="151dp"
+                    android:layout_height="134dp"
+                    android:layout_gravity="center"
+                    android:onClick="onClick"
+                    android:src="@drawable/mad"></ImageView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/mad"
+                    android:textAlignment="center"></TextView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/mad_en"
+                    android:textAlignment="center"
+                    android:textStyle="italic"></TextView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:background="@{reviewItem.isNeutral? @drawable/review_selected: @drawable/review_border}"
+                android:orientation="vertical"
+                android:padding="5dp"
+                android:textAlignment="center">
+
+                <ImageView
+                    android:id="@+id/btnNeutral"
+                    android:layout_width="151dp"
+                    android:layout_height="135dp"
+                    android:layout_gravity="center"
+                    android:onClick="onClick"
+                    android:src="@drawable/neutral"></ImageView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/neutral"
+                    android:textAlignment="center"></TextView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/neutral_en"
+                    android:textAlignment="center"
+                    android:textStyle="italic"></TextView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:background="@{reviewItem.isGood? @drawable/review_selected: @drawable/review_border}"
+                android:orientation="vertical"
+                android:padding="5dp"
+                android:textAlignment="center">
+
+                <ImageView
+                    android:id="@+id/btnGood"
+                    android:layout_width="157dp"
+                    android:layout_height="135dp"
+                    android:layout_gravity="center"
+                    android:onClick="onClick"
+                    android:src="@drawable/good"></ImageView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/good"
+                    android:textAlignment="center"></TextView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/good_en"
+                    android:textAlignment="center"
+                    android:textStyle="italic"></TextView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:background="@{reviewItem.isBest? @drawable/review_selected: @drawable/review_border}"
+                android:orientation="vertical"
+                android:padding="5dp"
+                android:textAlignment="center">
+
+                <ImageView
+                    android:id="@+id/btnBest"
+                    android:layout_width="wrap_content"
+                    android:layout_height="135dp"
+                    android:layout_gravity="center"
+                    android:onClick="onClick"
+                    android:src="@drawable/best"></ImageView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/best"
+                    android:textAlignment="center"></TextView>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/best_en"
+                    android:textAlignment="center"
+                    android:textStyle="italic"></TextView>
+            </LinearLayout>
+        </TableRow>
+
+        <TableRow android:visibility="visible">
+            <TableLayout
+                android:layout_marginTop="20dp"
+                android:layout_width="0dp"
+                android:layout_weight="1">
+                <TableRow>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:text="Chọn các tiêu chí mà quý khách chưa hài lòng (nếu có – không bắt buộc)"
+                        android:textAlignment="center"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black" />
+                </TableRow>
+                <TableRow>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="10dp"
+                        android:text="Please select the criteria that you are not satisfied with (if any – not mandatory)"
+                        android:textAlignment="center"
+                        android:textColor="@android:color/black"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </TableRow>
+                <!-- Hàng 1 -->
+                <TableRow>
+                    <!-- REFUELLER_NOT_CLEAN -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".5"
+                        android:padding="5dp">
+
+                        <CheckBox
+                            android:id="@+id/chkBad64"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="@{reviewItem.badReason64}"
+                            android:onClick="onClick"
+                            android:tag="64" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Xe tra nạp chưa sạch sẽ, sơn xe bị bong tróc" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="The refueller was not clean, and its paint was peeling"
+                                android:textStyle="italic" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- STAFF_UNPROFESSIONAL -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".5"
+                        android:padding="5dp">
+
+                        <CheckBox
+                            android:id="@+id/chkBad128"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="@{reviewItem.badReason128}"
+                            android:onClick="onClick"
+                            android:tag="128" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nhân viên không mặc đúng đồng phục; Thái độ thiếu chuyên nghiệp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Staff did not wear the proper uniform; Service attitude was impolite or unfriendly"
+                                android:textStyle="italic" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </TableRow>
+
+                <!-- Hàng 2 -->
+                <TableRow>
+                    <!-- REFUEL_NOT_ON_TIME_OR_QUALITY -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".5"
+                        android:padding="5dp">
+
+                        <CheckBox
+                            android:id="@+id/chkBad256"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="@{reviewItem.badReason256}"
+                            android:onClick="onClick"
+                            android:tag="256" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tra nạp không đúng giờ; không đáp ứng quy trình, số lượng, chất lượng" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Refuelling was not on time; did not fulfill the required procedure, quantity &amp; quality"
+                                android:textStyle="italic" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- OTHER -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".5"
+                        android:padding="5dp">
+
+                        <CheckBox
+                            android:id="@+id/chkBad32"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="@{reviewItem.badReason32}"
+                            android:onClick="onClick"
+                            android:tag="32" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Lý do khác" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Other reason"
+                                android:textStyle="italic" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </TableRow>
+
+                <!-- Ô nhập lý do khác -->
+                <TableRow android:visibility="@{reviewItem.badReason32? View.VISIBLE: View.GONE}">
+                    <EditText
+                        android:id="@+id/txtOtherReason"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@={reviewItem.otherReason}"
+                        android:onClick="onClick"
+                        android:padding="5dp"
+                        android:focusable="false"
+                        android:hint="Nhập lý do khác / Input other reason" />
+                </TableRow>
+            </TableLayout>
+        </TableRow>
+
+
+    </TableLayout>
+    </ScrollView>
+</layout>

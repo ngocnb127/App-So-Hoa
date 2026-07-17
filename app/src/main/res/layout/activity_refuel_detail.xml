@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:app="http://schemas.android.com/apk/res-auto">
+    <data>
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.RefuelItemData" />
+    </data>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+
+    android:orientation="vertical">
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="0.9"
+        app:cardCornerRadius="2dp"
+        app:cardUseCompatPadding="true"
+        tools:context=".RefuelDetailActivity">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+
+            <TextView
+                android:id="@+id/textView15"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/vat_rate"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_qc_no" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_vat"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text='@{String.format("%.0f%%",mItem.taxRate*100)}'
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_qc_no"
+                 />
+
+            <Spinner
+                android:id="@+id/refuelitem_detail_vat_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:entries="@array/vat_array"
+                android:spinnerMode="dropdown"
+                android:visibility="invisible"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_qc_no" />
+
+            <TextView
+                android:id="@+id/textView14"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/airline"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toBottomOf="@id/btnEdit" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_airline"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@{mItem.airlineModel.code}"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/btnEdit"
+                 />
+
+            <Spinner
+                android:id="@+id/refuelitem_detail_airline_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dialog"
+                android:visibility="invisible"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/btnEdit"
+                />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/aircraft_code"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_airline" />
+
+            <TextView xmlns:tools="http://schemas.android.com/tools"
+                android:id="@+id/new_refuel_flightCode"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text="@{mItem.flightCode}"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_airline"
+                />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/aircraftCode"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_aircraftCode" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_aircraftCode"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text="@{mItem.aircraftCode}"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/new_refuel_flightCode" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/parking_lot"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_parking" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_parking"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text="@{mItem.parkingLot}"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_aircraftCode" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/arrival_time"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_arrival" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_arrival"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_parking" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/departureTime"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_departure" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_departure"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_arrival" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/estimate_amount"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_estimateAmount" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_estimateAmount"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text='@{String.format("%,.0f",mItem.estimateAmount)}'
+                android:textIsSelectable="true"
+
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_departure" />
+
+            <TextView
+                android:id="@+id/textView4"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/real_amount"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_realAmount" />
+
+
+            <TextView
+                android:id="@+id/refuelitem_detail_realAmount"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text='@{String.format("%,.0f",mItem.realAmount)}'
+                android:textIsSelectable="true"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_estimateAmount" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_Temperature"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text='@{String.format("%.2f",mItem.manualTemperature)}'
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_realAmount" />
+
+            <TextView
+                android:id="@+id/textView12"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/temperature"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_Temperature" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_Density"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text='@{String.format("%.4f",mItem.density)}'
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_Temperature" />
+
+            <TextView
+                android:id="@+id/textView13"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/density"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_Density" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_qc_no"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textIsSelectable="true"
+                android:text='@{mItem.qualityNo}'
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left"
+                app:layout_constraintTop_toBottomOf="@id/refuelitem_detail_Density" />
+
+            <TextView
+                android:id="@+id/lblQCNo"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="@string/qc_no"
+                app:layout_constraintStart_toEndOf="@id/guideline_left"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_qc_no" />
+
+            <Button
+                android:id="@+id/refuelitem_detail_bntprint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/print_order"
+                app:layout_constraintEnd_toStartOf="@id/btnUpdate"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:ignore="InvalidId" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_left"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_center_left"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent=".5" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="1" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_bottom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintGuide_percent=".9" />
+
+            <Button
+                android:id="@+id/btnEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/edit_refuel"
+                app:layout_constraintEnd_toStartOf="@+id/guideline_right"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <Button
+                android:id="@+id/btnUpdate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/save"
+                android:visibility="gone"
+                app:layout_constraintEnd_toStartOf="@+id/btnEdit"
+
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <EditText
+                android:id="@+id/edtAircraft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="textVisiblePassword|textCapCharacters"
+                android:selectAllOnFocus="true"
+                android:visibility="invisible"
+                android:text='@{mItem.aircraftCode}'
+                app:layout_constraintStart_toStartOf="@id/refuelitem_detail_aircraftCode"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_aircraftCode" />
+
+            <EditText
+                android:id="@+id/edtDensity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="numberDecimal"
+                android:selectAllOnFocus="true"
+                android:visibility="invisible"
+                android:text='@{String.format("%.4f",mItem.density)}'
+                app:layout_constraintStart_toStartOf="@id/refuelitem_detail_aircraftCode"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_Density" />
+
+            <EditText
+                android:id="@+id/edtTemperature"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="numberDecimal"
+                android:selectAllOnFocus="true"
+                android:visibility="invisible"
+                app:layout_constraintStart_toStartOf="@id/refuelitem_detail_aircraftCode"
+                app:layout_constraintTop_toTopOf="@id/refuelitem_detail_Temperature" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/refuel_detail_card_refuel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1.1">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/refuel_start"
+                android:visibility="invisible"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toTopOf="@id/lblStartMeter" />
+
+            <TextView
+                android:id="@+id/textView2"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/refuel_end"
+                android:visibility="invisible"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toTopOf="@id/lblEndMeter" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_startTime"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textIsSelectable="true"
+                android:visibility="invisible"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center2"
+                app:layout_constraintTop_toTopOf="@id/lblStartMeter" />
+
+            <TextView
+                android:id="@+id/refuelitem_detail_endTime"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textIsSelectable="true"
+                android:visibility="invisible"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center2"
+                app:layout_constraintTop_toTopOf="@id/lblEndMeter" />
+
+            <TextView
+                android:id="@+id/lblStartMeter"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:layout_marginTop="@dimen/margin_top"
+                android:text="@string/start_meter"
+                app:layout_constraintStart_toEndOf="@id/guideline_left3"
+                app:layout_constraintTop_toBottomOf="@id/cardAmount" />
+
+            <TextView
+                android:id="@+id/txtStartMeter"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_top"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toBottomOf="@id/cardAmount" />
+
+            <TextView
+                android:id="@+id/lblEndMeter"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:layout_marginTop="@dimen/margin_top"
+                android:text="@string/end_meter"
+                app:layout_constraintStart_toEndOf="@id/guideline_left3"
+                app:layout_constraintTop_toBottomOf="@id/lblStartMeter" />
+
+            <TextView
+                android:id="@+id/txtEndMeter"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_top"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toBottomOf="@id/lblStartMeter" />
+
+            <Button
+                android:id="@+id/btnStart"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+
+                android:enabled="false"
+                android:paddingTop="30dp"
+                android:paddingBottom="30dp"
+                android:text="@string/start"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center2"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="@id/guideline_left3" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_left3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_center_left4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent=".5" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_center2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="1" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_bottom2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintGuide_percent=".9" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="33dp"
+                android:layout_height="25dp"
+                app:layout_constraintEnd_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toTopOf="@id/refuel_detail_chk_connect_lcr" />
+
+            <CheckedTextView
+                android:id="@+id/refuel_detail_chk_condition"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:layout_marginTop="@dimen/margin_top"
+                android:checkMark="@drawable/ic_unchecked"
+                android:onClick="onClick"
+                android:text="@string/truck_check"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center_left4"
+                app:layout_constraintStart_toStartOf="@id/guideline_left3"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckedTextView
+                android:id="@+id/refuel_detail_chk_inventory"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:layout_marginTop="@dimen/margin_top"
+                android:checkMark="@drawable/ic_unchecked_2"
+                android:onClick="onClick"
+                android:text="@string/inventory_check"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center_left4"
+                app:layout_constraintStart_toStartOf="@id/guideline_left3"
+                app:layout_constraintTop_toBottomOf="@id/refuel_detail_chk_condition" />
+
+            <CheckedTextView
+                android:id="@+id/refuel_detail_chk_connect_lcr"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:layout_marginTop="@dimen/margin_top"
+                android:gravity="left"
+                android:onClick="onClick"
+                android:text="@string/lcr_device_connect"
+                app:layout_constraintEnd_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintStart_toEndOf="@id/guideline_left3"
+                app:layout_constraintTop_toBottomOf="@id/refuel_detail_chk_inventory" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardTemperatur"
+                android:layout_width="250dp"
+                android:layout_height="120dp"
+                android:visibility="visible"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center2"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toBottomOf="@id/refuel_detail_chk_connect_lcr">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="@string/temperature" />
+
+                <TextView
+                    android:id="@+id/txtTemp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal|center_vertical"
+
+                    android:gravity="center"
+                    android:text="0.0"
+                    android:textSize="@dimen/largest_text" />
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardAmount"
+                android:layout_width="250dp"
+                android:layout_height="120dp"
+                app:layout_constraintEnd_toStartOf="@id/guideline_center_left4"
+                app:layout_constraintStart_toEndOf="@id/guideline_left3"
+                app:layout_constraintTop_toBottomOf="@id/refuel_detail_chk_connect_lcr">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="@string/volume" />
+
+                <TextView
+                    android:id="@+id/txtGrossQty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal|center_vertical"
+                    android:gravity="center"
+                    android:text="0"
+
+                    android:textSize="@dimen/largest_text" />
+            </androidx.cardview.widget.CardView>
+
+            <TextView
+                android:id="@+id/lbl_refuel_status"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/margin_start"
+                android:text="@string/lcr_connection_connecting"
+                android:textStyle="italic"
+                android:visibility="visible"
+                app:layout_constraintStart_toEndOf="@id/guideline_center_left4"
+                app:layout_constraintTop_toTopOf="@id/refuel_detail_chk_connect_lcr" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+</LinearLayout>
+
+
+</layout>

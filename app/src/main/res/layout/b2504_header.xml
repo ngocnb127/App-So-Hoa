@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- top divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="10dp">
+
+            <!-- checkbox -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Time -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".18"
+                android:gravity="center"
+                android:text="@string/time"
+                android:textStyle="bold" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Flight -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".18"
+                android:gravity="center"
+                android:text="@string/flight_code"
+                android:textStyle="bold" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Airline -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".12"
+                android:gravity="center"
+                android:text="Hãng"
+                android:textStyle="bold" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Parking -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".12"
+                android:gravity="center"
+                android:text="Vị trí"
+                android:textStyle="bold" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Buyer -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:text="Đại diện"
+                android:textStyle="bold" />
+
+            <View android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- Reason -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".20"
+                android:gravity="center"
+                android:text="Lý do"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- bottom divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray" />
+
+    </LinearLayout>
+</layout>

@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.REFUEL_ITEM_STATUS" />
+
+        <import type="com.megatech.fms.model.RefuelItemData.CURRENCY" />
+
+        <import type="com.megatech.fms.enums.INVOICE_TYPE" />
+
+        <import type="android.view.View"></import>
+
+        <variable
+            name="invoiceItem"
+            type="com.megatech.fms.model.ReceiptModel" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+            <Button
+                android:id="@+id/btnTechlog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onClick"
+                android:text="@string/input_techlog" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableStart="@android:drawable/ic_menu_save"
+                android:onClick="onClick"
+
+
+                android:text="@string/invoice_issue" />
+
+            <Button
+                android:id="@+id/btnCapture"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableStart="@{invoiceItem.captured?@drawable/ic_camera_check: @android:drawable/ic_menu_camera}"
+                android:onClick="onClick"
+
+                android:text="@{invoiceItem.captured?@string/view_image:@string/capture}" />
+
+            <Button
+                android:id="@+id/btnPrint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableStart="@drawable/ic_printed"
+                android:onClick="onClick"
+                android:text="@string/print" />
+            <Button
+                android:id="@+id/btnSellerSign"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+
+                android:text="@string/seller_signature" />
+
+            <Button
+                android:id="@+id/btnSign"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:onClick="onClick"
+
+                android:text="@string/buyer_signature" />
+
+
+        </androidx.appcompat.widget.Toolbar>
+<ScrollView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/receipt_number" />
+
+                <TextView
+                    android:id="@+id/receipt_number"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:onClick="onClick"
+                    android:text="@={invoiceItem.number}" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/date" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{DateUtils.formatDate(invoiceItem.date,"dd/MM/yyyy")}' />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/buyer" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@{invoiceItem.customerName}" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".2"
+                    android:text="@string/taxcode" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".8"
+                    android:text="@{invoiceItem.taxCode}" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".2"
+                    android:text="@string/product_type" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".8"
+                    android:text="@{invoiceItem.PName}"
+                    android:textColor="#FF0000"
+                    android:textStyle="bold" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="Xuất chờ ký" />
+
+                <CheckBox
+                    android:id="@+id/receipt_signtype_check"
+                    android:layout_width="0dp"
+                    android:layout_height="22dp"
+                    android:layout_weight=".15"
+                    android:checked="@{invoiceItem.signType == 3}"
+                    android:onClick="onClick"
+                    android:padding="0dp" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/address" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@{invoiceItem.customerAddress}" />
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/aircraft_type" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.aircraftType}" />
+
+                <TextView
+                    android:id="@+id/textView19"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/aircraft_code" />
+
+                <TextView
+                    android:id="@+id/textView20"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.aircraftCode}" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/flight_code" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.flightCode}" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/route_name" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.routeName}" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffcc00"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/customer_type" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.customerType==1?@string/oversea:@string/domestic}" />
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/route_type" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@{invoiceItem.flightType==1?@string/oversea:@string/domestic}" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/qc_no" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{invoiceItem.qualityNo}' />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/tech_log" />
+
+                <TextView
+                    android:id="@+id/receipt_techlog"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{String.format("%,20.0f",invoiceItem.techLog)}' />
+
+            </TableRow>
+
+            <TableRow
+
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/startTime" />
+
+                <TextView
+                    android:id="@+id/textView6"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{String.format("%s",DateUtils.getTime(invoiceItem.startTime))}' />
+
+
+                <TextView
+                    android:id="@+id/textView5"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/endTime" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{String.format("%s",DateUtils.getTime(invoiceItem.endTime))}' />
+
+
+            </TableRow>
+
+            <TableRow
+
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:visibility="gone"
+                android:padding="5dp">
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/tech_log" />
+
+                <TextView
+
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+
+                    android:text='@{String.format("%,20.0f",invoiceItem.techLog)}' />
+            </TableRow>
+            <TableRow
+
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#ffffff"
+                android:visibility="gone"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/split_invoice" />
+
+                <CheckBox
+                    android:id="@+id/receipt_split_check"
+                    android:layout_width="0dp"
+                    android:layout_height="22dp"
+                    android:layout_weight=".25"
+                    android:checked='@={invoiceItem.invoiceSplit}'
+                    android:onClick="onClick"
+                    android:padding="0dp" />
+
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/split_amount" />
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text='@{String.format("%,20.0f",invoiceItem.splitAmount)}' />
+
+
+            </TableRow>
+
+            <TableRow
+
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:visibility="gone"
+                android:padding="5dp">
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/return_amount" />
+
+                <TextView
+
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+
+                    android:text='@{String.format("%,20.0f",invoiceItem.returnAmount)}' />
+
+
+                <TextView
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:text="@string/defueling_no" />
+
+                <TextView
+                    android:id="@+id/receipt_defueling_number"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:onClick="onClick"
+
+                    android:text='@{invoiceItem.defuelingNo}' />
+
+
+            </TableRow>
+
+            <!-- Copy vào activity_invoice.xml thay thế TableRow cũ (~dòng 383) -->
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="So Tren Dong Ho"
+                    style="@android:style/TextAppearance.Small"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+                    android:paddingEnd="5dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GL: "
+                        style="@android:style/TextAppearance.Small"
+                        android:textStyle="bold"
+                        android:paddingEnd="3dp" />
+
+                    <TextView
+                        android:id="@+id/txtGrossValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#FF6B6B"
+                        android:textStyle="bold"
+                        style="@android:style/TextAppearance.Small" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+                    android:paddingEnd="5dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tong: "
+                        style="@android:style/TextAppearance.Small"
+                        android:textStyle="bold"
+                        android:paddingEnd="3dp" />
+
+                    <TextView
+                        android:id="@+id/txtTotalValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#4ECDC4"
+                        android:textStyle="bold"
+                        style="@android:style/TextAppearance.Small" />
+                </LinearLayout>
+            </TableRow>
+
+            <TableRow android:padding="5dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:text="@string/refuel_detail"
+                    android:textSize="@dimen/large_text" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:gravity="center|end"
+                    android:text='@{String.format("Tổng Kg: %, .0f", invoiceItem.weight)}'
+                    android:textColor="#FF0000"
+                    android:textStyle="bold"
+                    android:textSize="@dimen/medium_text"/>
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/refueller" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:gravity="center_horizontal"
+                    android:text="Số đồng hồ trước/sau" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/temperature" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/density" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/gallon" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/litter" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:text="@string/weight" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:minHeight="200dp"
+                android:layout_weight="1">
+            <ListView
+                android:id="@+id/invoice_item_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+            </TableRow>
+        </TableLayout>
+</ScrollView>
+    </LinearLayout>
+</layout>

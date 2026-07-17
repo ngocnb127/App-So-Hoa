@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.liquidcontrols.lcr.iq.sdk"
+    android:versionCode="1"
+    android:versionName="v1.00.00" >
+
+    <uses-sdk
+        android:minSdkVersion="19"
+        android:targetSdkVersion="27" />
+
+    <uses-feature android:name="android.hardware.wifi" />
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application>
+        <service
+            android:name="com.liquidcontrols.lcr.iq.sdk.service.SdkService"
+            android:description="@string/lc_sdk_service_name"
+            android:enabled="true"
+            android:exported="false" >
+        </service>
+    </application>
+
+</manifest>

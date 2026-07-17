@@ -1,0 +1,911 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2508Model" />
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/b2508_new_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.1"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+
+            <Button
+                android:id="@+id/b2508_new_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="16dp"
+                android:onClick="onClick"
+                android:text="@string/save" />
+        </androidx.appcompat.widget.Toolbar>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="3dp">
+            <TextView style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="3dp"
+                ></TextView>
+
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/flight_code"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_flight"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{mItem.flightCode}'
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/flightNo" />
+
+            <TextView
+                android:id="@+id/b2508_new_flightNo"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:focusable="false"
+
+                android:padding="5dp"
+                android:text="@{mItem.flightNo}"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/airport"></TextView>
+
+            <Spinner
+                android:id="@+id/b2508_new_airport"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck"></Spinner>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/truck_no"></TextView>
+
+            <Spinner
+                android:id="@+id/b2508_new_truck_no"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck"></Spinner>
+        </TableRow>
+
+
+
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/hour"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_time"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.time,"HH:mm")}'
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/date"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_DateCreated"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.DateCreated,"dd/MM/yyyy")}'
+                tools:ignore="TouchTargetSizeCheck" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Loại tàu bay"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_aircraftType"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text="@{mItem.aircraftType}"></TextView>
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EEEEEE"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:text=" Điều kiện / Circumstances"
+                android:padding="5dp"
+                android:textColor="#000000" />
+        </TableRow>
+
+        <!-- Hàng 1 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:text="APU đang nổ / APU operating" />
+
+            <CheckBox
+                android:id="@+id/section6_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_1}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="GPU đang hoạt động / GPU operating" />
+
+            <CheckBox
+                android:id="@+id/section6_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_2}"
+                android:onClick="onClick"
+                android:focusable="false" />
+        </TableRow>
+
+        <!-- Hàng 2 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Điều hòa tàu bay đang hoạt động / AC operating" />
+
+            <CheckBox
+                android:id="@+id/section6_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_3}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Trong nhà chứa tàu bay / In hangar" />
+
+            <CheckBox
+                android:id="@+id/section6_4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_5}"
+                android:onClick="onClick"
+                android:focusable="false" />
+        </TableRow>
+
+        <!-- Hàng 3 -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:minHeight="48dp"
+                android:padding="5dp"
+                android:text="Bảo dưỡng càng chính / MLG under maintenance" />
+
+            <CheckBox
+                android:id="@+id/section6_5"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:minHeight="48dp"
+                android:checked="@={mItem.section6_4}"
+                android:onClick="onClick"
+                android:focusable="false" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".4"
+                android:padding="5dp"
+                android:minHeight="48dp"
+                android:text="Một động cơ tàu bay đang hoạt động /One Aircraft Engine Running" />
+
+            <CheckBox
+                android:id="@+id/section6_6"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:checked="@={mItem.section6_6}"
+                android:focusable="false"
+                android:minHeight="48dp"
+                android:onClick="onClick" />
+        </TableRow>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#BDBDBD" />
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Lượng trước tra nạp"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_beforeFueling"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.beforeFueling)}'></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Tổng nhiên liệu chuyến bay"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_fuelOnBoard"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.fuelOnBoard)}'></TextView>
+
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Đơn vị"></TextView>
+
+
+            <Spinner
+                android:id="@+id/b2508_unit"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="25dp"
+                android:layout_weight=".25"
+                android:padding="5dp"></Spinner>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Lượng nhiên liệu tra nạp"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_new_fuelUplift"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f",mItem.fuelUplift)}'></TextView>
+
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <!-- Label chính -->
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Lượng nhiên liệu tra nạp (Gallon)" />
+
+            <!-- Giá trị gallon -->
+            <TextView
+                android:id="@+id/b2508_new_fuelOnBoardGalon"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{String.format("%.2f", mItem.fuelOnBoardGallon)}' />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:textColor="@android:color/holo_red_dark"
+                android:text="Tỷ trọng tính" />
+
+
+            <TextView
+                android:id="@+id/tv_density"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.25"
+                android:drawableLeft="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="3dp"
+                android:text='@{String.format("%.4f",mItem.density)}'
+                android:textIsSelectable="true" />
+
+
+
+
+
+        </TableRow>
+
+
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#BDBDBD"
+            android:layout_marginTop="6dp" />
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Nắp thùng dầu:"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Có xích"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover1"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover1}"
+                android:focusable="false"
+                android:onClick="onClick"
+
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Không xích"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover2"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover2}"
+                android:focusable="false"
+                android:onClick="onClick"
+
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text="Có bất thường"></TextView>
+
+            <CheckBox
+                android:id="@+id/cover3"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.cover3}"
+                android:focusable="false"
+                android:onClick="onClick"
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Cài đặt:"></TextView>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Automatic"></TextView>
+
+            <CheckBox
+                android:id="@+id/automatic"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.automatic}"
+                android:focusable="false"
+                android:onClick="onClick"
+
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="5dp"
+                android:text="Other"></TextView>
+
+            <CheckBox
+                android:id="@+id/other"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.15"
+                android:checked="@={mItem.other}"
+                android:focusable="false"
+                android:onClick="onClick"
+
+                android:padding="3dp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text=""></TextView>
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".1"
+                android:padding="5dp"
+                android:layout_marginLeft="15dp"
+                android:text=""></TextView>
+
+
+
+
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="5dp">
+
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="Ghi chú"></TextView>
+
+            <TextView
+                android:id="@+id/b2508_note"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{mItem.note}'></TextView>
+
+        </TableRow>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="8dp"
+            android:background="#BDBDBD" />
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="8dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:text="ĐẠI DIỆN HÃNG HÀNG KHÔNG"
+                android:textColor="@android:color/black"
+                android:textStyle="bold" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:text="NHÂN VIÊN SKYPEC"
+                android:textColor="@android:color/black"
+                android:textStyle="bold" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/AirlineSign"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text='@{mItem.TextAirlineSignature}' />
+
+            <TextView
+                android:id="@+id/UserSkypecSign"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text='@{mItem.TextUserSkypecSignature}' />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="4dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/b2508_signature_airline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@{mItem.urlImageAirline != null &amp;&amp; !mItem.urlImageAirline.isEmpty() ? @drawable/ic_checked : @drawable/ic_edit}"
+                    android:onClick="onClick"
+                    android:text="Bấm để ký" />
+
+                <TextView
+                    android:id="@+id/urlImageAirline"
+                    style="?android:attr/textAppearanceSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:paddingTop="4dp"
+                    android:text='@{mItem.urlImageAirline}'
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/b2508_signature_skypec"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@{mItem.urlImageSkypec != null &amp;&amp; !mItem.urlImageSkypec.isEmpty() ? @drawable/ic_checked : @drawable/ic_edit}"
+                    android:onClick="onClick"
+                    android:text="Bấm để ký" />
+
+                <TextView
+                    android:id="@+id/urlImageSkypec"
+                    style="?android:attr/textAppearanceSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:paddingTop="4dp"
+                    android:text='@{mItem.urlImageSkypec}'
+                    android:visibility="gone" />
+            </LinearLayout>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#ffffff"
+            android:padding="8dp">
+
+            <ImageView
+                android:id="@+id/ImageAirlineSign"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="0.5"
+                android:layout_margin="4dp"
+                android:adjustViewBounds="true"
+                android:background="#EEEEEE"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <ImageView
+                android:id="@+id/ImageUserSkypecSign"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="0.5"
+                android:layout_margin="4dp"
+                android:adjustViewBounds="true"
+                android:background="#EEEEEE"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </TableRow>
+
+
+
+
+
+
+
+
+
+    </LinearLayout>
+    </ScrollView>
+</layout>

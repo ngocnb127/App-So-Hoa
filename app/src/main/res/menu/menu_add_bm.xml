@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/menu_add_bm2508"
+        android:title="Thêm mới BM 2508" />
+
+    <item
+        android:id="@+id/menu_add_bm2504"
+        android:title="Thêm mới BM 2504" />
+
+    <item
+        android:id="@+id/menu_add_bm2503"
+        android:title="Thêm mới BM 2503" />
+    <item
+        android:id="@+id/menu_add_bm2505"
+        android:title="Thêm mới BM 2505" />
+
+</menu>

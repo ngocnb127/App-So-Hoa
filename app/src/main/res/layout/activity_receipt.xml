@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+
+    tools:context=".ReceiptActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:text="@string/receipt_list"
+                android:textColor="#fff"
+                android:textSize="24sp"
+                android:textStyle="bold">
+
+
+
+            </TextView>
+
+            <TextView
+                android:id="@+id/receip_date_picker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:drawableEnd="@drawable/ic_calendar"
+                android:onClick="onClick"
+                android:focusable="false"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/large_text"></TextView>
+
+
+        </androidx.appcompat.widget.Toolbar>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="horizontal"
+            android:background="#e0e0e0"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/receipt_list_number"
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:hint="@string/truck_no"
+                android:text="@string/receipt_number" />
+            <TextView
+                android:id="@+id/receipt_list_customer"
+                android:layout_width="0dp"
+                android:layout_weight=".2"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:hint="@string/truck_no"
+                android:text="@string/customer_code" />
+            <TextView
+                android:id="@+id/receipt_list_date"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight=".2"
+                android:gravity="center"
+                android:text="@string/receipt_date"
+                />
+            <TextView
+                android:id="@+id/receipt_list_flight"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight=".2"
+                android:gravity="center"
+                android:text="@string/flight_code"
+                />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight=".2"
+                android:gravity="center"
+                android:text="@string/route_name"
+                />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight=".1"
+                android:gravity="center"
+                android:text="@string/sync_status"
+                />
+        </LinearLayout>
+        <ListView
+            android:id="@+id/receipt_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="2dp"
+            android:divider="#e0e0e0">
+
+        </ListView>
+    </LinearLayout>
+
+</layout>

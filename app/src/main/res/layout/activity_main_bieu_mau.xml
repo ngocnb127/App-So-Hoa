@@ -1,0 +1,586 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- ================= TOOLBAR ================= -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:text="@string/back"
+                android:textColor="@color/colorWhite"
+                android:background="@android:color/transparent"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="DANH SÁCH BIỂU MẪU"
+                android:textColor="@color/colorWhite"
+                android:textStyle="bold"
+                android:textSize="18sp"/>
+        </androidx.appcompat.widget.Toolbar>
+
+        <!-- ================= QT25 ================= -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#E3F2FD">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QT25"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#0D47A1"
+                android:padding="12dp"
+                android:gravity="center_vertical"/>
+        </androidx.cardview.widget.CardView>
+
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:padding="8dp">
+
+            <!-- ===== 25.02 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2502"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.02"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.02"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PHIẾU NHẬP NL JET A-1 CHO XE"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.03 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2503"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.03"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.03"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PHIẾU YÊU CẦU TRA NẠP TRÊN CÁNH"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.04 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2504"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.04"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.04"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MẪU NẠP/HÚT TRƯỜNG HỢP ĐẶC BIỆT"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.05 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2505"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.05"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.05"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PHIẾU KIỂM TRA CLNL"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.05 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2506"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.06"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.06"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BIÊN BẢN LẤY VÀ GIAO NHẬN MẪU"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.08 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2508"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.08"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.08"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="XÁC NHẬN YÊU CẦU SỐ LƯỢNG JET A-1"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 25.09 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2509"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#E8F5E9">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="25.09"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 25.09"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PHIẾU KIỂM TRA ĐỐI CHỨNG NHIÊN LIỆU"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </GridLayout>
+
+        <!-- ================= QT23 ================= -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#F3E5F5">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QT23 -QT66"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#4A148C"
+                android:padding="12dp"
+                android:gravity="center_vertical"/>
+        </androidx.cardview.widget.CardView>
+
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:padding="8dp">
+
+            <!-- ===== 25.07A ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_2507a"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#F3E5F5">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="23.07A"
+                            android:textSize="36sp"
+                            android:textStyle="bold"
+                            android:textColor="#4A148C"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 23.07A"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Phiếu bảo dưỡng hàng ngày"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ===== 66.06 ===== -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_6606"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="70dp"
+                        android:background="#F3E5F5">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="66.06"
+                            android:textSize="36sp"
+                            android:textStyle="bold"
+                            android:textColor="#4A148C"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Biểu mẫu 66.06"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sổ theo dõi Niêm An ninh"
+                            android:textSize="13sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </GridLayout>
+
+    </LinearLayout>
+</ScrollView>

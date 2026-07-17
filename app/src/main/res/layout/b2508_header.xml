@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="10dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".05"></TextView>
+
+
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/time"
+                android:textStyle="bold"></TextView>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/flightNo"
+                android:textStyle="bold">
+
+            </TextView>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/refueller"
+                android:textStyle="bold"></TextView>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/operator"
+                android:textStyle="bold"></TextView>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/fuelUplift"
+                android:textStyle="bold"></TextView>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:background="@android:color/darker_gray" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".15"
+                android:gravity="center"
+                android:padding="5dp"
+                android:text="@string/fuelUpliftUSG"
+                android:textStyle="bold"></TextView>
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray" />
+    </LinearLayout>
+</layout>

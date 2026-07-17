@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+
+
+    tools:context=".SettingActivity">
+    <data>
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.TruckModel" />
+    </data>
+    <LinearLayout   android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:background="@color/colorPrimary">
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"
+            android:drawableStart="@drawable/ic_exit"
+            android:enabled="true"
+            android:text="@string/back"
+            />
+        <Button
+            android:id="@+id/btnUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:drawableStart="@android:drawable/ic_menu_save"
+            android:enabled="true"
+            android:text="@string/save"
+             />
+    </androidx.appcompat.widget.Toolbar>
+
+    <ProgressBar
+        android:id="@+id/loading_bar"
+        style="@style/Widget.AppCompat.ProgressBar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+    <TableRow  android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp" android:visibility="gone">
+        <TextView android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".25"
+            android:text="@string/refueling_method">
+
+        </TextView>
+        <RadioGroup android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_weight=".25">
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/refueler"
+                android:checked="true"/>
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/fhs"/>
+        </RadioGroup>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:text="@string/refuel_company"></TextView>
+        <RadioGroup android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_weight=".25">
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NAFSC"/>
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TAPETCO"/>
+        </RadioGroup>
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:padding="10dp">
+
+
+        <TextView
+            android:id="@+id/lblTruckNo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="Số xe"
+            android:textSize="@dimen/medium_text" />
+
+        <Spinner
+            android:id="@+id/spinner_truck"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+
+            android:spinnerMode="dropdown"
+            android:textSize="@dimen/large_text" />
+
+        <TextView
+
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="@string/current_amount"
+            android:textSize="@dimen/medium_text" />
+
+        <EditText
+            android:id="@+id/txtCurrentAmount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:digits="0123456789."
+            android:inputType="numberDecimal"
+            android:selectAllOnFocus="true"
+            android:textSize="@dimen/large_text" />
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/lblIMEI"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:gravity="right"
+            android:text="Tablet IMEI"
+            android:visibility="visible"
+             />
+
+        <EditText
+            android:id="@+id/txtIMEI"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="0.25"
+            android:selectAllOnFocus="true"
+            android:digits="0123456789."
+            android:editable="false"
+            android:inputType="none"
+            android:visibility="visible"
+           />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.5" />
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="@string/lcr_ip_address"
+            android:textSize="@dimen/medium_text"
+            android:visibility="visible" />
+
+        <EditText
+            android:id="@+id/txtIP"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="0.75"
+            android:digits="0123456789."
+            android:hint="192.168.1.1"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:textSize="@dimen/large_text"
+            android:visibility="visible" />
+
+        <Button
+            android:id="@+id/btnTest"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_weight=".25"
+            android:text="@string/test"
+            android:visibility="visible"
+
+            />
+
+        <TextView
+            android:id="@+id/lblPrinter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="@string/printer_address"
+            android:textSize="@dimen/medium_text"
+            android:visibility="visible" />
+
+        <EditText
+            android:id="@+id/txtPrinter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:digits="0123456789."
+            android:hint="192.168.1.1"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:textSize="@dimen/large_text"
+            android:visibility="visible" />
+
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/row_thermal_printer_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        >
+
+        <TextView
+
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="@string/thermal_printer_type"
+            android:textSize="@dimen/medium_text"
+            android:visibility="visible" />
+
+        <RadioGroup
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="3"
+            android:orientation="horizontal">
+            <RadioButton
+                android:id="@+id/rad_zq511"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="ZQ511"
+
+                android:textSize="@dimen/medium_text"></RadioButton>
+
+            <RadioButton android:id="@+id/rad_zq520"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+
+                android:padding="5dp"
+                android:text="ZQ520"
+                android:textSize="@dimen/medium_text"></RadioButton>
+
+
+
+        </RadioGroup>
+
+    </TableRow>
+        <TableRow
+            android:id="@+id/row_Device_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="right"
+                android:text="@string/device_type"
+                android:textSize="@dimen/medium_text"
+                android:visibility="visible" />
+
+            <RadioGroup
+                android:id="@+id/group_device_type"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rad_LCR"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="LCR"
+                    android:textSize="@dimen/medium_text" />
+
+                <RadioButton
+                    android:id="@+id/rad_TCS"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="TCS"
+                    android:textSize="@dimen/medium_text" />
+            </RadioGroup>
+
+        </TableRow>
+
+</LinearLayout>
+</layout>

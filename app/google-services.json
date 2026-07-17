@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "832154252474",
+    "project_id": "appskypec-a6dc5",
+    "storage_bucket": "appskypec-a6dc5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:832154252474:android:106fbed176c1e10fdc3e83",
+        "android_client_info": {
+          "package_name": "com.megatech.fms"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAZPCsYBSbzkuczr_rLuQ9KW4LHOMzcmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:832154252474:android:b11f1b8b14a019addc3e83",
+        "android_client_info": {
+          "package_name": "com.megatech.fms.fhs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAZPCsYBSbzkuczr_rLuQ9KW4LHOMzcmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:832154252474:android:5e08e1f7d2aaca2bdc3e83",
+        "android_client_info": {
+          "package_name": "com.skypec.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAZPCsYBSbzkuczr_rLuQ9KW4LHOMzcmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2504Model" />
+    </data>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- ================= TOOLBAR ================= -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary">
+
+            <Button
+                android:id="@+id/b2504_new_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick"
+                android:text="@string/back" />
+
+            <TextView
+                style="?android:attr/textAppearanceLarge"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="BM2504"
+                android:textColor="@color/colorWhite" />
+
+            <Button
+                android:id="@+id/b2504_new_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onClick"
+                android:drawableStart="@android:drawable/ic_menu_save"
+                android:text="@string/save" />
+        </androidx.appcompat.widget.Toolbar>
+
+        <!-- ================= TITLE ================= -->
+        <TextView
+            android:id="@+id/b2504_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="PHIẾU YÊU CẦU TRA NẠP TRONG TRƯỜNG HỢP ĐẶC BIỆT"
+            android:textColor="@color/colorPrimary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- ================= ROW 1: TIME ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="@string/time" />
+
+            <TextView
+                android:id="@+id/b2504_time"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".75"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:padding="5dp"
+                android:text='@{DateUtils.formatDate(mItem.date,"dd/MM/yyyy HH:mm")}'
+                tools:ignore="TouchTargetSizeCheck" />
+        </TableRow>
+
+        <!-- ================= ROW 2: AIRPORT | TRUCK ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/airport" />
+
+            <Spinner
+                android:id="@+id/b2504_airport"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/truck_no" />
+
+            <Spinner
+                android:id="@+id/b2504_truck"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                tools:ignore="TouchTargetSizeCheck" />
+        </TableRow>
+
+        <!-- ================= ROW 3: FLIGHT | AIRCRAFT ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EFEFEF"
+            android:padding="8dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="@string/flight_code" />
+
+            <TextView
+                android:id="@+id/b2504_new_flight"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:focusable="false"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.flightNo}"
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="@string/aircraft_code" />
+
+            <TextView
+                android:id="@+id/b2504_aircraft"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.acReg}" />
+        </TableRow>
+
+        <!-- ================= ROW 4: AIRLINE | PARKING ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EFEFEF"
+            android:padding="8dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Hãng" />
+
+            <TextView
+                android:id="@+id/b2504_airline"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.airlineName}" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Vị trí" />
+
+            <TextView
+                android:id="@+id/b2504_packing"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.packing}" />
+        </TableRow>
+
+        <!-- ================= ROW 5: ROUTE | CHOOSE LEVEL ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EFEFEF"
+            android:padding="8dp">
+
+
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Lý do" />
+
+            <Spinner
+                android:id="@+id/b2504_choose_level"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25" />
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Nội dung khác" />
+
+            <TextView
+                android:id="@+id/b2504_choose_note"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.chooseNote}" />
+        </TableRow>
+
+        <!-- ================= ROW 6: REPRESENTATIVE | NOTE | SIGN ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Đại diện" />
+
+            <TextView
+                android:id="@+id/b2504_representative"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.buyerName}" />
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:text="Chức vụ" />
+
+            <TextView
+                android:id="@+id/b2504_position"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:drawableStart="@drawable/ic_edit"
+                android:hint="@string/touch_to_edit"
+                android:onClick="onClick"
+                android:text="@{mItem.buyerPosition}" />
+
+
+        </TableRow>
+
+        <!-- ================= ROW 7: SIGNATURE BUTTON ================= -->
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight=".75" />
+
+            <Button
+                android:id="@+id/b2504_signature"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@{mItem.signPictureUrl != null ? @drawable/ic_checked : @drawable/ic_edit}"
+                android:onClick="onClick"
+                android:text="Bấm để khách hàng ký" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight=".25" />
+
+            <ImageView
+                android:id="@+id/b2504_signature_image"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginTop="8dp"
+                android:background="#EEEEEE"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </TableRow>
+
+    </LinearLayout>
+    </ScrollView>
+</layout>

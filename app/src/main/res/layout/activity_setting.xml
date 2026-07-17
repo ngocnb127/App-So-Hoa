@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".SettingActivity">
+
+    <EditText
+        android:id="@+id/txtIMEI"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:digits="0123456789."
+        android:ems="10"
+        android:inputType="number"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lblIMEI" />
+
+    <TextView
+        android:id="@+id/lblIMEI"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="Số IMEI"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
+    <include
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar"
+        app:layout_constraintBottom_toTopOf="parent"></include>
+
+    <TextView
+        android:id="@+id/lblTruckNo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="Số xe"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtIMEI" />
+
+    <EditText
+        android:id="@+id/txtTruckNo"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:ems="10"
+        android:inputType="textCapCharacters"
+        android:textAllCaps="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lblTruckNo" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/lcr_ip_address"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtTruckNo" />
+
+
+    <EditText
+        android:id="@+id/txtIP"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:digits="0123456789."
+        android:ems="10"
+        android:hint="192.168.1.30"
+        android:inputType="number"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textView" />
+
+    <Button
+        android:id="@+id/btnTest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="44dp"
+        android:layout_marginTop="112dp"
+        android:text="@string/connection_check"
+        app:layout_constraintStart_toEndOf="@+id/txtIP"
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
+
+    <EditText
+        android:id="@+id/txtPrinter"
+        android:layout_width="268dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="16dp"
+        android:digits="0123456789."
+        android:ems="10"
+        android:inputType="number"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lblPrinter" />
+
+    <Button
+        android:id="@+id/btnUpdate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:enabled="true"
+        android:text="@string/save"
+        app:layout_constraintStart_toEndOf="@id/txtPrinter"
+        app:layout_constraintTop_toTopOf="@id/txtPrinter" />
+
+    <TextView
+        android:id="@+id/lblPrinter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/printer_address"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtIP" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

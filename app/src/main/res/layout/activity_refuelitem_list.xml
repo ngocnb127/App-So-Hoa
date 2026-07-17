@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".RefuelItemListActivity">
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    <include
+        app:layout_constraintBottom_toTopOf="parent"
+        android:id="@+id/toolbar"
+        layout="@layout/toolbar"></include>
+
+    <FrameLayout
+        android:id="@+id/frameLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:layout_marginTop="56dp">
+
+        <ImageButton
+            android:id="@+id/btnRefresh"
+            android:layout_width="34dp"
+            android:layout_height="29dp"
+            app:srcCompat="@drawable/ic_refresh"
+            android:background="@null"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginStart="32dp"
+            android:text="@string/refuel_list"
+            android:textAppearance="?android:textAppearanceLarge" />
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/item_width_plus"
+            android:text="@string/detail_info"
+            android:textAppearance="?android:textAppearanceLarge" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginTop="28dp"
+            android:background="#c0c0c0" />
+
+        <include layout="@layout/refuelitem_list" />
+
+
+    </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

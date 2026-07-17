@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="com.megatech.fms.model.REFUEL_ITEM_STATUS" />
+
+        <variable
+            name="truckItem"
+            type="com.megatech.fms.model.InvoiceItemModel" />
+    </data>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:padding="3dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight=".33"
+            android:gravity="center"
+            android:hint="@string/truck_no"
+            android:text="@{truckItem.truckNo}" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight=".16"
+            android:gravity="center"
+            android:hint="@string/refuel_start"
+            android:text='@{String.format("%,20d",Math.round(truckItem.startNumber))}' />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight=".16"
+            android:gravity="center"
+            android:hint="@string/refuel_end"
+            android:text='@{String.format("%,20d",Math.round( truckItem.endNumber))}' />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight=".33"
+            android:gravity="center"
+            android:hint="@string/real_amount"
+            android:text='@{String.format("%,20.0f %s",truckItem.volume, truckItem.isReturn?"HT":"")}' />
+
+    </LinearLayout>
+</layout>
