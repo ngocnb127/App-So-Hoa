@@ -2,6 +2,7 @@ package com.megatech.fms.model;
 
 import android.database.DatabaseErrorHandler;
 
+import com.google.gson.annotations.SerializedName;
 import com.megatech.fms.FMSApplication;
 
 import java.util.Date;
@@ -15,6 +16,7 @@ public class TruckFuelModel extends BaseModel {
     private String ticketNo;
     private String tankNo;
     private String maintenanceStaff;
+    @SerializedName(value = "QCNo", alternate = {"QcNo", "qcNo"})
     private String qcNo;
     private Date time;
     private Date startTime;

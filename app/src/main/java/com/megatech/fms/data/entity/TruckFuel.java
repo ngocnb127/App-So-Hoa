@@ -2,6 +2,7 @@ package com.megatech.fms.data.entity;
 
 import androidx.room.Entity;
 
+import com.google.gson.annotations.SerializedName;
 import com.megatech.fms.model.TruckFuelModel;
 
 import java.util.Date;
@@ -11,6 +12,7 @@ public class TruckFuel extends BaseEntity {
     private String ticketNo;
     private String tankNo;
     private String maintenanceStaff;
+    @SerializedName(value = "QCNo", alternate = {"QcNo", "qcNo"})
     private String qcNo;
     private Date time;
     private int operatorId;
