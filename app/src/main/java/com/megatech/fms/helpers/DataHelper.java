@@ -56,16 +56,54 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class DataHelper {
-    private static final java.util.concurrent.atomic.AtomicBoolean processing =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private static final AtomicBoolean processing = new AtomicBoolean(false);
+    private static final AtomicBoolean syncLocked = new AtomicBoolean(false);
+    private static final AtomicBoolean syncPending = new AtomicBoolean(false);
+    private static final AtomicInteger activeSyncTasks = new AtomicInteger(0);
+    private static final ExecutorService syncExecutor = Executors.newSingleThreadExecutor(runnable ->
+            new Thread(runnable, "FMS-Sync-Worker"));
     private static final boolean isDebug = BuildConfig.DEBUG || true;
 
     private static final Context context = FMSApplication.getApplication();
     private static final HttpClient httpClient = new HttpClient();
     private static final DataRepository repo = DataRepository.getInstance(AppDatabase.getInstance(context));
+
+    private static void startSyncTask(String name, Runnable task) {
+        activeSyncTasks.incrementAndGet();
+        try {
+            syncExecutor.execute(() -> {
+            try {
+                task.run();
+            } catch (Throwable ex) {
+                Logger.appendLog("SYNC", name + " failed: " + ex.getMessage());
+            } finally {
+                finishSyncTask();
+            }
+            });
+        } catch (Throwable ex) {
+            Logger.appendLog("SYNC", name + " could not be queued: " + ex.getMessage());
+            finishSyncTask();
+        }
+    }
+
+    private static void finishSyncTask() {
+        if (activeSyncTasks.decrementAndGet() == 0) {
+            processing.set(false);
+            Intent intent = new Intent(UserBaseActivity.SYNC_BROADCAST);
+            intent.putExtra("Name", "SYNC");
+            FMSApplication.getApplication().sendBroadcast(intent);
+            if (!syncLocked.get() && syncPending.getAndSet(false)) {
+                Synchronize();
+            }
+        }
+    }
 
 
     public static List<TruckModel> getTrucks() {
@@ -152,7 +190,13 @@ public class DataHelper {
         RefuelItem localItem = repo.getRefuel(uniqueId);
 
         if (localItem == null) {
-            return null;
+            if (remoteItem == null) {
+                return null;
+            }
+            localItem = RefuelItem.fromRefuelItemData(remoteItem);
+            repo.insertRefuel(localItem);
+            remoteItem.setLocalId(localItem.getLocalId());
+            return remoteItem;
         }
 
         if (localItem.isLocalModified() || remoteItem == null) {
@@ -169,15 +213,15 @@ public class DataHelper {
     }
 
     public static void lockSync() {
-        locked = true;
+        syncLocked.set(true);
     }
 
     public static void unlockSync() {
-        locked = false;
-        new Thread(() -> Synchronize()).start();
+        syncLocked.set(false);
+        if (syncPending.getAndSet(false)) {
+            Synchronize();
+        }
     }
-
-    private static boolean locked = false;
 
     public static RefuelItemData getItemToRefuel(Integer flightId) {
         RefuelItem localItem = repo.getRefuelByFlightAndTruck(flightId, FMSApplication.getApplication().getTruckId());
@@ -199,6 +243,9 @@ public class DataHelper {
         remoteItem = httpClient.getRefuelItem(id);
         Logger.appendLog("DTH", "End remote loading item " + id + " - " + localId);
         if ((localItem != null && localItem.isLocalModified()) || remoteItem == null) {
+            if (localItem == null) {
+                return null;
+            }
             remoteItem = localItem.toRefuelItemData();
             List<RefuelItem> others = repo.getOthers(localId);
             remoteItem.setOthers(new ArrayList<>());
@@ -231,10 +278,15 @@ public class DataHelper {
 //            Logger.appendLog("SYNC", "Abort sync — app in background");
 //            return;
 //        }
-        if (processing.compareAndSet(false, true)) {   // chỉ MỘT luồng vào được
+        if (syncLocked.get()) {
+            syncPending.set(true);
+            return;
+        }
+        if (processing.compareAndSet(false, true)) {   // chỉ MỘT phiên sync vào được
+            activeSyncTasks.set(1); // coordinator giữ phiên sync cho tới khi đã tạo đủ worker
             Logger.appendLog("SYNC", "START Receipt thread=" + Thread.currentThread().getName());
             //post local modified data
-            new Thread(() -> {
+            startSyncTask("core", () -> {
 
                 try{
                     List<RefuelItem> modified = repo.getModifiedRefuel();
@@ -375,17 +427,13 @@ public class DataHelper {
                             }
                         }
                     }
-                    //send notify message to activities
-                    Intent intent = new Intent(UserBaseActivity.SYNC_BROADCAST);
-                    intent.putExtra("Name", "SYNC");
-                    FMSApplication.getApplication().sendBroadcast(intent);
                 }
                 finally {
-                    processing.set(false);
+                    // startSyncTask sẽ đóng worker và chỉ mở khóa khi mọi worker đã xong.
                 }
-            }).start();
+            });
             // synchronize truck fuels items
-            new Thread(() -> {
+            startSyncTask("truck-fuel", () -> {
 
                 List<TruckFuel> modified = repo.getModifiedTruckFuel();
                 if (modified.size() > 0) {
@@ -393,14 +441,10 @@ public class DataHelper {
                         TruckFuelModel itemData = item.toTruckFuelModel();
                         TruckFuelModel newData = httpClient.postTruckFuel(itemData);
                         if (newData != null) {
-                            TruckFuel updated = TruckFuel.fromTruckFuelModel(newData);
-
-                            updated.setLocalId(item.getLocalId());   // giữ localId cũ
-                            updated.setId(newData.getId());
-                            updated.setLocalModified(false);
-                            updated.setDeleted(item.isDeleted());
-
-                            repo.insertTruckFuel(updated);
+                            // Giữ payload local đầy đủ; response POST của API có thể chỉ trả một phần field.
+                            item.setId(newData.getId());
+                            item.setLocalModified(false);
+                            repo.insertTruckFuel(item);
                         }
                     }
                 }
@@ -410,16 +454,16 @@ public class DataHelper {
                     int[] ids = new int[lstModel.size()];
                     int i = 0;
                     for (TruckFuelModel model : lstModel) {
-                        repo.insertTruckFuel(TruckFuel.fromTruckFuelModel(model));
+                        repo.mergeRemoteTruckFuel(TruckFuel.fromTruckFuelModel(model));
 
                     }
 
                 }
 
-            }).start();
+            });
 
             //sync BM2505
-            new Thread(() -> {
+            startSyncTask("bm2505", () -> {
 
                 List<BM2505> modified = repo.getModifiedBM2505();
                 if (modified.size() > 0) {
@@ -429,7 +473,6 @@ public class DataHelper {
                         if (newData != null) {
                             item.setLocalModified(false);
                             item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
                             repo.insertBM2505(item);
                         }
                     }
@@ -440,7 +483,7 @@ public class DataHelper {
                     int[] ids = new int[lstModel.size()];
                     int i = 0;
                     for (BM2505Model model : lstModel) {
-                        repo.insertBM2505(BM2505.fromModel(model));
+                        repo.mergeRemoteBM2505(BM2505.fromModel(model));
 
                     }
 
@@ -457,12 +500,12 @@ public class DataHelper {
 
                 }
 
-            }).start();
+            });
 
             // =====================
             // SYNC BM2503
             // =====================
-            new Thread(() -> {
+            startSyncTask("bm2503", () -> {
 
                 List<BM2503> modified = repo.getModifiedBM2503();
                 if (modified.size() > 0) {
@@ -474,7 +517,6 @@ public class DataHelper {
                         if (newData != null) {
                             item.setLocalModified(false);
                             item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
 
                             repo.insertBM2503(item);
                         }
@@ -485,16 +527,16 @@ public class DataHelper {
                 List<BM2503Model> lstModel = httpClient.getBM2503List();
                 if (lstModel != null) {
                     for (BM2503Model model : lstModel) {
-                        repo.insertBM2503(BM2503.fromModel(model));
+                        repo.mergeRemoteBM2503(BM2503.fromModel(model));
                     }
                 }
 
-            }).start();
+            });
 
             // =====================
 // SYNC BM2504
 // =====================
-            new Thread(() -> {
+            startSyncTask("bm2504", () -> {
 
                 // ===== PUSH LOCAL MODIFIED =====
                 List<BM2504> modified = repo.getModifiedBM2504();
@@ -508,7 +550,6 @@ public class DataHelper {
                         if (newData != null) {
                             item.setLocalModified(false);
                             item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
 
                             repo.insertBM2504(item);
                         }
@@ -520,15 +561,15 @@ public class DataHelper {
                 if (lstModel != null && lstModel.size() > 0) {
 
                     for (BM2504Model model : lstModel) {
-                        repo.insertBM2504(BM2504.fromModel(model));
+                        repo.mergeRemoteBM2504(BM2504.fromModel(model));
                     }
                 }
 
-            }).start();
+            });
 
 
             //sync BM2307A
-            new Thread(() -> {
+            startSyncTask("check-trucks", () -> {
 
                 List<CheckTrucks> modified = repo.getModifiedCheckTrucks();
                 if (modified.size() > 0) {
@@ -538,7 +579,6 @@ public class DataHelper {
                         if (newData != null) {
                             item.setLocalModified(false);
                             item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
                             repo.insertCheckTrucks(item);
                         }
                     }
@@ -549,13 +589,13 @@ public class DataHelper {
                     int[] ids = new int[lstModel.size()];
                     int i = 0;
                     for (CheckTrucksModel model : lstModel) {
-                        repo.insertCheckTrucks(CheckTrucks.fromModel(model));
+                        repo.mergeRemoteCheckTrucks(CheckTrucks.fromModel(model));
                     }
 
                 }
-            }).start();
+            });
             //sync BM2508
-            new Thread(() -> {
+            startSyncTask("bm2508", () -> {
 
                 List<BM2508> modified = repo.getModifiedBM2508();
                 if (modified.size() > 0) {
@@ -563,13 +603,15 @@ public class DataHelper {
                         BM2508Model itemData = item.toModel();
                         BM2508Model newData = httpClient.postBM2508Post2(itemData);
                         if (newData != null) {
-                            item.setLocalModified(false);
                             item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
-                            repo.insertBM2508(item);
+                            itemData.setId(newData.getId());
                             ReceiptAPI client = new ReceiptAPI();
                             // Gửi file ảnh lên API
-                            client.postMultipartBM2508(itemData);
+                            boolean attachmentSaved = client.postMultipartBM2508(itemData) != null;
+                            if (attachmentSaved) {
+                                item.setLocalModified(false);
+                            }
+                            repo.insertBM2508(item);
                         }
                     }
                 }
@@ -579,16 +621,16 @@ public class DataHelper {
                     int[] ids = new int[lstModel.size()];
                     int i = 0;
                     for (BM2508Model model : lstModel) {
-                        repo.insertBM2508(BM2508.fromModel(model));
+                        repo.mergeRemoteBM2508(BM2508.fromModel(model));
                         ReceiptAPI client = new ReceiptAPI();
                         // Gửi file ảnh lên API
                         //client.postMultipartBM2508(model);
                     }
 
                 }
-            }).start();
+            });
             //update airlines, users from another thread
-            new Thread(() -> {
+            startSyncTask("master-data", () -> {
                 List<AirlineModel> lstModel = httpClient.getAirlines();
 
                 if (lstModel != null) {
@@ -603,7 +645,7 @@ public class DataHelper {
                 }
 
                 // sync Product
-                new Thread(() -> {
+                startSyncTask("products", () -> {
 
 
                     List<ProductModel> lstproduct = httpClient.getProductList();
@@ -614,7 +656,7 @@ public class DataHelper {
                         }
                     }
 
-                }).start();
+                });
 
                 //Users
 
@@ -649,13 +691,13 @@ public class DataHelper {
                     //repo.deleteOudateTrucks(ids);
                 }
 
-            }).start();
+            });
 
-            new Thread(() -> {
+            startSyncTask("logs", () -> {
                 Logger.sendLog();
-            }).start();
+            });
 
-            new Thread(() -> {
+            startSyncTask("screenshots", () -> {
                 ScreenshotAPI api = new ScreenshotAPI();
                 try {
                     File folder = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
@@ -667,13 +709,14 @@ public class DataHelper {
 
                     }
                 } catch (Exception ex) {
-
+                    Logger.appendLog("SYNC", "screenshots failed: " + ex.getMessage());
                 }
-            }).start();
+            });
             //get n
-
+            finishSyncTask(); // coordinator đã tạo xong toàn bộ worker
         }
         else {
+            syncPending.set(true);
             Logger.appendLog("SYNC", "SKIP receipt (đang chạy) thread=" + Thread.currentThread().getName());
         }
 
@@ -715,7 +758,7 @@ public class DataHelper {
     public static RefuelItemData postRefuel(RefuelItemData refuelData) {
         RefuelItemData postedItem = postRefuel(refuelData, false);
         // call synchronize to update remote database
-        if (postedItem.getStatus() == REFUEL_ITEM_STATUS.DONE)
+        if (postedItem != null && postedItem.getStatus() == REFUEL_ITEM_STATUS.DONE)
             Synchronize();
         return postedItem;
     }
@@ -740,7 +783,10 @@ public class DataHelper {
                 RefuelItemData postedItem = processing.get() ? null : httpClient.postRefuel(refuelData);
                 if (postedItem != null) {
                     // get local item again to make sure newest data
-                    localItem = repo.getRefuel(refuelData.getId(), refuelData.getLocalId());
+                    RefuelItem newestLocal = repo.getRefuel(refuelData.getId(), refuelData.getLocalId());
+                    if (newestLocal != null) {
+                        localItem = newestLocal;
+                    }
                     localItem.setId(postedItem.getId());
                     localItem.setUniqueId(postedItem.getUniqueId());
 
@@ -884,6 +930,7 @@ public class DataHelper {
     }
     public static void deleteBM2503(int[] ids) {
         repo.deleteBM2503(ids);
+        Synchronize();
     }
     // ===== BM2504 =====
 
@@ -904,6 +951,7 @@ public class DataHelper {
 
     public static void deleteBM2504(int[] ids) {
         repo.deleteBM2504(ids);
+        Synchronize();
     }
 
 
@@ -977,14 +1025,17 @@ public class DataHelper {
     }
     public static void deleteBM2505(int[] ids) {
         repo.deleteBM2505(ids);
+        Synchronize();
     }
 
     public static void deleteBM2508(int[] ids) {
         repo.deleteBM2508(ids);
+        Synchronize();
     }
 
     public static void deleteCheckTrucks(int[] ids) {
         repo.deleteCheckTrucks(ids);
+        Synchronize();
     }
 
     public static void postReceipt(ReceiptModel model) {

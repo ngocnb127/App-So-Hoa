@@ -346,6 +346,16 @@ public class DataRepository {
         }
     }
 
+    public void mergeRemoteTruckFuel(TruckFuel remote) {
+        TruckFuel local = db.truckFuelDao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.truckFuelDao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.truckFuelDao().update(remote);
+        }
+    }
+
 
     public List<TruckFuel> getModifiedTruckFuel() {
 
@@ -464,6 +474,15 @@ public class DataRepository {
             db.bm2505Dao().update(model);
         }
     }
+    public void mergeRemoteBM2505(BM2505 remote) {
+        BM2505 local = db.bm2505Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2505Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2505Dao().update(remote);
+        }
+    }
     public void insertBM2508(BM2508 model) {
 
         BM2508 item = db.bm2508Dao().get(model.getId(), model.getLocalId());
@@ -477,6 +496,15 @@ public class DataRepository {
             db.bm2508Dao().update(model);
         }
     }
+    public void mergeRemoteBM2508(BM2508 remote) {
+        BM2508 local = db.bm2508Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2508Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2508Dao().update(remote);
+        }
+    }
     public void insertCheckTrucks(CheckTrucks model) {
 
         CheckTrucks item = db.checkTrucksDao().get(model.getId(), model.getLocalId());
@@ -488,6 +516,15 @@ public class DataRepository {
 
             model.setLocalId(item.getLocalId());
             db.checkTrucksDao().update(model);
+        }
+    }
+    public void mergeRemoteCheckTrucks(CheckTrucks remote) {
+        CheckTrucks local = db.checkTrucksDao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.checkTrucksDao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.checkTrucksDao().update(remote);
         }
     }
 
@@ -576,7 +613,18 @@ public class DataRepository {
     }
 
     public boolean getLocalModified() {
-        SimpleSQLiteQuery query = new SimpleSQLiteQuery("Select SUM(CNT ) FROM (Select count(0) as CNT from RefuelItem where isLocalModified = 1 Union Select count(0) from Receipt where isLocalModified = 1)");
+        SimpleSQLiteQuery query = new SimpleSQLiteQuery(
+                "SELECT SUM(CNT) FROM (" +
+                        "SELECT count(0) AS CNT FROM RefuelItem WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM Receipt WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM TruckFuel WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM Invoice WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2503 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2504 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2505 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2508 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM CheckTrucks WHERE isLocalModified = 1" +
+                        ")");
         Cursor cs = db.query(query);
         if (cs.getCount()>0) {
             cs.moveToFirst();
@@ -816,6 +864,15 @@ public class DataRepository {
             db.bm2503Dao().update(model);
         }
     }
+    public void mergeRemoteBM2503(BM2503 remote) {
+        BM2503 local = db.bm2503Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2503Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2503Dao().update(remote);
+        }
+    }
     public List<BM2503> getModifiedBM2503() {
         return db.bm2503Dao().getModified();
     }
@@ -861,6 +918,15 @@ public class DataRepository {
         } else {
             model.setLocalId(item.getLocalId());
             db.bm2504Dao().update(model);
+        }
+    }
+    public void mergeRemoteBM2504(BM2504 remote) {
+        BM2504 local = db.bm2504Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2504Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2504Dao().update(remote);
         }
     }
     public List<BM2504> getModifiedBM2504() {
