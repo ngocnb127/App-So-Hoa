@@ -81,8 +81,20 @@ public class LogEntryAPI extends BaseAPI{
             zipped = zipLogFile(filePath);
 
             // Gợi ý tên file tải lên: <truckNo>-<yyyyMMdd_HHmmss>.fms.log.zip
-            String timeSuffix = new SimpleDateFormat("yyyyMMdd").format(new Date());
-            String uploadFileName = truckNo + "-" + timeSuffix + "---" + tabletId + "--.fms.log.zip";
+            String pendingName = new File(filePath).getName();
+            String timeSuffix = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
+            int stampStart = pendingName.indexOf(".log.");
+            if (stampStart >= 0 && pendingName.endsWith(".pending")) {
+                String pendingStamp = pendingName.substring(stampStart + 5,
+                        pendingName.length() - ".pending".length());
+                if (pendingStamp.matches("\\d{8}_\\d{6}_\\d{3}")) {
+                    timeSuffix = pendingStamp;
+                }
+            }
+            String logType = pendingName.startsWith("refuel-anomaly.log")
+                    ? "refuel-anomaly.log" : "fms.log";
+            String uploadFileName = truckNo + "-" + timeSuffix + "---" + tabletId
+                    + "--." + logType + ".zip";
 
             con = httpClient.createConnection(url, "POST", "multipart/form-data; boundary=" + boundary);
 

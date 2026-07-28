@@ -63,6 +63,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class DataHelper {
+
+    /**
+     * Serialize read/merge/write operations for RefuelItem. Activities and the
+     * background synchronizer can otherwise write different in-memory snapshots
+     * of the same row at the same time.
+     */
+    private static final Object REFUEL_WRITE_LOCK = new Object();
     private static final AtomicBoolean processing = new AtomicBoolean(false);
     private static final AtomicBoolean syncLocked = new AtomicBoolean(false);
     private static final AtomicBoolean syncPending = new AtomicBoolean(false);
@@ -107,28 +114,16 @@ public class DataHelper {
 
 
     public static List<TruckModel> getTrucks() {
-        if (isDebug) {
-
-            //
-
-            List<TruckModel> lstModel = httpClient.getTrucks();
-
-            if (lstModel != null) {
-                int[] ids = new int[lstModel.size()];
-                int i = 0;
-                for (TruckModel model : lstModel) {
-                    repo.insertTruck(Truck.fromTruckModel(model));
-
-                    ids[i++] = model.getId();
-                }
-                //repo.deleteOudateTrucks(ids);
+        List<TruckModel> remoteTrucks = httpClient.getTrucks();
+        if (remoteTrucks != null && !remoteTrucks.isEmpty()) {
+            for (TruckModel model : remoteTrucks) {
+                repo.insertTruck(Truck.fromTruckModel(model));
             }
+            return remoteTrucks;
+        }
 
-
-            return repo.getTrucks();
-        } else
-            return httpClient.getTrucks();
-
+        // Cài mới sẽ ưu tiên API; khi mất mạng mới dùng dữ liệu đã lưu local.
+        return repo.getTrucks();
     }
 
     public static List<TruckModel> getFHSTrucks() {
@@ -187,27 +182,30 @@ public class DataHelper {
     public static RefuelItemData getRefuelItem(String uniqueId, boolean locked) {
         RefuelItemData remoteItem = httpClient.getRefuelItem(uniqueId);
 
-        RefuelItem localItem = repo.getRefuel(uniqueId);
+        // Read/check/create must be atomic: two threads opening the same refuel
+        // would otherwise both see null and insert a duplicate row.
+        synchronized (REFUEL_WRITE_LOCK) {
+            RefuelItem localItem = repo.getRefuel(uniqueId);
 
-        if (localItem == null) {
-            if (remoteItem == null) {
-                return null;
+            if (localItem == null) {
+                if (remoteItem == null) {
+                    return null;
+                }
+                localItem = RefuelItem.fromRefuelItemData(remoteItem);
+                repo.insertRefuel(localItem);
+                remoteItem.setLocalId(localItem.getLocalId());
+                return remoteItem;
             }
-            localItem = RefuelItem.fromRefuelItemData(remoteItem);
-            repo.insertRefuel(localItem);
-            remoteItem.setLocalId(localItem.getLocalId());
-            return remoteItem;
-        }
 
-        if (localItem.isLocalModified() || remoteItem == null) {
-            remoteItem = localItem.toRefuelItemData();
-            List<RefuelItem> others = repo.getOthers(uniqueId);
-            remoteItem.setOthers(new ArrayList<>());
-            for (RefuelItem item : others) {
-                remoteItem.getOthers().add(item.toRefuelItemData());
+            if (localItem.isLocalModified() || remoteItem == null) {
+                remoteItem = localItem.toRefuelItemData();
+                List<RefuelItem> others = repo.getOthers(uniqueId);
+                remoteItem.setOthers(new ArrayList<>());
+                for (RefuelItem item : others) {
+                    remoteItem.getOthers().add(item.toRefuelItemData());
+                }
             }
         }
-
 
         return remoteItem;
     }
@@ -242,24 +240,31 @@ public class DataHelper {
 
         remoteItem = httpClient.getRefuelItem(id);
         Logger.appendLog("DTH", "End remote loading item " + id + " - " + localId);
-        if ((localItem != null && localItem.isLocalModified()) || remoteItem == null) {
-            if (localItem == null) {
-                return null;
+
+        // Re-read inside the lock: the row may have been created or modified while
+        // the HTTP request above was running.
+        synchronized (REFUEL_WRITE_LOCK) {
+            localItem = repo.getRefuel(id, localId);
+
+            if ((localItem != null && localItem.isLocalModified()) || remoteItem == null) {
+                if (localItem == null) {
+                    return null;
+                }
+                remoteItem = localItem.toRefuelItemData();
+                List<RefuelItem> others = repo.getOthers(localId);
+                remoteItem.setOthers(new ArrayList<>());
+                for (RefuelItem item : others) {
+                    remoteItem.getOthers().add(item.toRefuelItemData());
+                }
             }
-            remoteItem = localItem.toRefuelItemData();
-            List<RefuelItem> others = repo.getOthers(localId);
-            remoteItem.setOthers(new ArrayList<>());
-            for (RefuelItem item : others) {
-                remoteItem.getOthers().add(item.toRefuelItemData());
+
+            if (remoteItem != null && localItem == null) {
+
+                localItem = RefuelItem.fromRefuelItemData(remoteItem);
+                repo.insertRefuel(localItem);
+                remoteItem.setLocalId(localItem.getLocalId());
+
             }
-        }
-
-        if (remoteItem != null && localItem == null) {
-
-            localItem = RefuelItem.fromRefuelItemData(remoteItem);
-            repo.insertRefuel(localItem);
-            remoteItem.setLocalId(localItem.getLocalId());
-
         }
 
         return remoteItem;
@@ -292,21 +297,63 @@ public class DataHelper {
                     List<RefuelItem> modified = repo.getModifiedRefuel();
                     if (modified.size() > 0) {
                         for (RefuelItem item : modified) {
+                            String jsonBeforeRequest = item.getJsonData();
                             RefuelItemData itemData = item.toRefuelItemData();
                             RefuelItemData newData = httpClient.postRefuel(itemData);
                             if (newData != null) {
-                                item.setLocalModified(false);
-                                item.setId(newData.getId());
-                                item.setUniqueId(newData.getUniqueId());
-                                item.setPostStatus(RefuelItem.ITEM_POST_STATUS.SUCCESS);
-                                item.setJsonData(newData.toJson());
+                                if (newData.getStatus() == REFUEL_ITEM_STATUS.DONE
+                                        && itemData.getStatus() != REFUEL_ITEM_STATUS.DONE
+                                        && finalRefuelValuesChanged(newData, itemData)) {
+                                    logFinalRefuelChange("BACKGROUND_SYNC", newData, itemData,
+                                            "SERVER_REJECTED_DOWNGRADE");
+                                }
+                                synchronized (REFUEL_WRITE_LOCK) {
+                                    // Re-read after HTTP: an Activity may have saved a newer
+                                    // snapshot while this request was in flight.
+                                    RefuelItem newestLocal = repo.getRefuel(item.getId(), item.getLocalId());
+                                    if (newestLocal == null) {
+                                        newestLocal = item;
+                                    }
 
-                                // ← THÊM: đồng bộ đúng con số version/thời gian server vừa xác nhận
-                                item.setClientSeq(newData.getClientSeq());
-                                item.setServerRevision(newData.getServerRevision());
-                                item.setDateUpdated(newData.getDateUpdated());
+                                    if (RefuelSyncGuard.shouldPreserveLocal(jsonBeforeRequest,
+                                            newestLocal.getJsonData(), newestLocal.isLocalModified())) {
+                                        // Snapshot before the merge: it carries the local
+                                        // ClientSeq/ServerRevision the log needs to tell the
+                                        // two snapshots apart.
+                                        RefuelItemData keptBeforeMerge = newestLocal.toRefuelItemData();
+                                        RefuelSyncGuard.mergeServerMetadata(newestLocal, newData);
+                                        if (keptBeforeMerge.getStatus() == REFUEL_ITEM_STATUS.DONE
+                                                && finalRefuelValuesChanged(keptBeforeMerge, newData)) {
+                                            logFinalRefuelChange("BACKGROUND_SYNC",
+                                                    keptBeforeMerge, newData,
+                                                    "PRESERVE_NEWER_LOCAL");
+                                        }
+                                        repo.insertRefuel(newestLocal);
+                                        continue;
+                                    }
 
-                                repo.insertRefuel(item);
+                                    // Never let an old PROCESSING response downgrade a row
+                                    // which is already known locally as DONE.
+                                    if (newestLocal.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                                            && newData.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                                        logFinalRefuelChange("BACKGROUND_SYNC",
+                                                newestLocal.toRefuelItemData(), newData,
+                                                "BLOCK_OLD_RESPONSE");
+                                        Logger.appendLog("SYNC", "Ignore non-DONE response for DONE refuel "
+                                                + newestLocal.getId());
+                                        continue;
+                                    }
+
+                                    // HTTP 200 returns the authoritative server object. This
+                                    // also handles the API blocking DONE -> PROCESSING: the
+                                    // returned DONE object replaces the stale local payload and
+                                    // must not be retried.
+                                    RefuelItem serverItem = RefuelItem.fromRefuelItemData(newData);
+                                    serverItem.setLocalId(newestLocal.getLocalId());
+                                    serverItem.setLocalModified(false);
+                                    serverItem.setPostStatus(RefuelItem.ITEM_POST_STATUS.SUCCESS);
+                                    repo.insertRefuel(serverItem);
+                                }
                             }
                         }
                     }
@@ -319,16 +366,23 @@ public class DataHelper {
                         for (RefuelItemData model : remoteList) {
                             if (!model.isDeleted()) {
                                 RefuelItem remoteItem = RefuelItem.fromRefuelItemData(model);
-                                RefuelItem localItem = repo.getRefuel(remoteItem.getUniqueId());
-                                if (localItem == null) {
-                                    localItem = repo.getRefuel(remoteItem.getId(), remoteItem.getLocalId());
-                                }
-
-                                if (canApplyRemote(localItem, model)) {      // ← THÊM: dùng guard đã viết
-                                    if (localItem != null) {
-                                        remoteItem.setLocalId(localItem.getLocalId());   // giữ đúng localId, tránh tạo trùng bản ghi (đã bàn ở lượt trước)
+                                synchronized (REFUEL_WRITE_LOCK) {
+                                    RefuelItem localItem = repo.getRefuel(remoteItem.getUniqueId());
+                                    if (localItem == null) {
+                                        localItem = repo.getRefuel(remoteItem.getId(), remoteItem.getLocalId());
                                     }
-                                    repo.insertRefuel(remoteItem);
+
+                                    if (localItem != null
+                                            && localItem.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                                            && model.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                                        logFinalRefuelChange("REMOTE_PULL", localItem.toRefuelItemData(),
+                                                model, "BLOCK_DOWNGRADE");
+                                    } else if (canApplyRemote(localItem, model)) {
+                                        if (localItem != null) {
+                                            remoteItem.setLocalId(localItem.getLocalId());
+                                        }
+                                        repo.insertRefuel(remoteItem);
+                                    }
                                 }
 
                                 Flight flight = new Flight();
@@ -439,12 +493,18 @@ public class DataHelper {
                 if (modified.size() > 0) {
                     for (TruckFuel item : modified) {
                         TruckFuelModel itemData = item.toTruckFuelModel();
+                        Logger.appendLog("B2502", "Sync localId=" + itemData.getLocalId()
+                                + ", requestId=" + itemData.getId());
                         TruckFuelModel newData = httpClient.postTruckFuel(itemData);
                         if (newData != null) {
                             // Giữ payload local đầy đủ; response POST của API có thể chỉ trả một phần field.
                             item.setId(newData.getId());
+                            itemData.setId(newData.getId());
+                            item.setJsonData(itemData.toJson());
                             item.setLocalModified(false);
                             repo.insertTruckFuel(item);
+                            Logger.appendLog("B2502", "Synced localId=" + item.getLocalId()
+                                    + ", responseId=" + newData.getId());
                         }
                     }
                 }
@@ -605,14 +665,28 @@ public class DataHelper {
                         if (newData != null) {
                             item.setId(newData.getId());
                             itemData.setId(newData.getId());
-                            ReceiptAPI client = new ReceiptAPI();
-                            // Gửi file ảnh lên API
-                            boolean attachmentSaved = client.postMultipartBM2508(itemData) != null;
-                            if (attachmentSaved) {
-                                item.setLocalModified(false);
-                            }
+                            item.setJsonData(itemData.toJson());
+                            // Dữ liệu chính đã thành công: không POST lại, dù ảnh có thể chưa gửi được.
+                            item.setLocalModified(false);
+                            item.setAttachmentPending(hasCompleteBM2508Attachments(itemData));
                             repo.insertBM2508(item);
                         }
+                    }
+                }
+
+                // Ảnh/chữ ký có hàng đợi riêng; lỗi chỉ retry ảnh theo Id đã có trên server.
+                List<BM2508> pendingAttachments = repo.getPendingBM2508Attachments();
+                ReceiptAPI attachmentApi = new ReceiptAPI();
+                for (BM2508 item : pendingAttachments) {
+                    BM2508Model itemData = item.toModel();
+                    if (!hasCompleteBM2508Attachments(itemData)) {
+                        // Thiếu ảnh/chữ ký hoặc file đã bị xóa: dừng retry, giữ nguyên dữ liệu phiếu.
+                        item.setAttachmentPending(false);
+                        repo.insertBM2508(item);
+                        Logger.appendLog("BM2508_ATTACHMENT", "Stop retry, missing local attachment. id=" + item.getId());
+                    } else if (attachmentApi.postMultipartBM2508(itemData) != null) {
+                        item.setAttachmentPending(false);
+                        repo.insertBM2508(item);
                     }
                 }
                 List<BM2508Model> lstModel = httpClient.getBM2508List();
@@ -642,6 +716,13 @@ public class DataHelper {
                         //ids[i++] = model.getId();
                     }
                     //repo.deleteOudateTrucks(ids);
+                }
+
+                List<AirportsModel> lstAirports = httpClient.getAirports();
+                if (lstAirports != null) {
+                    for (AirportsModel model : lstAirports) {
+                        repo.insertAirports(Airports.fromAirportsModel(model));
+                    }
                 }
 
                 // sync Product
@@ -755,6 +836,65 @@ public class DataHelper {
         return true;
     }
 
+    private static boolean finalRefuelValuesChanged(RefuelItemData current, RefuelItemData incoming) {
+        if (current == null || incoming == null) return false;
+        return current.getStatus() != incoming.getStatus()
+                || Double.compare(current.getRealAmount(), incoming.getRealAmount()) != 0
+                || Double.compare(current.getStartNumber(), incoming.getStartNumber()) != 0
+                || Double.compare(current.getEndNumber(), incoming.getEndNumber()) != 0
+                || !java.util.Objects.equals(current.getEndTime(), incoming.getEndTime());
+    }
+
+    /**
+     * Propagate the stored row identity back onto the caller's object.
+     *
+     * <p>{@link #postRefuels(List, boolean)} and RefuelPreviewActivity discard the
+     * return value, so a caller holding a freshly created item (id=0, localId=0 —
+     * every split item) would keep posting 0/0 and insert a new row on every save.
+     * Only identity/version fields are copied: the caller may legitimately hold
+     * edits that are newer than the stored row.
+     */
+    private static RefuelItemData finishPostRefuel(RefuelItemData caller, RefuelItem stored) {
+        if (stored == null) return null;
+        if (caller != null) {
+            if (stored.getId() > 0)
+                caller.setId(stored.getId());
+            caller.setLocalId(stored.getLocalId());
+            if (stored.getUniqueId() != null && !stored.getUniqueId().isEmpty())
+                caller.setUniqueId(stored.getUniqueId());
+            caller.setLocalModified(stored.isLocalModified());
+            caller.setClientSeq(stored.getClientSeq());
+            caller.setServerRevision(stored.getServerRevision());
+        }
+        return stored.toRefuelItemData();
+    }
+
+    /**
+     * Audit an attempt to change an already finalized refuel.
+     *
+     * @param kept     values that survive in local storage after this operation
+     * @param rejected values that are discarded — the incoming payload for every
+     *                 BLOCK or PRESERVE action, the previous local values for
+     *                 ALLOW_DONE_EDIT
+     */
+    private static void logFinalRefuelChange(String source, RefuelItemData kept,
+                                             RefuelItemData rejected, String action) {
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=FINAL_REFUEL_CHANGE source=%s action=%s thread=%s "
+                        + "id=%d localId=%d uid=%s flight=%s truck=%s "
+                        + "keptStatus=%s keptAmount=%.0f keptStart=%.0f keptEnd=%.0f keptEndTime=%s "
+                        + "rejectedStatus=%s rejectedAmount=%.0f rejectedStart=%.0f rejectedEnd=%.0f rejectedEndTime=%s "
+                        + "keptClientSeq=%d keptServerRevision=%d rejectedClientSeq=%d rejectedServerRevision=%d",
+                source, action, Thread.currentThread().getName(), kept.getId(), kept.getLocalId(),
+                kept.getUniqueId(), kept.getFlightCode(), kept.getTruckNo(),
+                kept.getStatus(), kept.getRealAmount(), kept.getStartNumber(),
+                kept.getEndNumber(), String.valueOf(kept.getEndTime()),
+                rejected.getStatus(), rejected.getRealAmount(), rejected.getStartNumber(),
+                rejected.getEndNumber(), String.valueOf(rejected.getEndTime()),
+                kept.getClientSeq(), kept.getServerRevision(),
+                rejected.getClientSeq(), rejected.getServerRevision()));
+    }
+
     public static RefuelItemData postRefuel(RefuelItemData refuelData) {
         RefuelItemData postedItem = postRefuel(refuelData, false);
         // call synchronize to update remote database
@@ -768,50 +908,111 @@ public class DataHelper {
             Logger.appendLog("DTH", "postRefuel " + refuelData.getId() + " - " + refuelData.getLocalId());
             Logger.appendLog("DTH", String.format("FlightCode: %s Amount : %.0f Start Number: %.0f End Number: %.0f", refuelData.getFlightCode(), refuelData.getRealAmount(), refuelData.getStartNumber(), refuelData.getEndNumber()));
 
-            RefuelItem localItem = repo.getRefuel(refuelData.getId(), refuelData.getLocalId());
-            if (localItem == null) {
-                /// if item not exists in local database
-                localItem = RefuelItem.fromRefuelItemData(refuelData);
+            RefuelItem localItem;
+            String jsonBeforeRequest;
+            synchronized (REFUEL_WRITE_LOCK) {
+                localItem = repo.getRefuel(refuelData.getId(), refuelData.getLocalId());
+                jsonBeforeRequest = localItem == null ? null : localItem.getJsonData();
+                if (localItem == null) {
+                    /// if item not exists in local database
+                    localItem = RefuelItem.fromRefuelItemData(refuelData);
+                } else {
+                    if (localItem.getId() > 0 && refuelData.getId() == 0)
+                        refuelData.setId((localItem.getId()));
 
-            } else {
-                if (localItem.getId() > 0 && refuelData.getId() == 0)
-                    refuelData.setId((localItem.getId()));
-                localItem.updateData(refuelData);
+                    RefuelItemData currentData = localItem.toRefuelItemData();
+                    if (currentData.getStatus() == REFUEL_ITEM_STATUS.DONE
+                            && finalRefuelValuesChanged(currentData, refuelData)) {
+                        // An explicit DONE edit wins, so it is the value that is kept.
+                        boolean incomingWins = refuelData.getStatus() == REFUEL_ITEM_STATUS.DONE;
+                        logFinalRefuelChange(remotePost ? "DIRECT_POST" : "LOCAL_SAVE",
+                                incomingWins ? refuelData : currentData,
+                                incomingWins ? currentData : refuelData,
+                                incomingWins ? "ALLOW_DONE_EDIT" : "BLOCK_DOWNGRADE");
+                    }
 
+                    // A Preview/Confirm screen may still hold an old PROCESSING
+                    // object after the same refuel has been finalized. Do not write
+                    // that stale snapshot back to SQLite or schedule it for retry.
+                    if (localItem.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                            && refuelData.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                        Logger.appendLog("DTH", "Ignore stale non-DONE snapshot for DONE refuel "
+                                + localItem.getId());
+                        return finishPostRefuel(refuelData, localItem);
+                    }
+
+                    localItem.updateData(refuelData);
+                }
+
+                // Local-only changes must be persisted atomically with the stale
+                // status check above.
+                if (!remotePost) {
+                    localItem.setLocalModified(true);
+                    repo.insertRefuel(localItem);
+                    return finishPostRefuel(refuelData, localItem);
+                }
             }
+
             if (remotePost) {
                 RefuelItemData postedItem = processing.get() ? null : httpClient.postRefuel(refuelData);
-                if (postedItem != null) {
-                    // get local item again to make sure newest data
+                synchronized (REFUEL_WRITE_LOCK) {
                     RefuelItem newestLocal = repo.getRefuel(refuelData.getId(), refuelData.getLocalId());
                     if (newestLocal != null) {
                         localItem = newestLocal;
                     }
-                    localItem.setId(postedItem.getId());
-                    localItem.setUniqueId(postedItem.getUniqueId());
 
-                    // ← THÊM: copy đúng giá trị version/thời gian server vừa xác nhận về local,
-                    // để local không còn giữ con số cũ ("hóa thạch") sau khi push thành công
-                    localItem.setClientSeq(postedItem.getClientSeq());
-                    localItem.setServerRevision(postedItem.getServerRevision());
-                    localItem.setDateUpdated(postedItem.getDateUpdated());
-                    localItem.setJsonData(postedItem.toJson());
+                    if (postedItem != null) {
+                        if (RefuelSyncGuard.shouldPreserveLocal(jsonBeforeRequest,
+                                localItem.getJsonData(), localItem.isLocalModified())) {
+                            // Snapshot before the merge: it carries the local
+                            // ClientSeq/ServerRevision the log needs to tell the
+                            // two snapshots apart.
+                            RefuelItemData keptBeforeMerge = localItem.toRefuelItemData();
+                            RefuelSyncGuard.mergeServerMetadata(localItem, postedItem);
+                            if (keptBeforeMerge.getStatus() == REFUEL_ITEM_STATUS.DONE
+                                    && finalRefuelValuesChanged(keptBeforeMerge, postedItem)) {
+                                logFinalRefuelChange("DIRECT_POST", keptBeforeMerge,
+                                        postedItem, "PRESERVE_NEWER_LOCAL");
+                            }
+                            repo.insertRefuel(localItem);
+                            return finishPostRefuel(refuelData, localItem);
+                        }
 
-                    if (localItem.getRealAmount() == postedItem.getRealAmount()) {
-                        localItem.setLocalModified(false);
+                        // Preserve a newer local DONE if an older non-DONE response
+                        // happens to complete afterwards.
+                        if (localItem.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                                && postedItem.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                            logFinalRefuelChange("DIRECT_POST", localItem.toRefuelItemData(),
+                                    postedItem, "BLOCK_OLD_RESPONSE");
+                            return finishPostRefuel(refuelData, localItem);
+                        }
+
+                        RefuelItem serverItem = RefuelItem.fromRefuelItemData(postedItem);
+                        serverItem.setLocalId(localItem.getLocalId());
+                        serverItem.setLocalModified(false);
+                        serverItem.setPostStatus(RefuelItem.ITEM_POST_STATUS.SUCCESS);
+                        localItem = serverItem;
+                    } else {
+                        // HTTP was unavailable/skipped. Queue only if this request
+                        // has not become stale while waiting.
+                        if (localItem.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                                && refuelData.getStatus() != REFUEL_ITEM_STATUS.DONE) {
+                            logFinalRefuelChange("DIRECT_POST", localItem.toRefuelItemData(),
+                                    refuelData, "BLOCK_ENQUEUE_DOWNGRADE");
+                            return finishPostRefuel(refuelData, localItem);
+                        }
+                        localItem.updateData(refuelData);
+                        localItem.setLocalModified(true);
                     }
-                } else
-                    localItem.setLocalModified(true);
-            } else
-                localItem.setLocalModified(true);
 
-            repo.insertRefuel(localItem);
-            refuelData.setLocalId(localItem.getLocalId());
-            refuelData.setLocalModified(localItem.isLocalModified());
-            refuelData = localItem.toRefuelItemData();
-            return refuelData;
+                    repo.insertRefuel(localItem);
+                    return finishPostRefuel(refuelData, localItem);
+                }
+            }
         } else
             return null;
+
+        return null;
     }
 
 
@@ -961,9 +1162,19 @@ public class DataHelper {
 
         BM2508 localModel = BM2508.fromModel(model);
         localModel.setLocalModified(true);
+        localModel.setAttachmentPending(hasCompleteBM2508Attachments(model));
         repo.insertBM2508(localModel);
         // call synchronize to update remote database
         Synchronize();
+    }
+
+    public static boolean hasCompleteBM2508Attachments(BM2508Model model) {
+        if (model == null) return false;
+        String airlinePath = model.getAirlineSignaturePath();
+        String skypecPath = model.getUserSkypecSignaturePath();
+        if (airlinePath == null || airlinePath.trim().isEmpty()
+                || skypecPath == null || skypecPath.trim().isEmpty()) return false;
+        return new File(airlinePath).isFile() && new File(skypecPath).isFile();
     }
 
     public static void postCheckTrucks(CheckTrucksModel model) {
@@ -986,20 +1197,7 @@ public class DataHelper {
 
     public static List<AirportsModel> getAirports() {
         if (isDebug) {
-            List<AirportsModel> lstModel = httpClient.getAirports();
-
-            if (lstModel != null) {
-                int[] ids = new int[lstModel.size()];
-                int i = 0;
-                for (AirportsModel model : lstModel) {
-                    repo.insertAirports(Airports.fromAirportsModel(model));
-                    ids[i++] = model.getId();
-                }
-                //repo.deleteOudateAirports(ids);
-            }
-
             return repo.getAirports();
-
         }
         return httpClient.getAirports();
 

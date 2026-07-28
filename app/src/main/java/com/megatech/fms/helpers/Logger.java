@@ -25,6 +25,7 @@ public class Logger {
 
     private static Timer timer;
     private static long lastFileFlush = 0;
+    private static long lastRefuelAnomalyFlush = 0;
 
 
     public static void saveLog(LogEntryModel.LOG_TYPE logType, String logText, String activitiName)
@@ -75,6 +76,32 @@ public class Logger {
         }
     }
 
+    /**
+     * Dedicated audit file for attempts to change a refuel after it has been
+     * finalized. Keeping this separate makes production incidents searchable
+     * without having to inspect the much larger application log.
+     */
+    public static synchronized void appendRefuelAnomaly(String logText) {
+        android.util.Log.w("REFUEL_ANOMALY", logText);
+        Context ctx = FMSApplication.getApplication();
+        File logFile = new File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                "refuel-anomaly.log");
+
+        if (logFile.exists() && logFile.length() > 1024 * 1024) {
+            String ts = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
+            logFile.renameTo(new File(logFile.getAbsolutePath() + "." + ts + ".pending"));
+        }
+
+        try (BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true))) {
+            SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SSS");
+            buf.append("[").append(format.format(new Date())).append("] ")
+                    .append(logText == null ? "" : logText);
+            buf.newLine();
+        } catch (IOException ex) {
+            android.util.Log.e("REFUEL_ANOMALY", "Cannot write anomaly log", ex);
+        }
+    }
+
     public static boolean sendLog() {
         android.util.Log.d("LOGSEND", "sendLog gọi");
         try {
@@ -108,8 +135,17 @@ public class Logger {
             }
 
             File parent = current.getParentFile();
-            File[] pendings = (parent == null) ? null
-                    : parent.listFiles((d, n) -> n.startsWith("fms.log.") && n.endsWith(".pending"));
+            File anomaly = parent == null ? null : new File(parent, "refuel-anomaly.log");
+            if (anomaly != null && anomaly.exists() && anomaly.length() > 0
+                    && (anomaly.length() > 20 * 1024 || now - lastRefuelAnomalyFlush > 60 * 1000)) {
+                String ts = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
+                anomaly.renameTo(new File(anomaly.getAbsolutePath() + "." + ts + ".pending"));
+                lastRefuelAnomalyFlush = now;
+            }
+
+            File[] pendings = (parent == null) ? null : parent.listFiles((d, n) ->
+                    (n.startsWith("fms.log.") || n.startsWith("refuel-anomaly.log."))
+                            && n.endsWith(".pending"));
             android.util.Log.d("LOGSEND", "pending=" + (pendings == null ? 0 : pendings.length));
 
             boolean allOk = true;
