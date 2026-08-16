@@ -41,6 +41,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import com.megatech.fms.helpers.VersionCheckManager;
+import com.megatech.fms.helpers.update.UpdateStatus;
+import com.megatech.fms.helpers.TruckInvoiceSync;
 
 public class FMSApplication extends Application implements LifecycleObserver {
 
@@ -53,45 +55,98 @@ public class FMSApplication extends Application implements LifecycleObserver {
     public void onCreate() {
         super.onCreate();
 
+        // Gán trước mọi bước khởi tạo khác: nếu một bước bên dưới ném lỗi thì
+        // getApplication() vẫn trả về instance thay vì null, tránh NPE dây chuyền
+        // ở mọi nơi đang gọi FMSApplication.getApplication().
+        cApp = this;
+
         AppStateObserver.init();
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         checkDatabase();
         //registerDBService();
-        cApp = this;
-        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {   // ← THÊM TỪ ĐÂY
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override
             public void onActivityResumed(Activity activity) {
-                if (activity instanceof VersionUpdateActivity) return;
-
+                currentActivity = activity;
                 VersionCheckManager.checkIfNeeded();
-
-                if (VersionCheckManager.isHasUpdate()) {
-                    showUpdateReminder(activity);
-                }
+                maybeShowUpdateReminder(activity, VersionCheckManager.getStatus());
             }
 
             @Override public void onActivityStarted(Activity a) {}
             @Override public void onActivityPaused(Activity a) {}
             @Override public void onActivityStopped(Activity a) {}
             @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
-            @Override public void onActivityDestroyed(Activity a) {}
+            @Override public void onActivityDestroyed(Activity a) {
+                if (currentActivity == a) currentActivity = null;
+            }
             @Override public void onActivityCreated(Activity a, Bundle b) {}
         });
+
+        // Kết quả kiểm tra về sau khi Activity đã resume xong: trước đây trạng thái chỉ
+        // được đọc ngay tại onActivityResumed nên bản cập nhật vừa phát hiện phải đợi tới
+        // lần resume kế tiếp mới hiện ra.
+        VersionCheckManager.addListener(status -> maybeShowUpdateReminder(currentActivity, status));
     }
 
-    private void showUpdateReminder(Activity activity) {
-        if (activity.isFinishing() || activity.isDestroyed()) return;
+    /** Activity đang ở trên cùng, để hiển thị nhắc nhở khi kết quả kiểm tra về muộn. */
+    private Activity currentActivity;
+    /** Hộp thoại nhắc đang mở — bảo đảm mỗi lúc chỉ có một. */
+    private android.app.AlertDialog updateDialog;
 
-        new android.app.AlertDialog.Builder(activity)
+    private static final String PREF_UPDATE = "fms_update";
+    private static final String PREF_POSTPONED_VERSION = "postponed_version_code";
+    private static final String PREF_POSTPONED_AT = "postponed_at";
+    private static final long POSTPONE_DURATION_MS = 8 * 60 * 60 * 1000L; // 8 giờ
+
+    private void maybeShowUpdateReminder(Activity activity, UpdateStatus status) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (status == null || !status.hasUpdate()) return;
+
+        // Người dùng đang ở màn hình cập nhật rồi thì không cần nhắc.
+        if (activity instanceof VersionUpdateActivity) return;
+
+        // Không cắt ngang nghiệp vụ đang dở: lập chứng từ, tra nạp, ký nhận, in hóa đơn.
+        if (activity instanceof UpdateSensitiveScreen) return;
+
+        // Một hộp thoại tại một thời điểm. Nếu không chặn, mỗi lần chuyển Activity hoặc
+        // quay lại từ Settings/installer sẽ chồng thêm một hộp thoại nữa.
+        if (updateDialog != null && updateDialog.isShowing()) return;
+
+        long serverVersion = status.metadata.versionCode;
+        if (isPostponed(serverVersion)) return;
+
+        updateDialog = new android.app.AlertDialog.Builder(activity)
                 .setTitle("Có phiên bản mới")
-                .setMessage("Đã có phiên bản cập nhật mới. Bạn có muốn cập nhật ngay không?")
+                .setMessage("Đã có phiên bản " + status.metadata.raw
+                        + ". Bạn có muốn cập nhật ngay không?")
                 .setCancelable(true)
-                .setPositiveButton("Cập nhật", (dialog, which) -> {
-                    Intent intent = new Intent(activity, VersionUpdateActivity.class);
-                    activity.startActivity(intent);
+                .setPositiveButton("Cập nhật", (dialog, which) ->
+                        activity.startActivity(new Intent(activity, VersionUpdateActivity.class)))
+                .setNegativeButton("Để sau", (dialog, which) -> {
+                    postpone(serverVersion);
+                    dialog.dismiss();
                 })
-                .setNegativeButton("Để sau", (dialog, which) -> dialog.dismiss())
+                .setOnDismissListener(d -> updateDialog = null)
                 .show();
+    }
+
+    /**
+     * "Để sau" chỉ im lặng 8 giờ và chỉ với đúng phiên bản đã hoãn — một bản phát hành mới
+     * hơn sẽ nhắc lại ngay. Cố ý không giới hạn số lần nhắc: giới hạn như vậy cho phép
+     * thiết bị trốn cập nhật vĩnh viễn.
+     */
+    private boolean isPostponed(long versionCode) {
+        SharedPreferences prefs = getSharedPreferences(PREF_UPDATE, Context.MODE_PRIVATE);
+        if (prefs.getLong(PREF_POSTPONED_VERSION, -1) != versionCode) return false;
+        long postponedAt = prefs.getLong(PREF_POSTPONED_AT, 0);
+        return System.currentTimeMillis() - postponedAt < POSTPONE_DURATION_MS;
+    }
+
+    private void postpone(long versionCode) {
+        getSharedPreferences(PREF_UPDATE, Context.MODE_PRIVATE).edit()
+                .putLong(PREF_POSTPONED_VERSION, versionCode)
+                .putLong(PREF_POSTPONED_AT, System.currentTimeMillis())
+                .apply();
     }
     @Override
     public void onLowMemory() {
@@ -186,6 +241,7 @@ public class FMSApplication extends Application implements LifecycleObserver {
             scheduler.scheduleAtFixedRate(() -> {
                 try {
                     DataHelper.Synchronize();
+                    TruckInvoiceSync.synchronize();
                 } catch (Exception ex) {}
             }, 0, 30, TimeUnit.SECONDS);
         }
@@ -382,25 +438,24 @@ public class FMSApplication extends Application implements LifecycleObserver {
         return preferences.getString("QC_NO","");
     }
 
-    public void setInventory(final double addedAmount, String qcNo) {
+    public void setQCNo(String qcNo) {
         final SharedPreferences preferences = getSharedPreferences("FMS", MODE_PRIVATE);
+        preferences.edit().putString("QC_NO", qcNo).apply();
+    }
+
+    public void setInventory(final double addedAmount, String qcNo) {
         double   currentAmount = getSetting().getCurrentAmount();
-        SharedPreferences.Editor editor = preferences.edit();
         //editor.putdouble("CURRENT_AMOUNT", currentAmount + addedAmount);
-        editor.putString("QC_NO",qcNo);
-        editor.apply();
+        setQCNo(qcNo);
         setCurrentAmount( currentAmount + addedAmount);
 
 
     }
     public void setInventory(final double addedAmount, String qcNo, boolean isFullFuel) {
-        final SharedPreferences preferences = getSharedPreferences("FMS", MODE_PRIVATE);
         double currentAmount = getSetting().getCurrentAmount();
         double maxAmount = getSetting().getCapacity();
 
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("QC_NO", qcNo);
-        editor.apply();
+        setQCNo(qcNo);
 
         if (isFullFuel) {
             setCurrentAmount(maxAmount);
@@ -481,4 +536,3 @@ public class FMSApplication extends Application implements LifecycleObserver {
         editor.commit();
     }
 }
-

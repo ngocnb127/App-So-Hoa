@@ -23,6 +23,9 @@ public class DeviceDataView {
     private int delStatus;
     private int delCode;
 
+    /** Số ticket đọc từ thiết bị (SYS_TICKETNR). 0 = chưa đọc được. */
+    private long ticketNumber;
+
     // Network
     private String dateUL;
     private String timeUL;
@@ -33,6 +36,14 @@ public class DeviceDataView {
     // TCS
     private TCS_DELIVERY_STATE tcsDeliveryState;
     private TCS_SYSTEM_STATE tcsSystemState;
+
+    public long getTicketNumber() {
+        return ticketNumber;
+    }
+
+    public void setTicketNumber(long ticketNumber) {
+        this.ticketNumber = ticketNumber;
+    }
 
     // Getters and Setters
     public double getGrossPreset() {

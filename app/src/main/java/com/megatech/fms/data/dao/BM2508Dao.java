@@ -31,10 +31,18 @@ public interface BM2508Dao {
     @Query("SELECT * from BM2508 where isLocalModified")
     List<BM2508> getModified();
 
+    @Query("SELECT * from BM2508 where isAttachmentPending = 1 and id > 0 and isDeleted = 0")
+    List<BM2508> getPendingAttachments();
+
     @Query("DELETE from BM2508 WHERE id= :id")
     void delete(int id);
 
     @Query("Update BM2508 set isDeleted=1, isLocalModified=1 WHERE localId in( :ids)")
     void delete(int[] ids);
 
+
+    /** Thêm điều kiện ảnh: phiếu còn ảnh chờ gửi thì giữ nguyên cả phiếu lẫn file. */
+    @Query("DELETE FROM BM2508 WHERE NOT isLocalModified AND NOT isAttachmentPending "
+            + "AND id > 0 AND DateCreated < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

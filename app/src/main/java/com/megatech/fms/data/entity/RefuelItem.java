@@ -29,6 +29,23 @@ public class RefuelItem extends BaseEntity {
         itemData.setLocalModified(this.isLocalModified());
         if (getUniqueId()!=null && !getUniqueId().isEmpty())
             itemData.setUniqueId(this.getUniqueId());
+
+        // jsonData có thể còn giữ identity/version cũ (bản ghi tạo offline, response
+        // ghi cột nhưng không ghi lại json...). Cột của entity là nguồn chuẩn, và
+        // version không bao giờ được giảm.
+        if (this.getId() > 0)
+            itemData.setId(this.getId());
+        itemData.setClientSeq(Math.max(this.getClientSeq(), itemData.getClientSeq()));
+        itemData.setServerRevision(Math.max(this.getServerRevision(), itemData.getServerRevision()));
+
+        // Đóng dấu phiên bản của row tại thời điểm đọc: mọi màn hình giữ snapshot này
+        // đều biết mình đang sửa trên nền phiên bản nào, và trên payload nền nào.
+        itemData.setBaseClientSeq(itemData.getClientSeq());
+        itemData.setBaseServerRevision(itemData.getServerRevision());
+        // Vân tay tính từ chính jsonData đã lưu — ổn định với dữ liệu legacy thiếu trường,
+        // vì không đi qua các giá trị mặc định của model.
+        itemData.setBaseBusinessFingerprint(
+                com.megatech.fms.helpers.RefuelSyncGuard.businessFingerprintOfJson(getJsonData()));
         return  itemData;
     }
 
@@ -56,8 +73,12 @@ public class RefuelItem extends BaseEntity {
 
         RefuelItem item = this;
         RefuelItemData currentData = this.toRefuelItemData();
+
+        // Bản đến không được hạ cờ đã in, nhưng cũng không vì thế mà bỏ luôn cả lần ghi:
+        // trước đây return thẳng làm mọi sửa đổi của người dùng biến mất không dấu vết khi
+        // snapshot trên màn hình lỡ thiếu cờ printed. Giữ lại cờ rồi ghi bình thường.
         if (currentData.isPrinted() && !itemData.isPrinted())
-            return;
+            itemData.setPrinted(true);
 
         item.setId(itemData.getId());
         item.setTruckNo(itemData.getTruckNo());

@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:background="@color/colorPrimary">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <Button android:id="@+id/btnBack" android:layout_width="wrap_content"
+                android:layout_height="match_parent" android:drawableStart="@drawable/ic_exit"
+                android:onClick="onClick" android:text="@string/back" />
+
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:gravity="center"
+                android:text="@string/bm7501_title" android:textColor="#fff"
+                android:textSize="20sp" android:textStyle="bold" />
+
+            <Button android:id="@+id/btnSave7501" android:layout_width="wrap_content"
+                android:layout_height="match_parent" android:onClick="onClick"
+                android:text="@string/save" />
+
+            <Button android:id="@+id/btnSign7501" android:layout_width="wrap_content"
+                android:layout_height="match_parent" android:onClick="onClick"
+                android:text="@string/bm7501_sign_finish" />
+
+            <Button android:id="@+id/btnPrint7501" android:layout_width="wrap_content"
+                android:layout_height="match_parent" android:onClick="onClick"
+                android:text="@string/print_bm7501" android:visibility="gone" />
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+        <TextView android:id="@+id/bm7501_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="6dp" android:textSize="15sp" android:textStyle="bold" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@color/colorPrimary" android:padding="8dp" android:layout_marginTop="12dp"
+            android:text="A. KHÁCH HÀNG ĐIỀN / TO BE COMPLETED BY CUSTOMER" android:textColor="#fff" android:textSize="20sp" android:textStyle="bold" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="6dp" android:text="Thông tin do đại diện hãng cung cấp, nhân viên nhập hộ." android:textSize="13sp" android:textStyle="italic" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Đại diện hãng *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_customerRepName" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Chức danh" android:textSize="16sp" />
+            <EditText android:id="@+id/f_customerTitle" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Điện thoại" android:textSize="16sp" />
+            <EditText android:id="@+id/f_customerTel" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Fax" android:textSize="16sp" />
+            <EditText android:id="@+id/f_customerFax" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Loại tàu bay *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_aircraftType" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Số hiệu tàu bay *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_aircraftReg" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lý do hút *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_reason" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_reason_load" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Điều chỉnh tải trọng" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_reason_maint" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Bảo dưỡng" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_reason_other" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Khác" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lý do khác, ghi rõ" android:textSize="16sp" />
+            <EditText android:id="@+id/f_reasonOther" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Đã xả mẫu đáy thùng *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_tankDrain" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_tankDrain_yes" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Có" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_tankDrain_no" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Hãng đã KT vi sinh *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_custMicro" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_custMicro_yes" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Có" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_custMicro_no" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_custMicro_unk" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không rõ" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Thiết bị KT vi sinh" android:textSize="16sp" />
+            <Spinner android:id="@+id/f_custMicroKit" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Thiết bị khác, ghi rõ" android:textSize="16sp" />
+            <EditText android:id="@+id/f_custMicroKitOther" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Kết quả vi sinh" android:textSize="16sp" />
+            <Spinner android:id="@+id/f_custMicroResult" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Phụ gia *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_additivePresence" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_add_present" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Có" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_add_none" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không sử dụng" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_add_undet" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không xác định" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <CheckBox android:id="@+id/f_add_fsii" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="FSII" android:textSize="16sp" />
+
+        <CheckBox android:id="@+id/f_add_biocide" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Biocide" android:textSize="16sp" />
+
+        <CheckBox android:id="@+id/f_add_aquarius" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Aquarius WMA" android:textSize="16sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Sân bay thứ 1 *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_prevLocation1" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Loại nhiên liệu 1 *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_prevGrade1" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Sân bay thứ 2 *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_prevLocation2" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Loại nhiên liệu 2 *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_prevGrade2" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="6dp" android:text="Không rõ loại nhiên liệu thì ghi: Không xác định được." android:textSize="13sp" android:textStyle="italic" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@color/colorPrimary" android:padding="8dp" android:layout_marginTop="12dp"
+            android:text="B. SKYPEC ĐIỀN / TO BE COMPLETED BY SKYPEC" android:textColor="#fff" android:textSize="20sp" android:textStyle="bold" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Ngoại quan VAC *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_vac" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_vac_ok" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Đạt" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_vac_no" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không đạt" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Viên thử nước CWD *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_cwd" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_cwd_ok" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Đạt" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_cwd_no" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không đạt" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="KLR (kg/m3) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_densityKgM3" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <CheckBox android:id="@+id/f_conductivityRequired" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Có yêu cầu đo độ dẫn điện" android:textSize="16sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Độ dẫn điện (pS/m)" android:textSize="16sp" />
+            <EditText android:id="@+id/f_conductivityPsM" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <CheckBox android:id="@+id/f_contaminationSuspected" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Nghi ngờ nhiễm vi sinh" android:textSize="16sp" />
+
+        <CheckBox android:id="@+id/f_customerRequestedMicrobial" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Khách hàng yêu cầu KT vi sinh" android:textSize="16sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Thiết bị KT vi sinh" android:textSize="16sp" />
+            <Spinner android:id="@+id/f_skypecMicroKit" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Kết quả vi sinh" android:textSize="16sp" />
+            <Spinner android:id="@+id/f_skypecMicroResult" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lý do phải KT vi sinh" android:textSize="16sp" />
+            <EditText android:id="@+id/f_microbialReason" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@color/colorPrimary" android:padding="8dp" android:layout_marginTop="12dp"
+            android:text="C. CÁC BÊN XÁC NHẬN / PARTIES CONFIRM" android:textColor="#fff" android:textSize="20sp" android:textStyle="bold" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Phương tiện hút *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_defuellerTruckNo" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Giờ bắt đầu (HH:mm dd/MM/yyyy) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_startTime" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Giờ kết thúc (HH:mm dd/MM/yyyy) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_endTime" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Phương thức hút *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_method" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_method_ac" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Bơm tàu bay" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_method_ref" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Bơm xe" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_method_both" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Cả hai" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="6dp" android:text="Ưu tiên sử dụng bơm của tàu bay." android:textSize="13sp" android:textStyle="italic" />
+
+        <CheckBox android:id="@+id/f_signalsBriefed" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="4dp" android:text="Đã phổ biến/thống nhất phương thức ra tín hiệu" android:textSize="16sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Tín hiệu khác, ghi rõ" android:textSize="16sp" />
+            <EditText android:id="@+id/f_otherSignal" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lượng hút dự kiến (kg) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_expectedKg" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lượng hút thực tế (kg) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_actualKg" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Nhiệt độ thực tế (oC) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_actualTempC" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="KLR thực tế (kg/m3) *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_actualDensityKgM3" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Quy đổi Gal *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_gallon" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Quy đổi Lít *" android:textSize="16sp" />
+            <EditText android:id="@+id/f_liter" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="numberDecimal|numberSigned" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Nạp lại được, không cần KT bổ sung *" android:textSize="16sp" />
+            <RadioGroup android:id="@+id/f_refuellable" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/f_refuellable_yes" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Đồng ý" android:textSize="15sp" />
+                <RadioButton android:id="@+id/f_refuellable_no" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Không" android:textSize="15sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Phương án xử lý" android:textSize="16sp" />
+            <Spinner android:id="@+id/f_handling" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lưu trữ từ (HH:mm dd/MM/yyyy)" android:textSize="16sp" />
+            <EditText android:id="@+id/f_storageFrom" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Lưu trữ đến (HH:mm dd/MM/yyyy)" android:textSize="16sp" />
+            <EditText android:id="@+id/f_storageTo" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Ghi rõ vấn đề chất lượng" android:textSize="16sp" />
+            <EditText android:id="@+id/f_handlingNote" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Họ tên đại diện khách hàng" android:textSize="16sp" />
+            <EditText android:id="@+id/f_customerRepFinalName" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp">
+            <TextView android:layout_width="0dp" android:layout_weight="0.35" android:layout_height="wrap_content"
+                android:text="Họ tên đại diện SKYPEC" android:textSize="16sp" />
+            <EditText android:id="@+id/f_skypecRepName" android:layout_width="0dp" android:layout_weight="0.65"
+                android:layout_height="wrap_content" android:hint="" android:inputType="text" android:textSize="16sp" />
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@color/colorPrimary" android:padding="8dp" android:layout_marginTop="12dp"
+            android:text="CHỮ KÝ / SIGNATURES" android:textColor="#fff" android:textSize="20sp" android:textStyle="bold" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:padding="4dp">
+            <TextView android:id="@+id/lbl_sign_sectionA" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:text="Khách hàng - mục A: chưa ký" android:textSize="16sp" />
+            <Button android:id="@+id/btnSignSectionA" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:onClick="onClick" android:text="Ký mục A" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:padding="4dp">
+            <TextView android:id="@+id/lbl_sign_seller" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:text="Người bán (SKYPEC): chưa ký" android:textSize="16sp" />
+            <Button android:id="@+id/btnSignSeller" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:onClick="onClick" android:text="Ký người bán" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:padding="4dp">
+            <TextView android:id="@+id/lbl_sign_buyer" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:text="Người mua (khách hàng): chưa ký" android:textSize="16sp" />
+            <Button android:id="@+id/btnSignBuyer" android:layout_width="0dp" android:layout_weight="0.5"
+                android:layout_height="wrap_content" android:onClick="onClick" android:text="Ký người mua" />
+        </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

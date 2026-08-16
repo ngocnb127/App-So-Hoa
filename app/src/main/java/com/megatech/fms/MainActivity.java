@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -29,7 +30,6 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.databinding.DataBindingUtil;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
@@ -38,6 +38,7 @@ import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.LCR_DEVICE_CONNECTION_
 import com.megatech.fms.databinding.DialogShiftBinding;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.HttpClient;
+import com.megatech.fms.helpers.VersionCheckManager;
 import com.megatech.fms.helpers.LCRReader;
 import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.model.LCRDataModel;
@@ -92,6 +93,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
             btnSync.setVisibility(View.VISIBLE);
         showShiftInfo();
         updateRefuelList();
+        requestSync();
 
 
     }
@@ -104,7 +106,10 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         txtUpdateAvailable = findViewById(R.id.txtUpdateAvailable);
         txtUpdateAvailable.setVisibility(View.GONE); // mac dinh an, cho ket qua check
 
-        checkNewVersionAvailable();
+        // Badge chi phan anh trang thai cua VersionCheckManager. Truoc day MainActivity
+        // tu goi server voi endpoint khac (version.txt) so voi hop thoai nhac
+        // (versionUpdate.txt) nen hai noi co the ket luan trai nguoc nhau.
+        VersionCheckManager.addListener(updateStatusListener);
 
         // Click vao label -> mo man hinh VersionUpdateActivity
         txtUpdateAvailable.setOnClickListener(v -> {
@@ -186,8 +191,39 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
             initReader();
 
 
-//        registerReceiver(mMessageReceiver,
-//                new IntentFilter(UserBaseActivity.SYNC_BROADCAST));
+        // Danh sách kế hoạch đọc từ Room chứ không gọi thẳng API, nên nếu không nghe
+        // SYNC_BROADCAST thì lần cài mới màn hình đứng rỗng cho tới lần refresh sau.
+        registerSyncReceiver();
+    }
+
+    private boolean syncReceiverRegistered = false;
+
+    private void registerSyncReceiver() {
+        if (syncReceiverRegistered)
+            return;
+        IntentFilter filter = new IntentFilter(UserBaseActivity.SYNC_BROADCAST);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            registerReceiver(mMessageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else
+            registerReceiver(mMessageReceiver, filter);
+        syncReceiverRegistered = true;
+    }
+
+    /**
+     * Kéo dữ liệu về ngay khi vào màn hình chính. Bộ lập lịch nền chạy 30 giây một lần và
+     * lần chạy đầu tiên của nó rơi vào lúc chưa chọn xe (cài mới), nên nếu chỉ trông vào
+     * nó thì kế hoạch tra nạp phải chờ hết một chu kỳ mới hiện.
+     */
+    private void requestSync() {
+        if (currentApp.isFirstUse())
+            return;
+        new Thread(() -> {
+            try {
+                DataHelper.Synchronize();
+            } catch (Exception ex) {
+                Logger.appendLog("MAIN", "requestSync failed: " + ex.getMessage());
+            }
+        }).start();
     }
 
 
@@ -349,7 +385,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
     private void openIncompleItem(RefuelItemData itemData) {
 
         Intent intent = new Intent(this, RefuelDetailActivity.class);
-        intent.putExtra("REFUEL", itemData.toJson());
+        com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, itemData);
         startActivity(intent);
     }
 
@@ -357,20 +393,24 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         TextView lblShift = findViewById(R.id.lblShiftInfo);
         if (lblShift != null) {
             ShiftModel model = currentApp.getShift();
+            renderShiftInfo(lblShift, model);
+
             Date d = new Date();
             if (model == null || d.compareTo(model.getStartTime()) < 0 || d.compareTo(model.getEndTime()) > 0) {
-                model = new HttpClient().getShift();
-                if (model != null)
-                    currentApp.saveShift(model);
-            }
-            if (model != null) {
-                ShiftModel cModel = model.isSelected() ? model : model.getPrevShift().isSelected() ? model.getPrevShift() : model.getNextShift();
-                if (cModel.getStartTime() == null || cModel.getName() == null) {
-                    model.setSelected(true);
-                    cModel = model;
-                }
-
-                lblShift.setText(String.format("%s: %s ", getString(model.isSelected() ? R.string.current_shift : model.getPrevShift().isSelected() ? R.string.prev_shift : R.string.next_shift), cModel.toString()));
+                // Gọi API ca làm việc dưới nền: trước đây chạy thẳng trên main thread nên
+                // mỗi lần mở màn hình chính phải đứng chờ hết request rồi mới vẽ danh sách.
+                new Thread(() -> {
+                    ShiftModel remote = new HttpClient().getShift();
+                    if (remote == null)
+                        return;
+                    currentApp.saveShift(remote);
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed())
+                            return;
+                        renderShiftInfo(findViewById(R.id.lblShiftInfo), remote);
+                        updateRefuelList();
+                    });
+                }).start();
             }
         }
 
@@ -382,6 +422,22 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
                     showShiftDialog();
                 }
             });
+    }
+
+    private void renderShiftInfo(TextView lblShift, ShiftModel model) {
+        if (lblShift == null || model == null)
+            return;
+        try {
+            ShiftModel cModel = model.isSelected() ? model : model.getPrevShift().isSelected() ? model.getPrevShift() : model.getNextShift();
+            if (cModel.getStartTime() == null || cModel.getName() == null) {
+                model.setSelected(true);
+                cModel = model;
+            }
+
+            lblShift.setText(String.format("%s: %s ", getString(model.isSelected() ? R.string.current_shift : model.getPrevShift().isSelected() ? R.string.prev_shift : R.string.next_shift), cModel.toString()));
+        } catch (Exception ex) {
+            Logger.appendLog("MAIN", "renderShiftInfo failed: " + ex.getMessage());
+        }
     }
 
     private void showShiftDialog() {
@@ -509,7 +565,14 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
 
     @Override
     protected void onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+        if (syncReceiverRegistered) {
+            try {
+                unregisterReceiver(mMessageReceiver);
+            } catch (IllegalArgumentException ignored) {
+            }
+            syncReceiverRegistered = false;
+        }
+        VersionCheckManager.removeListener(updateStatusListener);
         super.onDestroy();
 
     }
@@ -570,52 +633,11 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
 
     }
 
-    private void checkNewVersionAvailable() {
-        String versionFile = BuildConfig.THERMAL_PRINTER ? "files/thermal.txt" : "files/version.txt";
-        String versionUrl = joinUrl(API_BASE_URL, versionFile);
-        new CheckNewVersionTask().execute(versionUrl);
-    }
-
-    /** Noi URL an toan, giong VersionUpdateActivity */
-    private static String joinUrl(String base, String path) {
-        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
-        if (path.startsWith("/")) path = path.substring(1);
-        return base + "/" + path;
-    }
-
-    private final class CheckNewVersionTask extends AsyncTask<String, Void, Boolean> {
-        @Override
-        protected Boolean doInBackground(String... urls) {
-            try {
-                HttpClient client = new HttpClient();
-                String versionInfo = client.getContent(urls[0]);
-                if (versionInfo == null || versionInfo.trim().isEmpty()) {
-                    Log.w(LOG_TAG, "Khong nhan duoc du lieu version tu server");
-                    return false;
-                }
-
-                versionInfo = versionInfo.trim().replace("\uFEFF", "");
-                String[] info = versionInfo.split("-");
-                if (info.length < 2) {
-                    Log.w(LOG_TAG, "versionInfo sai dinh dang: " + versionInfo);
-                    return false;
-                }
-
-                long newVersion = Long.parseLong(info[0].trim());
-                long currentVersion = BuildConfig.VERSION_CODE;
-
-                Log.d(LOG_TAG, "So sanh version: server=" + newVersion + " hien tai=" + currentVersion);
-                return newVersion > currentVersion;
-            } catch (Exception ex) {
-                Log.e(LOG_TAG, "Loi khi kiem tra version moi", ex);
-                return false; // loi mang/parse -> coi nhu khong co ban moi, khong lam phien nguoi dung
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean hasNewUpdate) {
-            if (isFinishing() || isDestroyed()) return; // tranh crash neu Activity da dong
-            txtUpdateAvailable.setVisibility(hasNewUpdate ? View.VISIBLE : View.GONE);
-        }
-}
+    private final VersionCheckManager.Listener updateStatusListener = status -> {
+        if (isFinishing() || isDestroyed()) return;
+        if (txtUpdateAvailable == null) return;
+        // Chi hien badge khi that su co ban moi. CHECK_FAILED khong bao gio duoc
+        // hieu la "khong co ban moi", nhung cung khong hien badge vi chua biet chac.
+        txtUpdateAvailable.setVisibility(status.hasUpdate() ? View.VISIBLE : View.GONE);
+    };
 }

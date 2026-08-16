@@ -23,7 +23,10 @@ public interface TruckFuelDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(TruckFuel truck);
 
-    @Query("Select * from TruckFuel where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
+    @Query("SELECT * FROM TruckFuel " +
+            "WHERE (id > 0 AND id = :id) " +
+            "OR (:localId > 0 AND localId = :localId) " +
+            "LIMIT 1")
     TruckFuel get(int id, int localId);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
@@ -37,4 +40,7 @@ public interface TruckFuelDao {
 
     @Query("SELECT * from truckfuel where isLocalModified")
     List<TruckFuel> getModified();
+
+    @Query("DELETE FROM TruckFuel WHERE NOT isLocalModified AND id > 0 AND time < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

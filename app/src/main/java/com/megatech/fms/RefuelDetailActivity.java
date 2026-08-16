@@ -12,6 +12,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
 import android.util.Log;
@@ -72,7 +74,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class RefuelDetailActivity extends UserBaseActivity implements View.OnClickListener {
+public class RefuelDetailActivity extends UserBaseActivity implements View.OnClickListener, OnBM2505SavedListener, UpdateSensitiveScreen {
 
     private List<AirlineModel> airlines = null;
 
@@ -104,10 +106,14 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private int checkDataRetryCount = 0;
     private static final int MAX_CHECK_DATA_RETRY = 20; // ~20 phút theo dõi, đủ cho phiên bơm dài
+    /** Thời gian chờ tối đa để TCS chuyển từ ENDING sang END sau khi người dùng bấm dừng. */
+    private static final long TCS_END_WAIT_TIMEOUT_MS = 35_000L;
 
     private String deviceSerial;
     private boolean askedApproachConfirm = false;
     private boolean approachPopupShown = false;
+    private final Object startEventLock = new Object();
+    private boolean startEventRecorded = false;
 
     private List<AirportsModel> airportslist;
     private List<TruckModel> truckList;
@@ -324,6 +330,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             RefuelItemData itemData = null;
             if (mData != null && !mData.isEmpty()) {
                 itemData = RefuelItemData.fromJson(mData);
+                com.megatech.fms.helpers.RefuelIntent.restoreBaseline(itemData, b);
             }
             if (itemData == null)
                 itemData = DataHelper.getItemToRefuel(flightId);
@@ -348,9 +355,26 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     mItem.setQualityNo(currentApp.getQCNo());
                 Logger.appendLog(LOG_TAG, "Flight Code: " + mItem.getFlightCode());
                 runOnUiThread(() -> {
-                    initReader();
-                    if (!isFinishing())
+                    if (isFinishing()) return;
+
+                    // Vẽ màn hình TRƯỚC, và tách hẳn khỏi việc kết nối đồng hồ.
+                    //
+                    // Trước đây hai việc nằm chung một lambda không có try/catch: bất kỳ lỗi nào
+                    // trong initReader() cũng làm showData() không bao giờ chạy, và người dùng
+                    // nhận một màn hình trắng không thao tác được — mất đồng hồ kéo theo mất
+                    // luôn cả giao diện. Nay đồng hồ hỏng chỉ còn là hỏng phần đồng hồ.
+                    try {
                         showData();
+                    } catch (Exception ex) {
+                        Logger.appendLog(LOG_TAG, "showData lỗi: " + describeException(ex));
+                    }
+
+                    try {
+                        initReader();
+                    } catch (Exception ex) {
+                        Logger.appendLog(LOG_TAG, "initReader lỗi: " + describeException(ex));
+                        setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+                    }
                 });
             }
 
@@ -379,20 +403,38 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     Runnable OnStartedDelivery= () -> {
         Log.d("TCS", "OnStartedDelivery");
+        recordStartEvent();
         statusStartTCS = REFUEL_STATUS.STARTED;
         refuel_status = REFUEL_STATUS.STARTED;
         setRefuelStatus(REFUEL_STATUS.STARTED);
     };
 
-    Runnable OnStoppedDelivery= () -> {
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        Log.d("TCS", "OnStoppedDelivery");
+    /**
+     * TCS kết thúc mẻ qua hai pha: ENDING (đã ngưng bơm, còn chốt số/in vé) rồi mới tới END.
+     * Ở pha này chỉ cập nhật trạng thái màn hình, chưa chốt số liệu.
+     */
+    Runnable OnEndingDelivery = () -> {
+        Log.d("TCS", "OnEndingDelivery");
+        Logger.appendLog(LOG_TAG, "TCS đang kết thúc mẻ (ENDING) - chờ số liệu chốt");
         refuel_status = REFUEL_STATUS.ENDING;
         setRefuelStatus(REFUEL_STATUS.ENDING);
+    };
+
+    /** Thiết bị đã về END: số liệu đã chốt, lúc này mới lấy và hoàn tất mẻ. */
+    Runnable OnStoppedDelivery= () -> {
+        Log.d("TCS", "OnStoppedDelivery");
+
+        // Lấy số liệu cuối cùng khi statusStartTCS vẫn còn STARTED để updateRefuelDataTCS ghi nhận.
+        if (tcsDevice != null) {
+            tcsData = tcsDevice.getDeviceDataView();
+            updateRefuelDataTCS();
+            applyTcsTicketNumber(tcsData);
+            Logger.appendLog(LOG_TAG, String.format(java.util.Locale.US,
+                    "TCS END - số liệu chốt: Gross=%.0f Total=%.0f Temp=%.1f",
+                    tcsData.getGrossQtyRound(), tcsData.getGrossTotalRound(),
+                    tcsData.getTemperature()));
+        }
+
         refuel_status = REFUEL_STATUS.ENDED;
         setRefuelStatus(REFUEL_STATUS.ENDED);
         statusStartTCS = REFUEL_STATUS.ENDED;
@@ -403,15 +445,94 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         if (statusStartTCS == REFUEL_STATUS.STARTED){
             tcsData = tcsDevice.getDeviceDataView();
             updateRefuelDataTCS();
+            applyTcsTicketNumber(tcsData);
             Log.d("TCS", "Data: " + tcsData.getConnectState() + " - " + tcsData.getGrossQtyRound() + " - " + tcsData.getGrossTotalRound());
         }
 
     };
 
+    /**
+     * Số ticket của TCS đóng vai trò số bán hàng của mẻ, giống SALENUMBER của LCR.
+     *
+     * <p>Lệnh 0x1D (SYS_TICKETNR) trả về số ticket <b>kế tiếp</b>, không phải số của mẻ đang
+     * chạy: đối chiếu thực tế ngày 05/08 cho thấy mẻ mang ticket 100735 thì thiết bị trả về
+     * 100736. Bộ giám sát TCS bên C# cũng dùng {@code nextNr - 1} cho ticket vừa xong.
+     *
+     * <p>Chỉ ghi nhận một lần cho mỗi mẻ để số hiển thị không nhảy khi thiết bị tăng ticket.
+     */
+    private void applyTcsTicketNumber(DeviceDataView data) {
+        if (data == null || saleNumberReceived) return;
+
+        long nextTicket = data.getTicketNumber();
+        if (nextTicket <= 1) return;
+
+        long ticket = nextTicket - 1;
+        lcrSaleNumber = String.valueOf(ticket);
+        lcrTicketNumber = lcrSaleNumber;
+        saleNumberReceived = true;
+        ticketNumberReceived = true;
+
+        // TCS chỉ có một số; lưu vào cả hai trường để phần in và phần đối chiếu dùng chung.
+        if (mItem != null) {
+            mItem.setSaleNumber(lcrSaleNumber);
+            mItem.setTicketNumber(lcrTicketNumber);
+        }
+        Logger.appendLog(LOG_TAG, "TCS Ticket/Sale Number: " + lcrSaleNumber
+                + " (thiết bị trả về next=" + nextTicket + ")");
+
+        runOnUiThread(() -> {
+            TextView tv = findViewById(R.id.txtDeliveryNumber);
+            if (tv != null) {
+                tv.setText(lcrSaleNumber);
+                tv.setTextColor(getResources().getColor(R.color.colorDarkGreen, getTheme()));
+            }
+        });
+    }
+
+    /**
+     * Mô tả ngoại lệ đủ để truy được nguyên nhân từ log của máy ngoài hiện trường.
+     *
+     * <p>{@code ex.getMessage()} một mình là không đủ: thông điệp của NPE chỉ cho biết
+     * "gọi phương thức trên null", không cho biết DÒNG NÀO. Kèm vài khung stack đầu tiên
+     * thuộc code của app là đủ để chỉ thẳng vị trí.
+     */
+    private static String describeException(Throwable ex) {
+        if (ex == null) return "null";
+
+        StringBuilder sb = new StringBuilder(ex.getClass().getSimpleName())
+                .append(": ").append(ex.getMessage());
+
+        StackTraceElement[] stack = ex.getStackTrace();
+        int printed = 0;
+        for (StackTraceElement frame : stack) {
+            if (!frame.getClassName().startsWith("com.megatech.fms")) continue;
+            sb.append(" | ").append(frame.getClassName().substring(frame.getClassName().lastIndexOf('.') + 1))
+                    .append('.').append(frame.getMethodName())
+                    .append(':').append(frame.getLineNumber());
+            if (++printed >= 4) break;
+        }
+        // Không có khung nào thuộc app (lỗi ném từ thư viện): lấy tạm khung trên cùng.
+        if (printed == 0 && stack.length > 0)
+            sb.append(" | ").append(stack[0]);
+
+        return sb.toString();
+    }
+
     private void initReader() {
         Logger.appendLog(LOG_TAG, "Init Reader");
 
         TruckModel settingModel = currentApp.getSetting();
+        if (settingModel == null) {
+            Logger.appendLog(LOG_TAG, "Init Reader BỎ QUA: chưa có cấu hình xe");
+            setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+            return;
+        }
+
+        // Phiên đăng nhập hỏng (token hết hạn) làm currentUser về null. Trước đây chỗ này ném
+        // NPE giữa chừng initReader, và vì nó nằm chung lambda với showData() nên hậu quả là
+        // màn hình trắng. Nay báo rõ và đi tiếp phần còn lại.
+        if (currentUser == null)
+            Logger.appendLog(LOG_TAG, "Init Reader: currentUser null — phiên đăng nhập có thể đã hết hạn");
 
         if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
             reader = LCRReader.create(this, storedIP, 10001, false);
@@ -423,13 +544,14 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             else reader.doConnectDevice();
 
             this.model = new LCRDataModel();
-            model.setUserId(currentUser.getUserId());
+            if (currentUser != null)
+                model.setUserId(currentUser.getUserId());
 
             if (reader.isAlreadyStarted()) onStarted();
 
         } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
             tcsDevice = new TcsDevice(storedIP, 10001, OnConnected, OnDisconnected,
-                    OnRecivedData, OnStartedDelivery, OnStoppedDelivery);
+                    OnRecivedData, OnStartedDelivery, OnEndingDelivery, OnStoppedDelivery);
             tcsDevice.connect();
             tcsDevice.runTask();
 
@@ -574,7 +696,6 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private void start() {
         startButtonPress = true;
-        mItem.setStartTime(new Date());
 
         // ✅ Chạy trên background thread để không block main thread
         new Thread(() -> {
@@ -619,9 +740,26 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         if (deviceIsError) {
             showForceStopDialog();
         } else {
-            //send END DELIVERY command to LCR
-            tcsDevice.disConnect();
+            // Không ngắt kết nối ngay: chờ thiết bị chuyển từ ENDING sang END rồi mới chốt số liệu
+            // (OnStoppedDelivery). Nếu quá thời gian chờ thì tự chốt bằng số liệu đang có.
+            refuel_status = REFUEL_STATUS.ENDING;
             setRefuelStatus(REFUEL_STATUS.ENDING);
+            Logger.appendLog(LOG_TAG, "Người dùng dừng TCS - chờ thiết bị về trạng thái END");
+
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (statusStartTCS != REFUEL_STATUS.ENDED) {
+                    Logger.appendLog(LOG_TAG, "Quá thời gian chờ END của TCS - chốt số liệu hiện có");
+                    if (tcsDevice != null) {
+                        tcsData = tcsDevice.getDeviceDataView();
+                        updateRefuelDataTCS();
+                        applyTcsTicketNumber(tcsData);
+                    }
+                    refuel_status = REFUEL_STATUS.ENDED;
+                    setRefuelStatus(REFUEL_STATUS.ENDED);
+                    statusStartTCS = REFUEL_STATUS.ENDED;
+                    doStopTCS();
+                }
+            }, TCS_END_WAIT_TIMEOUT_MS);
         }
 
     }
@@ -1123,21 +1261,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 }
                 case R.id.menu_add_bm2505: {
                     Logger.appendLog("ADD_BM", "Show BM2505 DialogFragment");
-                    B2505NewItemFragement frag = new B2505NewItemFragement();
-
-                    ArrayList<AirportsModel> airportArgs = airportslist != null
-                            ? new ArrayList<>(airportslist)
-                            : new ArrayList<>();
-
-                    ArrayList<TruckModel> truckArgs = truckList != null
-                            ? new ArrayList<>(truckList)
-                            : new ArrayList<>();
-
-                    args.putSerializable("AIRPORT_LIST", airportArgs);
-                    args.putSerializable("TRUCK_LIST", truckArgs);
-
-                    frag.setArguments(args);
-                    frag.show(getSupportFragmentManager(), "BM2505_NEW");
+                    // Fragment tự tải master data nên chỉ cần truyền ngữ cảnh của phiếu.
+                    B2505NewItemFragement.newInstance(args)
+                            .show(getSupportFragmentManager(), "BM2505_NEW");
                     return true;
                 }
             }
@@ -1145,6 +1271,12 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         });
 
         popup.show();
+    }
+
+    @Override
+    public void onBM2505Saved(com.megatech.fms.model.BM2505Model model) {
+        // Màn hình chi tiết tra nạp không hiển thị danh sách BM2505 nên chỉ ghi log.
+        Logger.appendLog("ADD_BM", "BM2505 saved locally, localId=" + model.getLocalId());
     }
 
     private Bundle buildBmArgs() {
@@ -1161,8 +1293,6 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         args.putInt("AIRPORT_ID", FMSApplication.getApplication().getUser().getAirportId());
         args.putString("AIRPORT_NAME", FMSApplication.getApplication().getUser().getAirport()); // thêm
-
-        args.putInt("AIRPORT_ID", FMSApplication.getApplication().getUser().getAirportId());
 
         args.putInt("FLIGHT_ID", mItem.getFlightId());
         args.putString("FLIGHT_CODE", mItem.getFlightCode());
@@ -1450,6 +1580,19 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
                         break;
 
+                    case TICKETNUMBER:
+                        // Trước đây không có case này: LCRReader vẫn bắn TICKETNUMBER về nhưng
+                        // Activity bỏ qua, nên ticketNumberReceived luôn false và phần đối chiếu
+                        // "số đồng hồ kết thúc vs ticket" không bao giờ chạy.
+                        if (dataModel.getTicketNumber() != null && !dataModel.getTicketNumber().isEmpty()) {
+                            lcrTicketNumber = dataModel.getTicketNumber();
+                            ticketNumberReceived = true;
+                            if (mItem != null) mItem.setTicketNumber(lcrTicketNumber);
+                            Logger.appendLog(LOG_TAG, "Ticket Number: " + lcrTicketNumber);
+                        }
+                        field_data_flag = field_data_flag | FIELD_DATA_FLAG.FIELD_TICKETNUMBER;
+                        break;
+
                     case SALENUMBER:
                         if (dataModel.getSaleNumber() != null && !dataModel.getSaleNumber().isEmpty()) {
                             lcrSaleNumber = dataModel.getSaleNumber();
@@ -1712,6 +1855,14 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                             // Đã nhận đủ dữ liệu trong chu kỳ này -> reset bộ đếm
                             checkDataRetryCount = 0;
                         }
+
+                        // SALENUMBER chỉ được hỏi một lần lúc bắt đầu mẻ và không nằm trong
+                        // requestData(), nên nếu thiết bị chưa trả lời thì số bán hàng sẽ
+                        // trống suốt mẻ và không in được lên phiếu. Hỏi lại cho tới khi có.
+                        if (!saleNumberReceived && checkDataRetryCount < MAX_CHECK_DATA_RETRY) {
+                            Logger.appendLog(LOG_TAG, "Chưa nhận được SALENUMBER, yêu cầu lại");
+                            requestSaleNumberAndTicket();
+                        }
                     }
                     field_data_flag = FIELD_DATA_FLAG.FIELD_NOT_DEFINED;
                 }
@@ -1720,17 +1871,42 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
             started = true;
             setRefuelStatus(REFUEL_STATUS.STARTED);
-            new Thread(() -> {
-                if (mItem != null) {
-                    Logger.appendLog("RFW", "Set item processing status");
-                    mItem.setStartTime(new Date());
-                    mItem.setTruckId(currentApp.getTruckId());
-                    mItem.setTruckNo(currentApp.getTruckNo());
-                    mItem.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
-                    DataHelper.postRefuel(mItem, false);
-                }
-            }).start();
+            recordStartEvent();
         }
+    }
+
+    /**
+     * Ghi nhận thời điểm đồng hồ xác nhận bắt đầu cấp phát. Thời gian được chụp
+     * ngay trong callback thiết bị và lưu local ở thread nền để không chặn UI.
+     */
+    private void recordStartEvent() {
+        final RefuelItemData itemToSave;
+        final Date eventTime;
+
+        synchronized (startEventLock) {
+            if (mItem == null || startEventRecorded) return;
+
+            // Khi Activity được tạo lại giữa phiên, callback "already started" không
+            // được phép ghi đè thời gian bắt đầu đã lưu trước đó.
+            if (mItem.getStatus() == REFUEL_ITEM_STATUS.PROCESSING
+                    && mItem.getStartTime() != null) {
+                startEventRecorded = true;
+                return;
+            }
+
+            startEventRecorded = true;
+            eventTime = new Date();
+            mItem.setStartTime(eventTime);
+            mItem.setTruckId(currentApp.getTruckId());
+            mItem.setTruckNo(currentApp.getTruckNo());
+            mItem.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
+            itemToSave = mItem;
+        }
+
+        Logger.appendLog("RFW", "Meter started at " + eventTime.getTime()
+                + ", save local item immediately");
+        new Thread(() -> DataHelper.postRefuel(itemToSave, false),
+                "Refuel-Start-Save").start();
     }
 
     private void requestSaleNumberAndTicket() {
@@ -1993,7 +2169,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         Logger.appendLog(LOG_TAG, "Device Sale Number: " + lcrSaleNumber);
         Logger.appendLog(LOG_TAG, "Device Ticket Number: " + lcrTicketNumber);
-        Logger.appendLog(LOG_TAG, "User End Number: " + mItem.getEndNumber());
+        Logger.appendLog(LOG_TAG, String.format(java.util.Locale.US,
+                "User End Number: %.0f", mItem.getEndNumber()));
 
         // Kiểm tra ticket trước khi hoàn thành
         checkEndNumberVsTicketNumber();
@@ -2026,7 +2203,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         if (mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
             Intent intent = new Intent(this, RefuelDetailConfirmActivity.class);
-            intent.putExtra("REFUEL", mItem.toJson());
+            // Kèm baseline để màn hình Confirm còn lưu được (xem RefuelIntent).
+            com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, mItem);
             //intent.putExtra("REFUEL_LOCAL_ID", mItem.getLocalId());
             int PREVIEW_OPEN = 1;
             startActivity(intent);

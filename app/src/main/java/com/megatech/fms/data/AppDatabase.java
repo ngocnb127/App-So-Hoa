@@ -19,6 +19,7 @@ import com.megatech.fms.data.dao.BM2503Dao;
 import com.megatech.fms.data.dao.BM2504Dao;
 import com.megatech.fms.data.dao.BM2505Dao;
 import com.megatech.fms.data.dao.BM2508Dao;
+import com.megatech.fms.data.dao.BM7501Dao;
 import com.megatech.fms.data.dao.CheckTrucksDao;
 import com.megatech.fms.data.dao.FlightDao;
 import com.megatech.fms.data.dao.InvoiceDao;
@@ -31,6 +32,7 @@ import com.megatech.fms.data.dao.ReviewDao;
 import com.megatech.fms.data.dao.ShiftDao;
 import com.megatech.fms.data.dao.TruckDao;
 import com.megatech.fms.data.dao.TruckFuelDao;
+import com.megatech.fms.data.dao.TruckInvoiceDao;
 import com.megatech.fms.data.dao.UserDao;
 import com.megatech.fms.data.entity.Airline;
 import com.megatech.fms.data.entity.Airports;
@@ -39,6 +41,7 @@ import com.megatech.fms.data.entity.BM2504;
 import com.megatech.fms.data.entity.BM2505;
 import com.megatech.fms.data.entity.BM2505Container;
 import com.megatech.fms.data.entity.BM2508;
+import com.megatech.fms.data.entity.BM7501;
 import com.megatech.fms.data.entity.CheckTrucks;
 import com.megatech.fms.data.entity.Flight;
 import com.megatech.fms.data.entity.Invoice;
@@ -50,6 +53,7 @@ import com.megatech.fms.data.entity.Review;
 import com.megatech.fms.data.entity.Shift;
 import com.megatech.fms.data.entity.Truck;
 import com.megatech.fms.data.entity.TruckFuel;
+import com.megatech.fms.data.entity.TruckInvoice;
 import com.megatech.fms.data.entity.User;
 import com.megatech.fms.enums.INVOICE_TYPE;
 import com.megatech.fms.data.entity.Product;
@@ -65,6 +69,7 @@ import com.megatech.fms.data.entity.Product;
         Invoice.class,
         BM2505.class,
         BM2508.class,
+        BM7501.class,
         BM2503.class,
         BM2504.class,
         CheckTrucks.class,
@@ -73,9 +78,10 @@ import com.megatech.fms.data.entity.Product;
         LogEntry.class,
         Review.class,
         BM2505Container.class,
-        Product.class
+        Product.class,
+        TruckInvoice.class
         },
-        version = 10,
+        version = 13,
         exportSchema = false
         )
 @TypeConverters({Converters.class,
@@ -186,14 +192,76 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE RefuelItem ADD COLUMN serverRevision INTEGER NOT NULL DEFAULT 0");
         }
     };
+    static final Migration MIGRATION_10_11 = new Migration(10, 11) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `TruckInvoice` (`localId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `invoiceId` INTEGER NOT NULL, `truckId` INTEGER NOT NULL, `flightCode` TEXT, `billNo` TEXT, `billDate` INTEGER, `invoiceNumber` TEXT, `signNo` TEXT, `loginTaxCode` TEXT, `flightId` INTEGER NOT NULL, `electronicInvoiceId` TEXT, `status` TEXT)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_TruckInvoice_invoiceId` ON `TruckInvoice` (`invoiceId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_TruckInvoice_billDate` ON `TruckInvoice` (`billDate`)");
+        }
+    };
+    static final Migration MIGRATION_11_12 = new Migration(11, 12) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE BM2508 ADD COLUMN isAttachmentPending INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+    /**
+     * Thêm bảng BM7501 (phiếu yêu cầu hút nhiên liệu).
+     *
+     * <p>Chỉ tạo bảng mới, không đụng bảng cũ — nên không có rủi ro mất dữ liệu cho máy
+     * đang ở version 12. Chỉ mục unique phải khai ở ĐÂY khớp với @Index của entity, nếu
+     * lệch thì Room sẽ báo lỗi validate schema lúc mở DB.
+     */
+    static final Migration MIGRATION_12_13 = new Migration(12, 13) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS BM7501 ("
+                    + "localId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+                    + "id INTEGER NOT NULL,"
+                    + "jsonData TEXT,"
+                    + "isSynced INTEGER NOT NULL,"
+                    + "isLocalModified INTEGER NOT NULL,"
+                    + "dateUpdated INTEGER,"
+                    + "isDeleted INTEGER NOT NULL,"
+                    + "uniqueId TEXT,"
+                    + "refuelItemUniqueId TEXT,"
+                    + "revisionNumber INTEGER NOT NULL,"
+                    + "supersedesUniqueId TEXT,"
+                    + "localNumber TEXT,"
+                    + "serverNumber TEXT,"
+                    + "localRevision INTEGER NOT NULL,"
+                    + "businessStatus TEXT,"
+                    + "syncStatus TEXT,"
+                    + "truckId INTEGER NOT NULL,"
+                    + "enteredByUserId INTEGER NOT NULL,"
+                    + "dateCreated INTEGER,"
+                    + "signedAt INTEGER,"
+                    + "printedAt INTEGER,"
+                    + "reprintCount INTEGER NOT NULL,"
+                    + "signedSnapshotHash TEXT)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS "
+                    + "index_BM7501_refuelItemUniqueId_revisionNumber "
+                    + "ON BM7501 (refuelItemUniqueId, revisionNumber)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS "
+                    + "index_BM7501_localNumber ON BM7501 (localNumber)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS "
+                    + "index_BM7501_refuelItemUniqueId ON BM7501 (refuelItemUniqueId)");
+        }
+    };
+
     public abstract RefuelItemDao refuelItemDao();
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
                 if (INSTANCE == null) {
+                    // Máy ở DB version không còn đường migration sẽ được dọn chủ động ở đây,
+                    // có ghi log, thay vì để Room âm thầm huỷ DB lúc đang dùng.
+                    DatabaseMaintenance.prepare(context.getApplicationContext());
+
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, BuildConfig.DB_FILE)
-                            .addMigrations(MIGRATION_9_10)
+                            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                             .fallbackToDestructiveMigration()  // lưới an toàn cho máy version cổ
                             .build();
                 }
@@ -201,6 +269,8 @@ public abstract class AppDatabase extends RoomDatabase {
         }
         return INSTANCE;
     }
+
+    public abstract BM7501Dao bm7501Dao();
 
     public abstract ParkingLotDao parkingLotDao();
 
@@ -223,6 +293,7 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract CheckTrucksDao checkTrucksDao();
 
     public abstract InvoiceDao invoiceDao();
+    public abstract TruckInvoiceDao truckInvoiceDao();
 
     public  abstract FlightDao flightDao();
 

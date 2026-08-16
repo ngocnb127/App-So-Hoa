@@ -29,4 +29,12 @@ public interface FlightDao {
     int update(Flight flight);
 
 
+
+    /**
+     * Chỉ xoá chuyến KHÔNG còn phiếu nào trỏ tới. Một phiếu đang chờ gửi mà mất chuyến thì
+     * mất luôn thông tin hiển thị, và không có gì khôi phục lại được từ local.
+     */
+    @Query("DELETE FROM Flight WHERE refuelScheduledTime < :cutoff "
+            + "AND NOT EXISTS (SELECT 1 FROM RefuelItem r WHERE r.flightId = Flight.id)")
+    int deleteOlderThanUnreferenced(long cutoff);
 }

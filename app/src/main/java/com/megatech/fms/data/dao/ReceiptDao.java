@@ -21,6 +21,9 @@ public interface ReceiptDao {
     @Query("Select * from  Receipt where number = :number ")
      Receipt get(String number);
 
+    @Query("SELECT COUNT(*) > 0 FROM Receipt WHERE number = :number")
+    boolean existsByNumber(String number);
+
     @Update(onConflict = OnConflictStrategy.REPLACE)
     int update( Receipt item);
 
@@ -42,4 +45,7 @@ public interface ReceiptDao {
     @Query("Select * from receipt where uniqueId  = :uniqueId ")
     Receipt getByUniqueId(String uniqueId);
 
+
+    @Query("DELETE FROM Receipt WHERE NOT isLocalModified AND id > 0 AND date < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

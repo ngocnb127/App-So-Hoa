@@ -27,6 +27,7 @@ public class TruckFuel extends BaseEntity {
             item.setJsonData(model.toJson());
 
             item.setId(model.getId());
+            item.setLocalId(model.getLocalId());
             return  item;
         }
 
@@ -37,6 +38,11 @@ public class TruckFuel extends BaseEntity {
     public  TruckFuelModel toTruckFuelModel() {
 
         TruckFuelModel model = gson.fromJson(this.getJsonData(), TruckFuelModel.class);
+        // jsonData is the original form payload. After the first synchronization the
+        // server id is stored on the Room entity, while that payload can still contain
+        // Id = 0. Always take identity from the entity so editing a synchronized local
+        // row is posted as an update instead of creating another server record.
+        model.setId(this.getId());
         model.setLocalId(this.getLocalId());
         model.setQcNo(this.qcNo);
         model.setDeleted(this.isDeleted());

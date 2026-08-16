@@ -45,7 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:text="@string/invoice"
-            android:visibility="gone"
+            android:visibility="visible"
 
             />
 
@@ -90,7 +90,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:text="@string/receipts"
-            android:visibility="visible"
+            android:visibility="gone"
 
 
             />

@@ -9,17 +9,16 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.megatech.fms.helpers.BM2505Factory;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
-import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
-import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.view.BM2505ArrayAdapter;
 
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class B2505Activity extends DateBaseActivity implements View.OnClickListener {
+public class B2505Activity extends DateBaseActivity implements View.OnClickListener, OnBM2505SavedListener, UpdateSensitiveScreen {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,16 +50,21 @@ public class B2505Activity extends DateBaseActivity implements View.OnClickListe
     private void openEdit( BM2505Model model) {
 
         FragmentManager fm = getSupportFragmentManager();
-        B2505NewItemFragement newItemFragement = new B2505NewItemFragement(model);
-        newItemFragement.show(fm, "fragment_edit_name");
-        loaddata();
+        B2505NewItemFragement.newInstance(model).show(fm, "fragment_edit_name");
     }
 
     private void openNew() {
 
+        Bundle args = new Bundle();
+        args.putInt(BM2505Factory.ARG_TRUCK_ID, currentApp.getTruckId());
+        args.putInt(BM2505Factory.ARG_AIRPORT_ID, BM2505Factory.getAccountAirportId());
+
         FragmentManager fm = getSupportFragmentManager();
-        B2505NewItemFragement newItemFragement = new B2505NewItemFragement();
-        newItemFragement.show(fm, "fragment_edit_name");
+        B2505NewItemFragement.newInstance(args).show(fm, "fragment_edit_name");
+    }
+
+    @Override
+    public void onBM2505Saved(BM2505Model model) {
         loaddata();
     }
 
@@ -99,19 +103,14 @@ public class B2505Activity extends DateBaseActivity implements View.OnClickListe
     }
 
     private List<BM2505Model> dataList;
-    public List<FlightModel> flightList = null;
 
-    public List<BM2505ContainerModel> containerList = null;
     @Override
     public void loaddata() {
         setProgressDialog();
-        //String mData = b.getString("REFUEL", "");
+        // master data của form BM2505 do B2505NewItemFragement tự tải
         new AsyncTask<Void, Void, List<BM2505Model>>() {
             @Override
             protected List<BM2505Model> doInBackground(Void... voids) {
-                userList = DataHelper.getUsers();
-                flightList =  DataHelper.getFlights();
-                containerList = DataHelper.getBM2505ContainerList();
                 List<BM2505Model> lst = DataHelper.getBM2505List(selectedDate);
                 return lst;
             }

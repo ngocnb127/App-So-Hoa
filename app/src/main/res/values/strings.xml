@@ -161,6 +161,7 @@
 
     <string name="not_granted_device_title">Thiết bị</string>
     <string name="no_internet_error">Không kết nối được máy chủ, vui lòng kiểm tra lại</string>
+    <string name="no_truck_list">Chưa lấy được danh sách xe, vui lòng kiểm tra kết nối và thử lại</string>
     <string name="qc_no">Số phiếu hóa nghiệm</string>
     <string name="print_all">In tất cả </string>
     <string name="print_invoice">In hóa đơn </string>
@@ -206,6 +207,13 @@
     <string name="version_updating">Đang cập nhật ...</string>
     <string name="update_checking">Đang kiểm tra phiên bản mới ...</string>
     <string name="using_version">Phiên bản đang sử dụng</string>
+    <string name="version_release_notes_title">Nội dung cập nhật</string>
+    <string name="version_release_note_bm2508_fix">• Sửa lỗi biểu mẫu 25.08.</string>
+    <string name="version_release_note_bm2502">• Khắc phục một số lỗi của BM 25.02.</string>
+    <string name="version_release_note_sync">• Tối ưu luồng đồng bộ dữ liệu online/offline.</string>
+    <string name="version_release_note_offline">• Tối ưu dữ liệu đã nhập khi mất mạng và tự đồng bộ lại khi có kết nối.</string>
+    <string name="version_release_note_truck_invoice">• Bổ sung màn hình tra cứu hóa đơn theo xe.</string>
+    <string name="version_release_note_invoice_pdf">• Cho phép xem trực tiếp PDF hóa đơn trên ứng dụng.</string>
     <string name="new_refuel">Chuyến mới</string>
     <string name="aircraft_type">Loại tàu bay</string>
     <string name="route_name">Đường bay</string>
@@ -247,6 +255,7 @@
     <string name="update_return_amount">Cập nhật khối lượng hoàn trả</string>
     <string name="update_weight_note">Cập nhật Techlog (KG)</string>
     <string name="edit_not_allow">Không cho phép sửa thông tin tra nạp</string>
+    <string name="edit_locked_after_print">Phiếu đã in và xuất chứng từ nên không sửa được trên máy tính bảng.\n\nVui lòng chỉnh sửa trên hệ thống web.</string>
     <string name="print_current">In mẻ hiện tại</string>
     <string name="print_bill2">Phiếu đường trường</string>
     <string name="total_amount">Tổng tiền thanh toán</string>
@@ -324,6 +333,25 @@
     <string name="density_must_input">Vui lòng nhập tỷ trọng trước</string>
     <string name="print_selected">In mẻ được chọn</string>
     <string name="print_extract">In P.hoàn trả</string>
+    <string name="print_bm7501_specimen">In thử BM 75.01</string>
+    <string name="bm7501_sign_save_failed">Không lưu được chữ ký, vui lòng ký lại</string>
+    <string name="bm7501_sign_finish">Ký &amp; hoàn tất</string>
+    <string name="bm7501_signed_ok">Đã ký. Phiếu được khoá, không sửa được nữa.</string>
+    <string name="bm7501_sign_blocked">Chưa ký được — còn thiếu thông tin bắt buộc</string>
+    <string name="bm7501_no_number">Chưa có số phiếu: mẻ hút này chưa xuất phiếu nên chưa có số. Xuất phiếu cho mẻ hút trước, rồi mở lại.</string>
+    <string name="bm7501_confirm_sign">Sau khi ký, phiếu sẽ bị khoá và không sửa được nữa. Xác nhận ký?</string>
+    <string name="bm7501_title">BM 75.01 - Phiếu yêu cầu hút nhiên liệu</string>
+    <string name="bm7501_open">Phiếu yêu cầu hút (75.01)</string>
+    <string name="print_bm7501">In phiếu</string>
+    <string name="bm7501_status_line">Số phiếu: %1$s — Trạng thái: %2$s</string>
+    <string name="bm7501_missing_refuel">Không xác định được mẻ hút để lập phiếu</string>
+    <string name="bm7501_multiple_active">Dữ liệu bất thường: mẻ hút này có nhiều hơn một phiếu đang hiệu lực. Đã khoá ký và in, vui lòng báo quản trị.</string>
+    <string name="bm7501_conflict">Phiếu đã được sửa ở nơi khác, đang tải lại bản mới nhất</string>
+    <string name="bm7501_locked">Phiếu đã ký hoặc đã huỷ, không sửa được nữa</string>
+    <string name="bm7501_saved_complete">Đã lưu. Phiếu đã đủ thông tin bắt buộc.</string>
+    <string name="bm7501_saved_incomplete">Đã lưu nháp — còn thiếu</string>
+    <string name="print_bm7501_specimen_confirm">In thử bố cục phiếu BM 75.01 (yêu cầu hút nhiên liệu) trên máy in nhiệt.\n\nBản in này đóng dấu MẪU/SPECIMEN và KHÔNG có giá trị pháp lý — dùng để kiểm tra bố cục, chữ tiếng Việt và độ dài giấy.\n\nCác mục khách hàng khai và kết quả kiểm tra chất lượng sẽ để trống cho tới khi có màn hình nhập liệu.</string>
+    <string name="print_bm7501_no_printer">Không kết nối được máy in nhiệt, vui lòng kiểm tra lại</string>
     <string name="update_tax_rate">Cập nhật VAT(%)</string>
     <string name="update_product">Cập nhật loại nhiên liệu </string>
     <string name="duplicate_invoice_number">Nhập trùng số hóa đơn. Vui lòng kiểm tra lại</string>
@@ -516,6 +544,19 @@
 
     <string name="flight">Chuyến bay</string>
     <string name="bm2505_report_type">Loại phiếu</string>
+    <string name="save_print_info_failed">Không lưu được thông tin in vào phiếu. Vui lòng kiểm tra lại phiếu trước khi rời đi.</string>
+    <string name="save_leave_time_failed">Không lưu được giờ rời đi. Vui lòng thử lại.</string>
+    <string name="bm2505_airport_undetermined">Chưa xác định được sân bay</string>
+    <string name="bm2505_airport_required">Chưa xác định được sân bay của xe tra nạp. Vui lòng kiểm tra lại cấu hình xe/tài khoản trước khi lưu phiếu BM2505.</string>
+    <string name="bm2505_truck_airport_not_allowed">Sân bay của xe tra nạp không thuộc phạm vi phân quyền của tài khoản. Vui lòng liên hệ quản trị để cập nhật lại.</string>
+    <string name="bm2505_flight_required">Vui lòng chọn chuyến bay</string>
+    <string name="bm2505_container_required">Vui lòng chọn loại bồn/kho chứa</string>
+    <string name="bm2505_operator_required">Vui lòng chọn nhân viên kiểm tra</string>
+    <string name="bm2505_invalid_density15">Tỷ trọng ở 15°C không hợp lệ</string>
+    <string name="bm2505_invalid_temperature">Nhiệt độ không hợp lệ</string>
+    <string name="bm2505_invalid_max_flowrate">Lưu lượng tối đa không hợp lệ</string>
+    <string name="bm2505_save_failed">Không lưu được phiếu BM2505 xuống máy. Vui lòng thử lại.</string>
+    <string name="bm2505_saved_pending_sync">Đã lưu phiếu BM2505 trên máy, đang chờ đồng bộ lên hệ thống.</string>
     <string name="update_depot">Nhập kho chứa</string>
     <string name="bm2505_container_type">Loại</string>
     <string name="product_type">Loại NL</string>

@@ -17,7 +17,6 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -28,6 +27,7 @@ import android.widget.SearchView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,16 +35,18 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.DialogFragment;
 
 import com.megatech.fms.databinding.B2505NewBinding;
+import com.megatech.fms.helpers.BM2505Factory;
 import com.megatech.fms.helpers.DataHelper;
-import com.megatech.fms.model.AirlineModel;
+import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
 import com.megatech.fms.model.FlightModel;
+import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
-import com.megatech.fms.view.AirlineArrayAdapter;
 import com.megatech.fms.view.FlightArrayAdapter;
 
 import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -55,65 +57,90 @@ import java.util.regex.Pattern;
 
 public class B2505NewItemFragement extends DialogFragment {
 
+    private static final String ARG_EDIT_MODE = "BM2505_EDIT_MODE";
+
     private int mYear, mMonth, mDay, mHour, mMinute;
-    private List<UserModel> userList;
-
-    public B2505NewItemFragement() {
-        this.model = new BM2505Model();
-        this.model.setWaterCheck(true);
-        this.model.setTime(new Date());
-        this.model.setOperatorId(FMSApplication.getApplication().getUser().getUserId());
-        this.model.setTruckId(FMSApplication.getApplication().getTruckId());
-        this.model.setRTCNo(FMSApplication.getApplication().getQCNo());
-
-    }
-
-    public B2505NewItemFragement(BM2505Model model) {
-        this.model = model;
-    }
-
-    public static B2505NewItemFragement newInstance(BM2505Model model) {
-
-        B2505NewItemFragement frag = new B2505NewItemFragement(model);
-        Bundle args = new Bundle();
-
-        frag.setArguments(args);
-        return frag;
-    }
 
     Locale locale = Locale.getDefault();
     NumberFormat numberFormat = NumberFormat.getInstance(locale);
     Dialog dlg;
     BM2505Model model;
-    private List<FlightModel> flights;
-    private List<BM2505ContainerModel> containers;
-    private B2505Activity activityb25;
+    View rootView;
+    B2505NewBinding binding;
+
+    // ==== MASTER DATA: fragment tự tải, không phụ thuộc list bất đồng bộ của activity ====
+    private final List<UserModel> userList = new ArrayList<>();
+    private final List<BM2505ContainerModel> containers = new ArrayList<>();
+    private final List<AirportsModel> airports = new ArrayList<>();
+    private final List<TruckModel> trucks = new ArrayList<>();
+    private List<FlightModel> flights = new ArrayList<>();
+
+    private boolean isEditMode = false;
+    private boolean isSaving = false;
+    private boolean masterDataLoaded = false;
+
+    /**
+     * Fragment phải có constructor rỗng để Android tái tạo được sau khi đổi cấu hình.
+     * Dữ liệu luôn đi qua arguments/savedInstanceState.
+     */
+    public B2505NewItemFragement() {
+    }
+
+    /**
+     * Thêm mới: args mang ngữ cảnh (TRUCK_ID, FLIGHT_ID, FLIGHT_CODE, AIRCRAFT_CODE, AIRPORT_ID...).
+     */
+    public static B2505NewItemFragement newInstance(@Nullable Bundle args) {
+        B2505NewItemFragement frag = new B2505NewItemFragement();
+        frag.setArguments(args != null ? new Bundle(args) : new Bundle());
+        return frag;
+    }
+
+    /**
+     * Sửa bản ghi đã có.
+     */
+    public static B2505NewItemFragement newInstance(BM2505Model model) {
+        B2505NewItemFragement frag = new B2505NewItemFragement();
+        Bundle args = new Bundle();
+        args.putSerializable(BM2505Factory.ARG_MODEL, model);
+        args.putBoolean(ARG_EDIT_MODE, true);
+        frag.setArguments(args);
+        return frag;
+    }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-
         dlg = super.onCreateDialog(savedInstanceState);
         return dlg;
     }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         Bundle args = getArguments();
-        if (args == null) return;
+        isEditMode = args != null && args.getBoolean(ARG_EDIT_MODE, false);
 
-        model.setFlightId(args.getInt("FLIGHT_ID", 0));
-
-        String flightCode = args.getString("FLIGHT_CODE", "");
-        if (flightCode == null || flightCode.trim().isEmpty()) {
-            flightCode = args.getString("FLIGHT_NO", "");
+        if (savedInstanceState != null && savedInstanceState.containsKey(BM2505Factory.ARG_MODEL)) {
+            // khôi phục đúng dữ liệu người dùng đang nhập dở
+            model = (BM2505Model) savedInstanceState.getSerializable(BM2505Factory.ARG_MODEL);
+            isEditMode = savedInstanceState.getBoolean(ARG_EDIT_MODE, isEditMode);
+        } else if (args != null && args.containsKey(BM2505Factory.ARG_MODEL)) {
+            model = (BM2505Model) args.getSerializable(BM2505Factory.ARG_MODEL);
         }
-        model.setFlightCode(flightCode);
 
-        model.setAircraftCode(args.getString("AIRCRAFT_CODE", ""));
+        if (model == null)
+            model = BM2505Factory.createNew(args);
 
-        model.setTruckId(args.getInt("TRUCK_ID", model.getTruckId()));
+        if (model.getTime() == null)
+            model.setTime(new Date());
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable(BM2505Factory.ARG_MODEL, model);
+        outState.putBoolean(ARG_EDIT_MODE, isEditMode);
     }
 
     public void findViews(View v) {
@@ -135,16 +162,13 @@ public class B2505NewItemFragement extends DialogFragment {
         }
     }
 
-    View rootView;
-    B2505NewBinding binding;
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        //return super.onCreateView(inflater, container, savedInstanceState);
         binding = DataBindingUtil.inflate(inflater, R.layout.b2505_new, container, false);
         binding.setMItem(this.model);
-        return binding.getRoot();
+        rootView = binding.getRoot();
+        return rootView;
     }
 
     @Override
@@ -152,99 +176,30 @@ public class B2505NewItemFragement extends DialogFragment {
         super.onViewCreated(view, savedInstanceState);
         findViews(view);
 
-        Activity activity = getActivity();
-
-        if (userList == null) userList = new ArrayList<>();
-        if (flights == null) flights = new ArrayList<>();
-        if (containers == null) containers = new ArrayList<>();
-
-        Spinner containerSpinner = view.findViewById(R.id.bm2505_container_list);
-        Spinner spn = view.findViewById(R.id.b2505_new_operator);
-
-        ArrayAdapter<BM2505ContainerModel> containerAdapter =
-                new ArrayAdapter<>(activity, R.layout.support_simple_spinner_dropdown_item, containers);
-        containerAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-        containerSpinner.setAdapter(containerAdapter);
-
-        ArrayAdapter<UserModel> spinnerAdapter =
-                new ArrayAdapter<>(activity, R.layout.support_simple_spinner_dropdown_item, userList);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-        spn.setAdapter(spinnerAdapter);
-
-        containerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (i >= 0 && i < containers.size()) {
-                    BM2505ContainerModel container = (BM2505ContainerModel) adapterView.getItemAtPosition(i);
-                    model.setContainerId(container.getId());
-                    model.setContainerName(container.getName());
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) { }
-        });
-
-        spn.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (i >= 0 && i < userList.size()) {
-                    UserModel user = (UserModel) adapterView.getItemAtPosition(i);
-                    model.setOperatorId(user.getId());
-                    model.setOperatorName(user.getName());
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) { }
-        });
-
-        if (activity instanceof B2505Activity) {
-            B2505Activity b2505Activity = (B2505Activity) activity;
-            activityb25 = b2505Activity;
-
-            if (b2505Activity.userList != null) userList.addAll(b2505Activity.userList);
-            if (b2505Activity.flightList != null) flights = b2505Activity.flightList;
-            if (b2505Activity.containerList != null) containers.addAll(b2505Activity.containerList);
-
-            spinnerAdapter.notifyDataSetChanged();
-            containerAdapter.notifyDataSetChanged();
-
-            syncSelectedOperator(spn);
-            syncSelectedContainer(containerSpinner);
-
-        } else if (activity instanceof RefuelPreviewActivity) {
-            RefuelPreviewActivity refuelPreview = (RefuelPreviewActivity) activity;
-
-            if (refuelPreview.userListbm2505 != null) userList.addAll(refuelPreview.userListbm2505);
-            if (refuelPreview.flightList != null) flights = refuelPreview.flightList;
-            if (refuelPreview.containerList != null) containers.addAll(refuelPreview.containerList);
-
-            spinnerAdapter.notifyDataSetChanged();
-            containerAdapter.notifyDataSetChanged();
-
-            syncSelectedOperator(spn);
-            syncSelectedContainer(containerSpinner);
-
-        } else if (activity instanceof RefuelDetailActivity) {
-            loadDataAsync(spinnerAdapter, containerAdapter, spn, containerSpinner);
-        }
+        setSaveEnabled(false);
+        loadMasterData(view);
     }
-    private void loadDataAsync(ArrayAdapter<UserModel> spinnerAdapter,
-                               ArrayAdapter<BM2505ContainerModel> containerAdapter,
-                               Spinner spn,
-                               Spinner containerSpinner) {
+
+    /**
+     * Tải toàn bộ master data cần cho form: sân bay, người thực hiện, chuyến bay,
+     * loại bồn và danh sách xe (để xác định sân bay của xe tra nạp).
+     */
+    private void loadMasterData(final View view) {
 
         new AsyncTask<Void, Void, Void>() {
             List<UserModel> usersResult;
             List<FlightModel> flightsResult;
             List<BM2505ContainerModel> containersResult;
+            List<AirportsModel> airportsResult;
+            List<TruckModel> trucksResult;
 
             @Override
             protected Void doInBackground(Void... voids) {
                 usersResult = DataHelper.getUsers();
                 flightsResult = DataHelper.getFlights();
                 containersResult = DataHelper.getBM2505ContainerList();
+                airportsResult = DataHelper.getAirports();
+                trucksResult = BuildConfig.FHS ? DataHelper.getFHSTrucks() : DataHelper.getTrucks();
                 return null;
             }
 
@@ -255,49 +210,215 @@ public class B2505NewItemFragement extends DialogFragment {
                 userList.clear();
                 if (usersResult != null) userList.addAll(usersResult);
 
-                flights = flightsResult != null ? flightsResult : new ArrayList<>();
-
                 containers.clear();
                 if (containersResult != null) containers.addAll(containersResult);
 
-                spinnerAdapter.notifyDataSetChanged();
-                containerAdapter.notifyDataSetChanged();
+                airports.clear();
+                if (airportsResult != null) airports.addAll(airportsResult);
 
-                syncSelectedOperator(spn);
-                syncSelectedContainer(containerSpinner);
+                trucks.clear();
+                if (trucksResult != null) trucks.addAll(trucksResult);
+
+                flights = flightsResult != null ? flightsResult : new ArrayList<FlightModel>();
+
+                masterDataLoaded = true;
+                setupAirportSpinner(view);
+                setupOperatorSpinner(view);
+                setupContainerSpinner(view);
+                setSaveEnabled(true);
+                binding.invalidateAll();
             }
         }.execute();
     }
-    private void syncSelectedOperator(Spinner spn) {
-        if (model.getOperatorId() > 0) {
-            for (int i = 0; i < userList.size(); i++) {
-                if (model.getOperatorId() == userList.get(i).getId()) {
-                    spn.setSelection(i);
-                    break;
-                }
-            }
+
+    // =========================
+    // SPINNERS
+    // =========================
+
+    /**
+     * Sân bay do hệ thống xác định (ưu tiên sân bay của xe tra nạp), người dùng không được đổi:
+     * ô sân bay chỉ hiển thị, không gắn listener và luôn ở trạng thái disable.
+     */
+    private void setupAirportSpinner(View view) {
+        Spinner spinner = view.findViewById(R.id.b2505_new_airport);
+        if (spinner == null) return;
+
+        TruckModel currentTruck = BM2505Factory.findTruck(trucks, model.getTruckId());
+        BM2505Factory.AirportResolution resolution = BM2505Factory.resolveAirport(
+                isEditMode, model.getAirportId(), currentTruck,
+                BM2505Factory.getAccountAirportId(), airports);
+
+        final List<AirportsModel> options = new ArrayList<>();
+
+        if (resolution.resolved) {
+            model.setAirportId(resolution.airportId);
+            if (resolution.airportName != null && !resolution.airportName.trim().isEmpty())
+                model.setAirportName(resolution.airportName);
+
+            String display = model.getAirportName() != null && !model.getAirportName().trim().isEmpty()
+                    ? model.getAirportName()
+                    : String.valueOf(resolution.airportId);
+            options.add(createAirportOption(resolution.airportId, display));
+        } else {
+            // không xác định được sân bay: để trống và chặn ở bước validate, không cho tự chọn
+            model.setAirportId(null);
+            model.setAirportName(null);
+            options.add(createAirportOption(0, getString(R.string.bm2505_airport_undetermined)));
+
+            if (resolution.truckAirportNotAllowed)
+                showError(R.string.bm2505_truck_airport_not_allowed);
         }
+
+        ArrayAdapter<AirportsModel> adapter = new ArrayAdapter<>(requireContext(),
+                R.layout.support_simple_spinner_dropdown_item, options);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+
+        spinner.setOnItemSelectedListener(null);
+        spinner.setAdapter(adapter);
+        spinner.setSelection(0, false);
+        spinner.setEnabled(false);
+        spinner.setClickable(false);
     }
 
-    private void syncSelectedContainer(Spinner containerSpinner) {
-        if (model.getContainerId() > 0) {
-            for (int i = 0; i < containers.size(); i++) {
-                if (model.getContainerId() == containers.get(i).getId()) {
-                    containerSpinner.setSelection(i);
-                    break;
-                }
-            }
+    private void setupOperatorSpinner(View view) {
+        Spinner spinner = view.findViewById(R.id.b2505_new_operator);
+        if (spinner == null) return;
+
+        final List<UserModel> options = new ArrayList<>(userList);
+        int selectedIndex = indexOfUser(options, model.getOperatorId());
+
+        if (selectedIndex < 0) {
+            // không tìm thấy nhân viên tương ứng: yêu cầu chọn, không lấy phần tử đầu
+            UserModel placeholder = new UserModel();
+            placeholder.setId(0);
+            placeholder.setName(getString(R.string.select_user));
+            options.add(0, placeholder);
+            selectedIndex = 0;
+            model.setOperatorId(0);
+            model.setOperatorName(null);
         }
+
+        ArrayAdapter<UserModel> adapter = new ArrayAdapter<>(requireContext(),
+                R.layout.support_simple_spinner_dropdown_item, options);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+
+        bindSpinner(spinner, adapter, selectedIndex, new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View v, int i, long l) {
+                Object item = adapterView.getItemAtPosition(i);
+                if (!(item instanceof UserModel)) return;
+                UserModel user = (UserModel) item;
+                if (user.getId() == null || user.getId() <= 0) {
+                    model.setOperatorId(0);
+                    model.setOperatorName(null);
+                    return;
+                }
+                model.setOperatorId(user.getId());
+                model.setOperatorName(user.getName());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
+        });
+    }
+
+    private void setupContainerSpinner(View view) {
+        Spinner spinner = view.findViewById(R.id.bm2505_container_list);
+        if (spinner == null) return;
+
+        final List<BM2505ContainerModel> options = new ArrayList<>(containers);
+        int selectedIndex = indexOfContainer(options, model.getContainerId());
+
+        if (selectedIndex < 0) {
+            BM2505ContainerModel placeholder = new BM2505ContainerModel();
+            placeholder.setId(0);
+            placeholder.setName(getString(R.string.bm2505_container_type));
+            options.add(0, placeholder);
+            selectedIndex = 0;
+            model.setContainerId(0);
+            model.setContainerName(null);
+        }
+
+        ArrayAdapter<BM2505ContainerModel> adapter = new ArrayAdapter<>(requireContext(),
+                R.layout.support_simple_spinner_dropdown_item, options);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+
+        bindSpinner(spinner, adapter, selectedIndex, new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View v, int i, long l) {
+                Object item = adapterView.getItemAtPosition(i);
+                if (!(item instanceof BM2505ContainerModel)) return;
+                BM2505ContainerModel container = (BM2505ContainerModel) item;
+                if (container.getId() == null || container.getId() <= 0) {
+                    model.setContainerId(0);
+                    model.setContainerName(null);
+                    return;
+                }
+                model.setContainerId(container.getId());
+                model.setContainerName(container.getName());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
+        });
+    }
+
+    /**
+     * Gắn adapter, đồng bộ selection rồi mới gắn listener (post) để lần bind đầu tiên
+     * không ghi đè model bằng phần tử đầu danh sách.
+     */
+    private <T> void bindSpinner(final Spinner spinner, ArrayAdapter<T> adapter, int selectedIndex,
+                                 final AdapterView.OnItemSelectedListener listener) {
+        spinner.setOnItemSelectedListener(null);
+        spinner.setAdapter(adapter);
+        if (selectedIndex >= 0 && selectedIndex < adapter.getCount())
+            spinner.setSelection(selectedIndex, false);
+
+        spinner.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!isAdded()) return;
+                spinner.setOnItemSelectedListener(listener);
+            }
+        });
+    }
+
+    private AirportsModel createAirportOption(int id, String name) {
+        AirportsModel airport = new AirportsModel();
+        airport.setId(id);
+        airport.setName(name);
+        return airport;
+    }
+
+    private int indexOfUser(List<UserModel> list, int userId) {
+        if (userId <= 0) return -1;
+        for (int i = 0; i < list.size(); i++) {
+            UserModel u = list.get(i);
+            if (u != null && u.getId() != null && u.getId() == userId)
+                return i;
+        }
+        return -1;
+    }
+
+    private int indexOfContainer(List<BM2505ContainerModel> list, int containerId) {
+        if (containerId <= 0) return -1;
+        for (int i = 0; i < list.size(); i++) {
+            BM2505ContainerModel c = list.get(i);
+            if (c != null && c.getId() != null && c.getId() == containerId)
+                return i;
+        }
+        return -1;
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        getDialog().getWindow().setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-
+        if (getDialog() != null && getDialog().getWindow() != null)
+            getDialog().getWindow().setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }
-
 
     public void onClick(View view) {
         int id = view.getId();
@@ -311,7 +432,7 @@ public class B2505NewItemFragement extends DialogFragment {
                 binding.invalidateAll();
                 break;
             case R.id.b2505_new_back:
-                dlg.dismiss();
+                dismissDialog();
                 break;
             case R.id.b2505_new_save:
                 save();
@@ -339,13 +460,13 @@ public class B2505NewItemFragement extends DialogFragment {
                 showEditDialog(id, InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
                 break;
             case R.id.b2505_new_appearance_cb:
-                dlg.findViewById(R.id.b2505_new_appearance).setVisibility(View.GONE);
+                findFormView(R.id.b2505_new_appearance).setVisibility(View.GONE);
                 model.setAppearanceCheck("C&B");
                 binding.invalidateAll();
                 break;
             case R.id.b2505_new_appearance_other:
             case R.id.b2505_new_appearance:
-                dlg.findViewById(R.id.b2505_new_appearance).setVisibility(View.VISIBLE);
+                findFormView(R.id.b2505_new_appearance).setVisibility(View.VISIBLE);
                 m_Title = getString(R.string.update_appearance_check);
                 showEditDialog(id, InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
                 break;
@@ -374,39 +495,123 @@ public class B2505NewItemFragement extends DialogFragment {
                 showEditDialog(id, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
                 break;
             case R.id.b2505_new_max_flowrate:
-                m_Title = getString( R.string.update_max_flowrate);
+                m_Title = getString(R.string.update_max_flowrate);
                 showEditDialog(id, InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 break;
         }
     }
 
+    // =========================
+    // SAVE
+    // =========================
+
     private void save() {
 
-        new AsyncTask<Void, Void, Void>() {
+        if (isSaving) return;
+        if (!masterDataLoaded) return;
+
+        Integer error = validate();
+        if (error != null) {
+            showError(error);
+            return;
+        }
+
+        isSaving = true;
+        setSaveEnabled(false);
+
+        new AsyncTask<Void, Void, Boolean>() {
             @Override
-            protected Void doInBackground(Void... voids) {
-                DataHelper.postBM2505(model);
-                return null;
+            protected Boolean doInBackground(Void... voids) {
+                return DataHelper.postBM2505(model);
             }
 
             @Override
-            protected void onPostExecute(Void aVoid) {
-                super.onPostExecute(aVoid);
-                if (activityb25 instanceof B2505Activity)
-                {
-                    activityb25.loaddata();
+            protected void onPostExecute(Boolean savedLocally) {
+                super.onPostExecute(savedLocally);
+
+                if (savedLocally == null || !savedLocally) {
+                    // ghi local thất bại: giữ dialog để người dùng thử lại
+                    isSaving = false;
+                    setSaveEnabled(true);
+                    showError(R.string.bm2505_save_failed);
+                    return;
                 }
-                dlg.dismiss();
+
+                notifySaved();
+
+                if (isAdded())
+                    Toast.makeText(requireContext(), R.string.bm2505_saved_pending_sync, Toast.LENGTH_LONG).show();
+
+                dismissDialog();
             }
-
-
         }.execute();
-
-
     }
 
+    /**
+     * @return id chuỗi lỗi, null nếu hợp lệ.
+     */
+    private Integer validate() {
+
+        if (model.getAirportId() == null || model.getAirportId() <= 0)
+            return R.string.bm2505_airport_required;
+
+        if (model.getReportType() == 0) {
+            boolean hasFlight = model.getFlightId() > 0
+                    || (model.getFlightCode() != null && !model.getFlightCode().trim().isEmpty());
+            if (!hasFlight) return R.string.bm2505_flight_required;
+        } else if (model.getContainerId() <= 0) {
+            return R.string.bm2505_container_required;
+        }
+
+        if (model.getOperatorId() <= 0)
+            return R.string.bm2505_operator_required;
+
+        if (model.getTemperature() != 0 && (model.getTemperature() < -50 || model.getTemperature() > 100))
+            return R.string.bm2505_invalid_temperature;
+
+        if (model.getDensity15() != 0 && (model.getDensity15() < 0.6 || model.getDensity15() > 1.0))
+            return R.string.bm2505_invalid_density15;
+
+        if (model.getMaxFlowRate() < 0)
+            return R.string.bm2505_invalid_max_flowrate;
+
+        return null;
+    }
+
+    private void notifySaved() {
+        Activity activity = getActivity();
+        if (activity instanceof OnBM2505SavedListener)
+            ((OnBM2505SavedListener) activity).onBM2505Saved(model);
+    }
+
+    private void setSaveEnabled(boolean enabled) {
+        View saveButton = findFormView(R.id.b2505_new_save);
+        if (saveButton != null) saveButton.setEnabled(enabled);
+    }
+
+    private View findFormView(int id) {
+        View root = rootView != null ? rootView : getView();
+        return root != null ? root.findViewById(id) : null;
+    }
+
+    private void dismissDialog() {
+        dismissAllowingStateLoss();
+    }
+
+    private void showError(int messageId) {
+        Activity activity = getActivity();
+        if (activity instanceof BaseActivity)
+            ((BaseActivity) activity).showErrorMessage(messageId);
+        else if (activity != null)
+            Toast.makeText(activity, messageId, Toast.LENGTH_LONG).show();
+    }
+
+    // =========================
+    // FLIGHT / TIME / EDIT DIALOGS
+    // =========================
+
     private void openFlightSelect() {
-        Dialog flightDlg = new Dialog(getActivity());
+        final Dialog flightDlg = new Dialog(requireActivity());
         flightDlg.setTitle(R.string.app_name);
         flightDlg.setContentView(R.layout.flight_select_dialog);
         SearchView searchView = flightDlg.findViewById(R.id.flight_dlg_search);
@@ -417,7 +622,6 @@ public class B2505NewItemFragement extends DialogFragment {
                 FlightArrayAdapter adapter = (FlightArrayAdapter) lvAirline.getAdapter();
                 adapter.getFilter().filter(query);
                 adapter.notifyDataSetChanged();
-                //lvAirline.setAdapter(adapter);
                 return false;
             }
 
@@ -431,8 +635,8 @@ public class B2505NewItemFragement extends DialogFragment {
                 return false;
             }
         });
-        ListView lvAirline = flightDlg.findViewById(R.id.list_airline);
-        lvAirline.setAdapter(new FlightArrayAdapter(getActivity(), flights));
+        final ListView lvAirline = flightDlg.findViewById(R.id.list_airline);
+        lvAirline.setAdapter(new FlightArrayAdapter(requireActivity(), flights));
         lvAirline.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
@@ -453,15 +657,14 @@ public class B2505NewItemFragement extends DialogFragment {
         flightDlg.show();
     }
 
-    private void showTimeDialog(int id)  {
+    private void showTimeDialog(int id) {
 
         final Date date = new Date();
 
-        if (id == R.id.b2505_new_time )
+        if (id == R.id.b2505_new_time && model.getTime() != null)
             date.setTime(model.getTime().getTime());
 
         final Calendar c = Calendar.getInstance();
-        c.setTime(date);
         c.setTime(date);
         mYear = c.get(Calendar.YEAR);
         mMonth = c.get(Calendar.MONTH);
@@ -489,27 +692,11 @@ public class B2505NewItemFragement extends DialogFragment {
         datePickerDialog.show();
     }
 
-    private Calendar getCalendar(int id) {
-        final Date date = new Date();
-        if (id == R.id.b2505_new_time)
-            date.setTime(this.model.getTime().getTime());
-
-
-        final Calendar c = Calendar.getInstance();
-        c.setTime(date);
-        return c;
-    }
     private void updateTime(int id, Calendar c) {
 
         if (id == R.id.b2505_new_time)
             this.model.setTime(c.getTime());
-        updateBinding();
-    }
-    private void updateBinding() {
-
         binding.invalidateAll();
-
-
     }
 
     private String m_Text = "";
@@ -523,14 +710,11 @@ public class B2505NewItemFragement extends DialogFragment {
         showEditDialog(id, inputType, pattern, false);
     }
 
-    private void showEditDialog(final int id, int inputType, boolean required) {
-        showEditDialog(id, inputType, ".*", required);
-    }
+    private void showEditDialog(final int id, int inputType, String pattern, final boolean required) {
 
-    private void showEditDialog(final int id, int inputType, String pattern, boolean required) {
+        Context context = getActivity();
+        if (context == null) return;
 
-
-        Context context = this.getActivity();
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
 
         builder.setTitle(m_Title);
@@ -539,8 +723,9 @@ public class B2505NewItemFragement extends DialogFragment {
 
         input.setTypeface(Typeface.DEFAULT);
 
-        input.setText(((TextView) dlg.findViewById(id)).getText());
-
+        View currentView = findFormView(id);
+        if (currentView instanceof TextView)
+            input.setText(((TextView) currentView).getText());
 
         input.setImeOptions(EditorInfo.IME_ACTION_DONE);
         input.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -552,8 +737,6 @@ public class B2505NewItemFragement extends DialogFragment {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 return actionId == EditorInfo.IME_ACTION_DONE;
             }
-
-
         });
         builder.setView(input);
 
@@ -572,19 +755,19 @@ public class B2505NewItemFragement extends DialogFragment {
                 }
             });
         }
-        final AlertDialog dialog = builder.create();// builder.show();
+        final AlertDialog dialog = builder.create();
         dialog.setCancelable(!required);
 
         dialog.show();
 
-
-
         input.requestFocus();
-        if ( id==R.id.b2505_new_density15)
-            input.setSelection(2, input.getText().length());
+        int textLength = input.getText().length();
+        if (id == R.id.b2505_new_density15 && textLength > 2)
+            input.setSelection(2, textLength);
         else
-            input.setSelection(0, input.getText().length());
+            input.setSelection(0, textLength);
 
+        final String finalPattern = pattern;
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -598,7 +781,7 @@ public class B2505NewItemFragement extends DialogFragment {
                 if (required && m_Text.isEmpty()) {
                     return false;
                 }
-                Pattern regex = Pattern.compile(pattern);
+                Pattern regex = Pattern.compile(finalPattern);
                 Matcher matcher = regex.matcher(m_Text);
                 if (!matcher.find()) {
                     return false;
@@ -617,19 +800,19 @@ public class B2505NewItemFragement extends DialogFragment {
                             model.setRTCNo(m_Text);
                             break;
                         case R.id.b2505_new_temperature:
-                            d = numberFormat.parse(m_Text).doubleValue();
+                            d = parseNumber(m_Text);
                             model.setTemperature(d);
                             break;
                         case R.id.b2505_new_density:
-                            d = numberFormat.parse(m_Text).doubleValue();
+                            d = parseNumber(m_Text);
                             model.setDensity(d);
                             break;
                         case R.id.b2505_new_density15:
-                            d = numberFormat.parse(m_Text).doubleValue();
+                            d = parseNumber(m_Text);
                             model.setDensity15(d);
                             break;
                         case R.id.b2505_new_density_diff:
-                            d = numberFormat.parse(m_Text).doubleValue();
+                            d = parseNumber(m_Text);
                             model.setDensityDiff(d);
                             break;
                         case R.id.b2505_new_appearance_other:
@@ -646,21 +829,24 @@ public class B2505NewItemFragement extends DialogFragment {
                             model.setNote(m_Text);
                             break;
                         case R.id.b2505_new_max_flowrate:
-                            d = numberFormat.parse(m_Text).doubleValue();
-
+                            d = parseNumber(m_Text);
                             model.setMaxFlowRate(d);
                             break;
 
                     }
-                } catch (NumberFormatException ex) {
-                    activityb25.showErrorMessage(R.string.invalid_number_format);
-                    return false;
-                } catch (Exception ex) {
+                } catch (ParseException | NumberFormatException ex) {
+                    showError(R.string.invalid_number_format);
                     return false;
                 }
                 binding.invalidateAll();
                 return true;
             }
         });
+    }
+
+    private double parseNumber(String text) throws ParseException {
+        Number number = numberFormat.parse(text);
+        if (number == null) throw new ParseException(text, 0);
+        return number.doubleValue();
     }
 }

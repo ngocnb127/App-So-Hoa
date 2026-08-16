@@ -10,6 +10,10 @@ import java.util.Date;
 public class BM2508 extends BaseEntity {
     public Date DateCreated;
     private Integer FlightId = 0;
+    private boolean isAttachmentPending;
+
+    public boolean isAttachmentPending() { return isAttachmentPending; }
+    public void setAttachmentPending(boolean attachmentPending) { isAttachmentPending = attachmentPending; }
 
     public Integer getFlightId() {
         return FlightId;

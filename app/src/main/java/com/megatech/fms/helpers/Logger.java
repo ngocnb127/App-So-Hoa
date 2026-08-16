@@ -27,6 +27,23 @@ public class Logger {
     private static long lastFileFlush = 0;
     private static long lastRefuelAnomalyFlush = 0;
 
+    /**
+     * Khoảng cách tối thiểu giữa hai lần cắt chunk log ứng dụng.
+     *
+     * <p>Nhịp này KHÔNG quyết định rủi ro mất log: appendLog đã flush + close từng dòng
+     * xuống đĩa, phần chưa gửi nằm nguyên trong fms.log qua cả crash lẫn tắt máy. Nó chỉ
+     * quyết định số request lên server. Ngưỡng dung lượng bên dưới vẫn cắt sớm khi log dày.
+     */
+    private static final long FILE_FLUSH_INTERVAL = 3 * 60 * 1000;
+    private static final long FILE_FLUSH_SIZE = 100 * 1024;
+
+    /**
+     * Log bất thường hiếm khi có nội dung nên giữ nhịp 60s: không phát sinh request thừa
+     * (file rỗng thì không cắt), mà khi thực sự xảy ra sự cố thì lên server sớm nhất.
+     */
+    private static final long ANOMALY_FLUSH_INTERVAL = 60 * 1000;
+    private static final long ANOMALY_FLUSH_SIZE = 20 * 1024;
+
 
     public static void saveLog(LogEntryModel.LOG_TYPE logType, String logText, String activitiName)
     {
@@ -125,10 +142,10 @@ public class Logger {
             long size = current.exists() ? current.length() : -1;
             android.util.Log.d("LOGSEND", "fms.log size=" + size);   // xác nhận file có nội dung không
 
-// rotate phần dở -> .pending khi: >100KB HOẶC đã quá 60s từ lần gửi trước (miễn có nội dung)
+// rotate phần dở -> .pending khi: quá ngưỡng dung lượng HOẶC quá lâu từ lần gửi trước
             long now = System.currentTimeMillis();
             if (current.exists() && current.length() > 0
-                    && (current.length() > 100 * 1024 || now - lastFileFlush > 60 * 1000)) {
+                    && (current.length() > FILE_FLUSH_SIZE || now - lastFileFlush > FILE_FLUSH_INTERVAL)) {
                 String ts = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
                 current.renameTo(new File(fileName + "." + ts + ".pending"));
                 lastFileFlush = now;
@@ -137,7 +154,8 @@ public class Logger {
             File parent = current.getParentFile();
             File anomaly = parent == null ? null : new File(parent, "refuel-anomaly.log");
             if (anomaly != null && anomaly.exists() && anomaly.length() > 0
-                    && (anomaly.length() > 20 * 1024 || now - lastRefuelAnomalyFlush > 60 * 1000)) {
+                    && (anomaly.length() > ANOMALY_FLUSH_SIZE
+                        || now - lastRefuelAnomalyFlush > ANOMALY_FLUSH_INTERVAL)) {
                 String ts = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
                 anomaly.renameTo(new File(anomaly.getAbsolutePath() + "." + ts + ".pending"));
                 lastRefuelAnomalyFlush = now;

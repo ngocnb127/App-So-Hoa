@@ -39,6 +39,7 @@ public class TcsDevice implements IDevice {
     private short ProdId;
 
     private DeviceDataView tcsDataView = new DeviceDataView();
+    private long ticketNumber = 0;
 
     private final String ip;
     private final int port;
@@ -47,7 +48,19 @@ public class TcsDevice implements IDevice {
     private final Runnable onDisconnected;
     private final Runnable onReceivedData;
     private final Runnable onStartedDelivery;
+    private final Runnable onEndingDelivery;
     private final Runnable onStoppedDelivery;
+
+    /**
+     * Số vòng đọc tối đa còn chờ ở pha ENDING trước khi coi như mẻ đã kết thúc.
+     * Mỗi vòng cách nhau {@link #POLL_INTERVAL_MS}, tương đương 30 giây.
+     */
+    private static final int ENDING_TIMEOUT_LOOPS = 60;
+    private static final long POLL_INTERVAL_MS = 500;
+
+    // Giá trị cuối của mẻ, giữ lại từ pha ENDING phòng khi thiết bị xoá màn hình khi về IDLE.
+    private double lastDeliveryGrossQty, lastDeliveryGrossTotal, lastDeliveryAvgTemp;
+    private long lastDeliveryTicketNumber;
 
     public TcsDevice(
             String ip,
@@ -58,12 +71,26 @@ public class TcsDevice implements IDevice {
             Runnable onStartedDelivery,
             Runnable onStoppedDelivery
     ) {
+        this(ip, port, onConnected, onDisconnected, onReceivedData, onStartedDelivery, null, onStoppedDelivery);
+    }
+
+    public TcsDevice(
+            String ip,
+            int port,
+            Runnable onConnected,
+            Runnable onDisconnected,
+            Runnable onReceivedData,
+            Runnable onStartedDelivery,
+            Runnable onEndingDelivery,
+            Runnable onStoppedDelivery
+    ) {
         this.ip = ip;
         this.port = port;
         this.onConnected = onConnected;
         this.onDisconnected = onDisconnected;
         this.onReceivedData = onReceivedData;
         this.onStartedDelivery = onStartedDelivery;
+        this.onEndingDelivery = onEndingDelivery;
         this.onStoppedDelivery = onStoppedDelivery;
     }
 
@@ -118,6 +145,9 @@ public class TcsDevice implements IDevice {
         new Thread(() -> {
             TCS_DELIVERY_STATE oldDeliveryState = TCS_DELIVERY_STATE.ERROR;
             boolean connectedFlag = false;
+            boolean deliveryStarted = false;
+            boolean endingNotified = false;
+            int endingLoops = 0;
 
             while (tcsFunc.isConnect()) {
                 tcsState = DeviceConnectState.CONNECTED;
@@ -131,12 +161,36 @@ public class TcsDevice implements IDevice {
                 readField();
                 updateDataView();
 
-                if (oldDeliveryState != tcsDeliveryState) {
-                    if (tcsDeliveryState == TCS_DELIVERY_STATE.ACTIVE && onStartedDelivery != null) {
-                        onStartedDelivery.run();
+                if (oldDeliveryState != tcsDeliveryState
+                        && tcsDeliveryState == TCS_DELIVERY_STATE.ACTIVE) {
+                    deliveryStarted = true;
+                    endingNotified = false;
+                    endingLoops = 0;
+                    if (onStartedDelivery != null) onStartedDelivery.run();
+                }
+
+                if (deliveryStarted) {
+                    // Pha ENDING: thiết bị đã ngưng bơm nhưng còn chốt số/in vé, số liệu chưa chốt.
+                    if (isEndingState(tcsDeliveryState)) {
+                        holdDeliveryValues();
+                        endingLoops++;
+                        if (!endingNotified) {
+                            endingNotified = true;
+                            if (onEndingDelivery != null) onEndingDelivery.run();
+                        }
                     }
-                    if (tcsDeliveryState == TCS_DELIVERY_STATE.STOPPED && onStoppedDelivery != null) {
-                        onStoppedDelivery.run();
+
+                    // Pha END: chỉ khi thiết bị về IDLE (hoặc quá thời gian chờ) mới lấy số liệu cuối.
+                    boolean ended = endingNotified
+                            && (tcsDeliveryState == TCS_DELIVERY_STATE.IDLE
+                                || endingLoops >= ENDING_TIMEOUT_LOOPS);
+                    if (ended) {
+                        restoreDeliveryValues();
+                        updateDataView();
+                        deliveryStarted = false;
+                        endingNotified = false;
+                        endingLoops = 0;
+                        if (onStoppedDelivery != null) onStoppedDelivery.run();
                     }
                 }
 
@@ -145,7 +199,7 @@ public class TcsDevice implements IDevice {
                 }
 
                 try {
-                    Thread.sleep(500); // 500 milliseconds delay
+                    Thread.sleep(POLL_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt(); // Restore interrupt flag
                     break;
@@ -159,11 +213,34 @@ public class TcsDevice implements IDevice {
         }).start();
     }
 
+    /** Các trạng thái thuộc pha kết thúc (ENDING): đã ngưng bơm nhưng chưa chốt xong mẻ. */
+    private boolean isEndingState(TCS_DELIVERY_STATE state) {
+        return state == TCS_DELIVERY_STATE.STOPPED
+                || state == TCS_DELIVERY_STATE.TCKT_PENDING
+                || state == TCS_DELIVERY_STATE.PRINTING;
+    }
+
+    /** Giữ lại số liệu cuối trong pha ENDING (thiết bị có thể xoá màn hình khi về IDLE). */
+    private void holdDeliveryValues() {
+        if (GrossQty > 0) lastDeliveryGrossQty = GrossQty;
+        if (GrossTotal_WM > 0) lastDeliveryGrossTotal = GrossTotal_WM;
+        if (avgTemp != 0) lastDeliveryAvgTemp = avgTemp;
+        if (ticketNumber > 0) lastDeliveryTicketNumber = ticketNumber;
+    }
+
+    private void restoreDeliveryValues() {
+        if (GrossQty <= 0 && lastDeliveryGrossQty > 0) GrossQty = lastDeliveryGrossQty;
+        if (GrossTotal_WM <= 0 && lastDeliveryGrossTotal > 0) GrossTotal_WM = lastDeliveryGrossTotal;
+        if (avgTemp == 0 && lastDeliveryAvgTemp != 0) avgTemp = lastDeliveryAvgTemp;
+        if (ticketNumber <= 0 && lastDeliveryTicketNumber > 0) ticketNumber = lastDeliveryTicketNumber;
+    }
+
     public void readField() {
         readGrossDisplay();
         readGrossTotalWM();
         readAvgTemp();
         readDeliveryStatus();
+        readTicketNumber();
 
         //readFlowRate();
         //readDateUL();
@@ -211,6 +288,19 @@ public class TcsDevice implements IDevice {
                 flagPreset = 3;
             }
         }
+    }
+
+    /**
+     * Đọc số ticket của thiết bị (SYS_TICKETNR = 0x1D).
+     *
+     * <p>Giá trị là số nguyên 64 bit theo thứ tự byte lớn trước, khác với các trường số thực
+     * (double) của những lệnh còn lại — xem {@link #extractULong(byte[])}.
+     */
+    public void readTicketNumber() {
+        tcsFunc.setMsgStatus(TcsFlagMsgCmd.FLAG_TYPE40.getValue());
+        TcsMsgCmd cmd = TcsMsgCmd.CMD_SYS_TICKETNR;
+        byte[] dataRev = tcsFunc.getField(cmd.getValue());
+        processValue(cmd, 1, dataRev);
     }
 
     public void readGrossTotalWM() {
@@ -364,6 +454,12 @@ public class TcsDevice implements IDevice {
                         GrossTotal_WM = retvalue;
                         break;
 
+                    case CMD_SYS_TICKETNR:
+                        rc = dataRev[6];
+                        stt = dataRev[7];
+                        ticketNumber = extractULong(dataRev);
+                        break;
+
                     case CMD_SYS_TIME:
                         strValue = extractString(dataRev);
                         rc = dataRev[6];
@@ -407,6 +503,16 @@ public class TcsDevice implements IDevice {
         return buffer.getDouble();
     }
 
+    /** Số nguyên 64 bit không dấu, byte lớn trước (giống Decode.U64 của bộ giám sát TCS). */
+    private long extractULong(byte[] input) {
+        if (input == null || input.length < 16) return 0;
+        long value = 0;
+        for (int i = 8; i < 16; i++) {
+            value = (value << 8) | (input[i] & 0xFF);
+        }
+        return value;
+    }
+
     private byte[] reversed(byte[] input) {
         byte[] output = new byte[input.length];
         for (int i = 0; i < input.length; i++) {
@@ -435,6 +541,7 @@ public class TcsDevice implements IDevice {
             tcsDataView.setRc(rc);
             tcsDataView.setDevStatus(devStatus);
 
+            tcsDataView.setTicketNumber(ticketNumber);
             tcsDataView.setName(name);
             tcsDataView.setVersion(String.valueOf(version));
 

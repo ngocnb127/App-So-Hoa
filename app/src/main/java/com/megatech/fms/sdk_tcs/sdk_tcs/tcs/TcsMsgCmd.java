@@ -15,6 +15,8 @@ public enum TcsMsgCmd {
     CMD_DEL_FRT(0x42),
     CMD_DEL_AVGTEMP(0x40),
     CMD_SYS_GROSSTOTAL(0x1E),
+    /** Số ticket kế tiếp của thiết bị (SYS_TICKETNR) — dùng làm số bán hàng của mẻ. */
+    CMD_SYS_TICKETNR(0x1D),
     CMD_DEL_PRODUCT(0x0C);
 
     private final int value;

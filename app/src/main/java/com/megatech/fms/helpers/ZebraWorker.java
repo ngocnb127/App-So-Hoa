@@ -10,6 +10,7 @@ import android.util.Log;
 import com.megatech.fms.BuildConfig;
 import com.megatech.fms.FMSApplication;
 import com.megatech.fms.model.BM2503Model;
+import com.megatech.fms.model.BM7501Model;
 import com.megatech.fms.model.ReceiptItemModel;
 import com.megatech.fms.model.ReceiptModel;
 import com.megatech.fms.model.TruckModel;
@@ -220,6 +221,86 @@ public class ZebraWorker {
             print(receiptModel);
         }
     }
+    /**
+     * In phiếu BM 75.01 (yêu cầu hút nhiên liệu).
+     *
+     * <p>Khác {@code printReceipt}/{@code print2503}: phiếu này có tới ba chữ ký nên nạp
+     * ba ảnh vào máy in. Ảnh nào chưa có thì bản in chừa chỗ ký tay.
+     */
+    public void print7501(BM7501Model model, BM7501Printer.Options options) {
+        if (!ensureConnection()) {
+            onConnectionError();
+            return;
+        }
+        try {
+            con.open();
+
+            ZebraPrinter zebraPrinter = ZebraPrinterFactory.getInstance(con);
+            storeSignature(zebraPrinter, BM7501Printer.GRF_CUSTOMER_SECTION_A,
+                    model.getCustomerSectionASignaturePath());
+            storeSignature(zebraPrinter, BM7501Printer.GRF_SKYPEC,
+                    model.getSkypecSignaturePath());
+            storeSignature(zebraPrinter, BM7501Printer.GRF_CUSTOMER_FINAL,
+                    model.getCustomerFinalSignaturePath());
+
+            print(BM7501Printer.createZpl(model, options));
+
+            con.close();
+            onSuccess();
+        } catch (Exception ex) {
+            Logger.appendLog("ZEBRA ERROR", "print7501: " + ex.getMessage());
+            clearAddress();
+            onError();
+        }
+    }
+
+    private void storeSignature(ZebraPrinter zebraPrinter, String grfName, String path) {
+        if (path == null || path.isEmpty()) return;
+        try {
+            File f = new File(path);
+            if (f.exists()) {
+                zebraPrinter.storeImage(grfName, f.getAbsolutePath(), 300, 200);
+            }
+        } catch (Exception ex) {
+            // Thiếu một chữ ký không được làm hỏng cả bản in; phần đó sẽ để ký tay.
+            Logger.appendLog("ZEBRA ERROR", "storeSignature " + grfName + ": " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Bảo đảm có kết nối tới máy in: dùng địa chỉ đã lưu, nếu chưa có thì lấy thiết bị
+     * Bluetooth đã ghép đôi đầu tiên. Tách riêng cho đường in BM 75.01 để không phải
+     * chép lại đoạn dò máy in lần thứ tư.
+     */
+    private boolean ensureConnection() {
+        try {
+            if (con != null && con.isConnected()) return true;
+
+            String macAddress = getAddress();
+            if (macAddress == null) {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) return false;
+
+                Set<BluetoothDevice> bondedDevices = adapter.getBondedDevices();
+                if (bondedDevices == null || bondedDevices.isEmpty()) return false;
+
+                for (BluetoothDevice device : bondedDevices) {
+                    macAddress = device.getAddress();
+                    Logger.appendLog("ZEBRA BONDED PICKED", macAddress);
+                    saveAddress(macAddress);
+                    break;
+                }
+            }
+            if (macAddress == null) return false;
+
+            con = new BluetoothConnection(macAddress);
+            return true;
+        } catch (Exception ex) {
+            Logger.appendLog("ZEBRA ERROR", "ensureConnection: " + ex.getMessage());
+            return false;
+        }
+    }
+
     public void print2503(BM2503Model bM2503Model)
     {
         /*if (BuildConfig.DEBUG)

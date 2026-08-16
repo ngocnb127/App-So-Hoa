@@ -47,6 +47,36 @@
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#efefef"
+            android:padding="5dp">
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".25"
+                android:padding="5dp"
+                android:text="@string/airport"></TextView>
+
+            <Spinner
+                android:id="@+id/b2505_new_airport"
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight=".25"
+                android:padding="5dp"></Spinner>
+
+            <TextView
+                style="?android:attr/textAppearanceMedium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight=".5"
+                android:padding="5dp"></TextView>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:background="#ffffff"
             android:padding="5dp">
             <TextView style="?android:attr/textAppearanceMedium"

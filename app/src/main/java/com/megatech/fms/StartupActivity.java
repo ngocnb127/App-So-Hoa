@@ -16,7 +16,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.megatech.fms.helpers.InstallHelper;
 import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.helpers.TruckAPI;
 import com.megatech.fms.model.TruckModel;
@@ -102,6 +101,14 @@ public class StartupActivity extends BaseActivity {
                 showMain();
             } else
                 setting();
+        } else if (requestCode == SETTING_CODE) {
+            // Cài mới: chọn xe xong phải vào thẳng màn hình chính. Trước đây StartupActivity
+            // tự finish() ngay khi mở màn hình cài đặt nên lưu xong là app thoát ra ngoài,
+            // người dùng phải mở lại mới thấy kế hoạch tra nạp.
+            if (!currentApp.isFirstUse())
+                showMain();
+            else
+                finish();
         } else
             super.onActivityResult(requestCode, resultCode, data);
     }
@@ -109,7 +116,6 @@ public class StartupActivity extends BaseActivity {
     private void setting() {
         Intent intent = new Intent(this, SettingActivity.class);
         startActivityForResult(intent, SETTING_CODE);
-        finish();
     }
 
 

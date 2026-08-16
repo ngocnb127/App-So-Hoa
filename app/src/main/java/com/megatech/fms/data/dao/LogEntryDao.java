@@ -28,4 +28,7 @@ public interface LogEntryDao {
 
     @Query("Delete from LogEntry where localId In (:ids)")
     void deleteLogs(int[] ids);
+
+    @Query("DELETE FROM LogEntry WHERE isLocalModified = 0 AND logTime < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

@@ -38,4 +38,7 @@ public interface ReviewDao {
 
     @Query("Select * from Review where isLocalModified  = 1")
     List<Review> getModified();
+
+    @Query("DELETE FROM Review WHERE NOT isLocalModified AND id > 0 AND dateUpdated < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

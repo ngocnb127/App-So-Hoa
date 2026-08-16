@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-public class PrintInvoiceActivity extends UserBaseActivity implements View.OnClickListener {
+public class PrintInvoiceActivity extends UserBaseActivity implements View.OnClickListener, UpdateSensitiveScreen {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

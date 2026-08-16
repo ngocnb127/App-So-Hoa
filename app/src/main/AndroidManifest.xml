@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-sdk android:maxSdkVersion="31" />
-
     <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -30,8 +28,6 @@
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE " />
-    <uses-permission android:name="android.permission.INSTALL_PACKAGES " />
 
     <uses-feature
         android:name="android.hardware.camera"
@@ -64,6 +60,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme.NoActionBar"
         android:usesCleartextTraffic="true">
+        <activity
+            android:name=".TruckInvoiceActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".InvoicePdfActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
         <activity
             android:name=".MainBieuMau"
             android:exported="false" />
@@ -123,7 +127,7 @@
             android:screenOrientation="landscape" />
         <activity
             android:name=".VersionUpdateActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTop"
             android:screenOrientation="landscape" />
         <activity
@@ -152,6 +156,11 @@
             android:name=".SettingActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
+        <activity
+            android:name=".B7501Activity"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <activity
             android:name=".ExtractActivity"
             android:exported="true"

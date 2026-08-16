@@ -20,6 +20,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.LCR_COMMAND;
 import com.liquidcontrols.lcr.iq.sdk.lc.api.constants.LCR.LCR_DEVICE_CONNECTION_STATE;
+import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.HttpClient;
 import com.megatech.fms.helpers.LCRReader;
 import com.megatech.fms.model.LCRDataModel;
@@ -29,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class RefuelActivity extends UserBaseActivity  implements View.OnClickListener {
+public class RefuelActivity extends UserBaseActivity  implements View.OnClickListener, UpdateSensitiveScreen {
 
     private LCRReader reader;
     private final List<String> loggerList = new ArrayList<>();
@@ -76,12 +77,19 @@ public class RefuelActivity extends UserBaseActivity  implements View.OnClickLis
         Bundle b = getIntent().getExtras();
         Integer flightId = b.getInt("REFUEL_ID",2);
         String mData = b.getString("REFUEL","");
-        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
 
-        refuelData = gson.fromJson(mData, RefuelItemData.class);
+        // Dùng RefuelItemData.fromJson để snapshot đi qua Intent còn giữ được baseline
+        // (version + vân tay payload). Parse bằng Gson trần sẽ làm mất baseline và
+        // precondition khi lưu bị bỏ qua.
+        refuelData = mData == null || mData.isEmpty() ? null : RefuelItemData.fromJson(mData);
+        com.megatech.fms.helpers.RefuelIntent.restoreBaseline(refuelData, b);
 
         if (refuelData == null && flightId !=null) {
-            refuelData = client.getRefuelItem(flightId);
+            // Qua DataHelper chứ không gọi thẳng HttpClient: object lấy trực tiếp từ server
+            // không có baseline (version + vân tay payload nền), nên mọi lần lưu sau đó sẽ bị
+            // precondition từ chối. DataHelper ghi bản server xuống Room rồi trả về bản đã
+            // đóng dấu baseline.
+            refuelData = DataHelper.getRefuelItem(flightId, 0);
         }
         if (refuelData!=null){
             ((TextView)findViewById(R.id.txtFlightCode)).setText(refuelData.getFlightCode());
@@ -286,12 +294,8 @@ public class RefuelActivity extends UserBaseActivity  implements View.OnClickLis
 
         finish();
 /*
-        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
-
-        String data = gson.toJson(refuelData);
-
         Intent intent = new Intent(this, RefuelPreviewActivity.class);
-        intent.putExtra("REFUEL", data);
+        com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
         startActivityForResult(intent, PREVIEW_OPEN);
         //finishAffinity();
 

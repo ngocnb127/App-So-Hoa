@@ -6,8 +6,17 @@ import android.graphics.BitmapFactory;
 import com.megatech.fms.model.BM2508Model;
 import com.megatech.fms.model.ReceiptModel;
 
+import com.megatech.fms.FMSApplication;
+
 import java.io.File;
 import java.net.HttpURLConnection;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class ReceiptAPI extends  BaseAPI{
 
@@ -16,111 +25,65 @@ public class ReceiptAPI extends  BaseAPI{
         url = BASE_URL + "/api/receipts";
     }
 
-    public ReceiptModel postMultipart(ReceiptModel model)
-    {
+    public BM2508Model postMultipartBM2508(BM2508Model model) {
+        if (model == null) return null;
+
+        String uploadUrl = BASE_URL + "/api/bm2508/multipart";
         try {
-            Logger.appendLog("ReceiptAPI", "Post Receipt: " + model.getNumber());
-            //getPdfString(model);
-            String parm = gson.toJson(model);
-            FileUploader  uploader = new FileUploader(url+"/multipart","UTF-8");
-            uploader.addFormField("Receipt-Data",parm);
-            if (model.getPdfPath() !=null && !model.getPdfPath().isEmpty()) {
-                File f = new File(model.getPdfPath());
-                if (f.exists()) {
-                    uploader.addFilePart("Receipt-Image", f);
-                }
-            }
-            if (model.getSellerSignaturePath() !=null && !model.getSellerSignaturePath().isEmpty()) {
-                File f = new File(model.getSellerSignaturePath());
-                if (f.exists()) {
-                    uploader.addFilePart("Seller-Signature", f);
-                }
-            }
-            if (model.getSignaturePath() !=null && !model.getSignaturePath().isEmpty()) {
-                File f = new File(model.getSignaturePath());
-                if (f.exists()) {
-                    uploader.addFilePart("Buyer-Signature", f);
-                }
-            }
-            //model.setPdfImageString(null);
-            HttpResponse response = uploader.finish();
-            if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                return gson.fromJson(response.getData(), ReceiptModel.class);
-            }
+            MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("BM2508-Data", gson.toJson(model));
 
-        }
-        catch (Exception ex)
-        {
-            Logger.appendLog("ReceiptAPI 1", ex.getMessage());
-        }
-        return null;
-    }
-    public BM2508Model postMultipartBM2508(BM2508Model model)
-    {
-        try {
-            String parm = gson.toJson(model);
-            FileUploader  uploader = new FileUploader(BASE_URL + "/api/bm2508" + "/multipart","UTF-8");
-            uploader.addFormField("BM2508-Data",parm);
-            if (model.getPdfPath() !=null && !model.getPdfPath().isEmpty()) {
-                File f = new File(model.getPdfPath());
-                if (f.exists()) {
-                    uploader.addFilePart("BM2508-Image", f);
-                }
-            }
-//            if (model.getAirlineSignaturePath(null) !=null && !model.getAirlineSignaturePath(null).isEmpty() ) {
-//                File f = new File(model.getAirlineSignaturePath(null));
-//                if (f.exists()) {
-//                    uploader.addFilePart("Airline-Signature", f);
-//                }
-//            }
+            addFilePart(bodyBuilder, "BM2508-Image", model.getPdfPath());
+            addFilePart(bodyBuilder, "Airline-Signature", model.getAirlineSignaturePath());
+            addFilePart(bodyBuilder, "UserSkypec-Signature", model.getUserSkypecSignaturePath());
 
-            String airlineImageUrl = model.getUrlImageAirline();
-            String airlineSignaturePath = model.getAirlineSignaturePath();
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(uploadUrl)
+                    .post(bodyBuilder.build());
 
-            if (airlineSignaturePath == null || airlineImageUrl.equals(airlineSignaturePath)) {
-                File file = new File(airlineImageUrl);
-                if (file.exists()) {
-                    try {
-                        uploader.addFilePart("Airline-Signature", file);
-                    } catch (Exception e) {
-                        e.printStackTrace(); // Log or handle the error appropriately
-                    }
-                }
-            }
+            // Thiếu header này chính là lỗi cũ. Token null thì vẫn gửi (server có thể đang tắt
+            // xác thực), nhưng phải ghi log để không âm thầm quay lại tình trạng 401 hàng loạt.
+            String token = currentToken();
+            if (token != null && !token.isEmpty())
+                requestBuilder.addHeader("Authorization", "Bearer " + token);
+            else
+                Logger.appendLog("BM2508-1", "Không có token khi gửi ảnh BM2508");
 
-            String UrlImageSkypec = model.getUrlImageSkypec();
-            String UserSkypecSignaturePath = model.getUserSkypecSignaturePath();
+            Response response = new OkHttpClient().newCall(requestBuilder.build()).execute();
+            String body = response.body() != null ? response.body().string() : "";
 
-            if (UserSkypecSignaturePath == null || UrlImageSkypec.equals(UserSkypecSignaturePath)) {
-                File file = new File(UrlImageSkypec);
-                if (file.exists()) {
-                    try {
-                        uploader.addFilePart("UserSkypec-Signature", file);
-                    } catch (Exception e) {
-                        e.printStackTrace(); // Log or handle the error appropriately
-                    }
-                }
-            }
+            if (response.isSuccessful())
+                return gson.fromJson(body, BM2508Model.class);
 
-//            if (model.getUserSkypecSignaturePath() !=null && !model.getUserSkypecSignaturePath().isEmpty()) {
-//                File f = new File(model.getUserSkypecSignaturePath());
-//                if (f.exists()) {
-//                    uploader.addFilePart("UserSkypec-Signature", f);
-//                }
-//            }
-            //model.setPdfImageString(null);
-            HttpResponse response = uploader.finish();
-            if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                return gson.fromJson(response.getData(), BM2508Model.class);
-            }
-
-        }
-        catch (Exception ex)
-        {
+            // Phân biệt lỗi xác thực với lỗi mạng: tầng trên còn biết có nên thử lại hay không.
+            Logger.appendLog("BM2508-1", (response.code() == 401 ? "SAI XÁC THỰC" : "Lỗi")
+                    + " khi gửi ảnh BM2508: HTTP " + response.code());
+        } catch (Exception ex) {
             Logger.appendLog("BM2508-1", ex.getMessage());
         }
         return null;
     }
+
+    /** Chỉ đính tệp khi đường dẫn có thật và tệp còn tồn tại trên đĩa. */
+    private void addFilePart(MultipartBody.Builder builder, String partName, String path) {
+        if (path == null || path.trim().isEmpty()) return;
+
+        File file = new File(path);
+        if (!file.exists()) return;
+
+        builder.addFormDataPart(partName, file.getName(),
+                RequestBody.create(file, MediaType.parse("application/octet-stream")));
+    }
+
+    private String currentToken() {
+        try {
+            return FMSApplication.getApplication().getUser().getToken();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     public ReceiptModel post(ReceiptModel model)
     {
         try {

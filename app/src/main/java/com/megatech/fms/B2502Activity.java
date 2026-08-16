@@ -38,7 +38,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class B2502Activity extends UserBaseActivity implements OnClickListener {
+public class B2502Activity extends UserBaseActivity implements OnClickListener, UpdateSensitiveScreen {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

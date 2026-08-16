@@ -17,6 +17,26 @@ public class BM2505Model extends BaseModel {
 
     private double maxFlowRate;
 
+    private Integer airportId;
+
+    private String airportName;
+
+    public Integer getAirportId() {
+        return airportId;
+    }
+
+    public void setAirportId(Integer airportId) {
+        this.airportId = airportId;
+    }
+
+    public String getAirportName() {
+        return airportName;
+    }
+
+    public void setAirportName(String airportName) {
+        this.airportName = airportName;
+    }
+
     public int getReportType() {
         return reportType;
     }

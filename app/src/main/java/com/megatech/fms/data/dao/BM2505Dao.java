@@ -22,7 +22,7 @@ public interface BM2505Dao {
     List<BM2505> getAll(long start, long end);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(BM2505 truck);
+    long insert(BM2505 truck);
 
     @Query("Select * from BM2505 where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
     BM2505 get(int id, int localId);
@@ -50,4 +50,7 @@ public interface BM2505Dao {
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void updateContainer(BM2505Container item);
+
+    @Query("DELETE FROM BM2505 WHERE NOT isLocalModified AND id > 0 AND time < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

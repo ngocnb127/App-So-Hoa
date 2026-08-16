@@ -43,4 +43,7 @@ public interface BM2503Dao {
     List<BM2503> getModified();
 
 
+
+    @Query("DELETE FROM BM2503 WHERE NOT isLocalModified AND id > 0 AND time < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

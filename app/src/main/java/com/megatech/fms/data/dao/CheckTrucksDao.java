@@ -39,4 +39,7 @@ public interface CheckTrucksDao {
     @Query("Update CheckTrucks set isDeleted=1, isLocalModified=1 WHERE localId in( :ids)")
     void delete(int[] ids);
 
+
+    @Query("DELETE FROM CheckTrucks WHERE NOT isLocalModified AND id > 0 AND DateCreated < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

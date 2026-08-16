@@ -115,7 +115,7 @@ public class RefuelItemDetailFragment extends Fragment  {
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
 
             intent.putExtra("REFUEL_ID", mItem.getId());
-            intent.putExtra("REFUEL",gson.toJson(mItem));
+            com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, mItem);
             startActivityForResult(intent, mItem.getId());
         }
     }

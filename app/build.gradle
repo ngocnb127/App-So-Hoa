@@ -3,27 +3,48 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 
+// Thông tin ký nằm ngoài source control: keystore.properties (không commit) hoặc biến môi trường.
+// Xem keystore.properties.example. Không bao giờ đặt mật khẩu trực tiếp trong file này.
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def signingStorePath = keystoreProps['storeFile'] ?: System.getenv('FMS_KEYSTORE_PATH')
+def signingStorePass = keystoreProps['storePassword'] ?: System.getenv('FMS_KEYSTORE_PASSWORD')
+def signingKeyAlias = keystoreProps['keyAlias'] ?: System.getenv('FMS_KEY_ALIAS')
+def signingKeyPass = keystoreProps['keyPassword'] ?: System.getenv('FMS_KEY_PASSWORD')
+def hasSigningConfig = signingStorePath != null && signingStorePass != null &&
+        signingKeyAlias != null && signingKeyPass != null
+
+// Ngày build phải ổn định để bản phát hành tái lập được. CI truyền FMS_BUILD_DATE;
+// build local không có thì lấy ngày hiện tại và cảnh báo.
+def buildDateFromEnv = System.getenv('FMS_BUILD_DATE')
+def resolvedBuildDate = buildDateFromEnv ?: new Date().format('yyyyMMdd')
+if (buildDateFromEnv == null) {
+    logger.warn("CANH BAO: FMS_BUILD_DATE chua duoc dat, dung ngay hien tai ${resolvedBuildDate}. " +
+            "Ban phat hanh chinh thuc phai dat bien nay de build tai lap duoc.")
+}
+
 android {
     signingConfigs {
         release {
-            storeFile file('/Users/ngoc/Documents/DevNgoc/App-So-Hoa/keys/fms4.jks')
-            storePassword '123456'
-            keyAlias = 'keyfms'
-            keyPassword '123456'
+            if (hasSigningConfig) {
+                // rootProject.file(): đường dẫn tương đối tính từ gốc dự án (nơi đặt
+                // keystore.properties), không phải từ thư mục module app/.
+                // Đường dẫn tuyệt đối truyền qua biến môi trường vẫn dùng được.
+                storeFile rootProject.file(signingStorePath)
+                storePassword signingStorePass
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPass
+            }
         }
-
-        debug {
-            storeFile file('/Users/ngoc/Documents/DevNgoc/App-So-Hoa/keys/fms4.jks')
-            storePassword '123456'
-            keyAlias = 'keyfms'
-            keyPassword '123456'
-        }
-
+        // debug: cố ý không cấu hình -> Gradle dùng debug keystore mặc định của máy.
+        // Không bao giờ ký bản debug bằng khóa release.
     }
     compileSdk 34
     defaultConfig {
-        def date = new Date()
-        def formattedDate = date.format('yyyyMMdd')
+        def formattedDate = resolvedBuildDate
 
         manifestPlaceholders = [appIcon: "@drawable/icon96"]
 
@@ -31,13 +52,26 @@ android {
 
         minSdkVersion 26
         targetSdkVersion 33
-        versionCode 103
-        def patchNumber = "1"
+        // PHÁT HÀNH ĐI QUA HAI CỔNG, và chỉ versionCode vượt được cả hai:
+        //
+        //  1. AppVersionInfo.isNewerThanCurrent — so bộ ba (versionCode, buildDate, patchNumber)
+        //     theo thứ tự từ điển. Nâng riêng buildDate/patch là đủ để máy BÁO có bản mới.
+        //  2. ApkValidator — sau khi tải xong, đòi apkVersionCode > VERSION_CODE, KHÔNG xét
+        //     buildDate/patch. Bản cùng versionCode bị chặn ở đây với thông báo
+        //     "APK không mới hơn bản đang chạy (105 ≤ 105)".
+        //
+        // Hệ quả: nâng riêng buildDate/patch tạo ra vòng lặp báo-tải-từ chối. Mỗi lần phát
+        // hành có đổi mã nguồn PHẢI nâng versionCode. patchNumber chỉ để phân biệt các lần
+        // dựng trong cùng một ngày, không thay thế được versionCode.
+        versionCode 107
+        def patchNumber = "2"
         def versionNumber = "11"
         def buildNumber = "6"
 
+        versionName "${versionNumber}.${buildNumber}.${patchNumber}"
 
         buildConfigField 'int', 'PATCH_NUMBER', patchNumber
+        buildConfigField 'int', 'BUILD_DATE', formattedDate
 
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -59,7 +93,14 @@ android {
         buildConfigField 'String', 'METER_UNIT','"GALLON"'
         buildConfigField 'boolean', 'THERMAL_PRINTER','false'
 
-        signingConfig signingConfigs.release
+        // Kênh phát hành. MẶC ĐỊNH null = updater TẮT HOÀN TOÀN.
+        // Chỉ release/thermal được bật tường minh bên dưới. Không bao giờ suy ra kênh
+        // từ THERMAL_PRINTER (đó là cờ loại máy in, không phải kênh phát hành).
+        buildConfigField 'String', 'UPDATE_CHANNEL', 'null'
+
+        if (hasSigningConfig) {
+            signingConfig signingConfigs.release
+        }
         proguardFiles
 
         applicationVariants.all { variant ->
@@ -83,12 +124,14 @@ android {
             buildConfigField 'String', 'PRINTER_IP', '"10.0.2.2"'
             buildConfigField 'boolean', 'FHS', 'false'
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
+            buildConfigField 'String', 'UPDATE_CHANNEL', 'null'   // updater TẮT trên debug
             manifestPlaceholders = [appIcon: "@drawable/icon96"]
             resValue "string", "app_name", "FMS Delivery DEBUG"
         }
         release {
             buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
             buildConfigField 'String', 'DB_FILE', '"fms_release.db"'
+            buildConfigField 'String', 'UPDATE_CHANNEL', '"release"'
             manifestPlaceholders = [appIcon: "@drawable/icon96"]
             buildConfigField 'boolean', 'PRINT_RECEIPT', 'true'
 
@@ -104,6 +147,7 @@ android {
             buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
 
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
+            buildConfigField 'String', 'UPDATE_CHANNEL', '"thermal"'
 
             buildConfigField 'String', 'DB_FILE', '"fms_thermal.db"'
             manifestPlaceholders = [appIcon: "@drawable/icon96y"]
@@ -117,6 +161,9 @@ android {
             buildConfigField 'String', 'API_BASE_URL', '"https://fmsapi.skypec.com.vn/"'
             buildConfigField 'String', 'DB_FILE', '"fms_demo.db"'
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'false'
+            // initWith release đã sao chép UPDATE_CHANNEL="release" — PHẢI đặt lại null,
+            // nếu không máy demo sẽ được mời cài APK production (cùng applicationId).
+            buildConfigField 'String', 'UPDATE_CHANNEL', 'null'
 
             resValue "string", "app_name", "FMS Delivery TEST"
         }
@@ -126,6 +173,7 @@ android {
             initWith demo
             buildConfigField 'String', 'DB_FILE', '"fms_demo_thermal.db"'
             buildConfigField 'boolean', 'THERMAL_PRINTER', 'true'
+            buildConfigField 'String', 'UPDATE_CHANNEL', 'null'
 
             resValue "string", "app_name", "FMS Delivery TEST THERMAL"
         }
@@ -159,8 +207,13 @@ dependencies {
     implementation 'androidx.core:core:1.12.0'
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.github.mhiew:android-pdf-viewer:3.2.0-beta.3'
 
     testImplementation 'junit:junit:4.12'
+    // Test tích hợp Room chạy trên JVM: Room in-memory cần Context nên phải có Robolectric.
+    testImplementation 'androidx.room:room-testing:2.6.1'
+    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'org.robolectric:robolectric:4.11.1'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     //implementation 'com.google.firebase:firebase-analytics:17.2.1'
@@ -196,4 +249,3 @@ configurations.all {
         force 'androidx.core:core-ktx:1.12.0'
     }
 }
-

@@ -68,6 +68,15 @@ public class DataRepository {
         this.db = db;
     }
 
+    /**
+     * Chỉ dành cho test: tạo repository trên một AppDatabase riêng (thường là in-memory)
+     * mà không đụng tới singleton dùng trong production.
+     */
+    @androidx.annotation.VisibleForTesting
+    public static DataRepository forTesting(AppDatabase db) {
+        return new DataRepository(db);
+    }
+
     public static DataRepository getInstance(AppDatabase db) {
         if (sInstance == null) {
             synchronized (DataRepository.class) {
@@ -217,8 +226,13 @@ public class DataRepository {
     }
 
     public List<RefuelItem> getModifiedRefuel() {
-        List<RefuelItem> modified = db.refuelItemDao().getModified();
+        List<RefuelItem> modified = db.refuelItemDao().getModifiedForSync();
         return modified;
+    }
+
+    /** Toàn bộ row còn thay đổi chưa gửi, kể cả row đang giữ conflict — dùng để hiển thị. */
+    public List<RefuelItem> getAllModifiedRefuel() {
+        return db.refuelItemDao().getModified();
     }
 
     public List<AirlineModel> getAirlines() {
@@ -300,10 +314,22 @@ public class DataRepository {
     }
     public void deleteOldRefuels(int numDays) {
 
-        Date d= new Date();
-        d = new Date(d.getTime() - 24*60*60*1000 *numDays);
+        // 24L: phép nhân phải làm ở kiểu long. Với int, 24*60*60*1000*numDays TRÀN từ
+        // numDays = 25 trở lên và đổi dấu — mốc cắt nhảy sang tương lai và câu lệnh xoá
+        // gần như toàn bộ phiếu. Đổi 10 thành 30 với ý "giữ lâu hơn" là mất sạch dữ liệu.
+        Date d = new Date();
+        d = new Date(d.getTime() - 24L * 60 * 60 * 1000 * numDays);
 
         db.refuelItemDao().deleteByDate(d.getTime());
+    }
+
+    /**
+     * Đưa các phiếu đang kẹt ở trạng thái conflict trở lại hàng đợi đồng bộ.
+     *
+     * @return số phiếu được đưa trở lại
+     */
+    public int resumeConflictedRefuels() {
+        return db.refuelItemDao().resumeConflictedRows();
     }
 
     public RefuelItemData getIncomplete(String truckNo) {
@@ -461,18 +487,25 @@ public class DataRepository {
         }
     }
 
-    public void insertBM2505(BM2505 model) {
+    /**
+     * @return localId của bản ghi sau khi ghi (dùng để cập nhật lại model, tránh insert trùng
+     * khi người dùng lưu nhiều lần trên cùng một phiếu).
+     */
+    public int insertBM2505(BM2505 model) {
 
         BM2505 item = db.bm2505Dao().get(model.getId(), model.getLocalId());
 
         if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.bm2505Dao().insert(model);
+            long newLocalId = db.bm2505Dao().insert(model);
+            if (newLocalId > 0)
+                model.setLocalId((int) newLocalId);
         } else {
 
 
             model.setLocalId(item.getLocalId());
             db.bm2505Dao().update(model);
         }
+        return model.getLocalId();
     }
     public void mergeRemoteBM2505(BM2505 remote) {
         BM2505 local = db.bm2505Dao().get(remote.getId(), remote.getLocalId());
@@ -500,7 +533,7 @@ public class DataRepository {
         BM2508 local = db.bm2508Dao().get(remote.getId(), remote.getLocalId());
         if (local == null) {
             db.bm2508Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
+        } else if (!local.isLocalModified() && !local.isAttachmentPending()) {
             remote.setLocalId(local.getLocalId());
             db.bm2508Dao().update(remote);
         }
@@ -579,6 +612,10 @@ public class DataRepository {
         return modified;
     }
 
+    public List<BM2508> getPendingBM2508Attachments() {
+        return db.bm2508Dao().getPendingAttachments();
+    }
+
     public List<CheckTrucks> getModifiedCheckTrucks() {
         List<CheckTrucks> modified = db.checkTrucksDao().getModified();
         return modified;
@@ -596,6 +633,10 @@ public class DataRepository {
             model.setCancelReason(item.getCancelReason());
             return db.receiptDao().update(model);
         }
+    }
+
+    public boolean receiptNumberExists(String number) {
+        return number != null && db.receiptDao().existsByNumber(number);
     }
 
     public List<Receipt> getModifiedReceipt() {

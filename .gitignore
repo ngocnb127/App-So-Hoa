@@ -11,3 +11,9 @@
 /build
 /captures
 .externalNativeBuild
+
+# Khóa ký và mật khẩu — KHÔNG BAO GIỜ commit
+keys/
+keystore.properties
+*.jks
+*.keystore

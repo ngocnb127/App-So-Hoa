@@ -15,7 +15,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class ReceiptSignActivity extends AppCompatActivity {
+public class ReceiptSignActivity extends AppCompatActivity implements UpdateSensitiveScreen {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

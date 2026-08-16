@@ -80,20 +80,26 @@ public class LogEntryAPI extends BaseAPI{
         try {
             zipped = zipLogFile(filePath);
 
-            // Gợi ý tên file tải lên: <truckNo>-<yyyyMMdd_HHmmss>.fms.log.zip
+            // Tên file tải lên: <truckNo>-<yyyyMMdd>---<tabletId>--.fms.log.zip
+            //
+            // Chỉ tới NGÀY, không tới giây: server (api/log2) gộp theo tên file sau khi bỏ
+            // đuôi .zip, nên tên chứa giờ-phút-giây thì mỗi chunk 60s thành một file riêng
+            // trên server. Mốc thời gian chi tiết vẫn nằm trong từng dòng log.
             String pendingName = new File(filePath).getName();
-            String timeSuffix = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
+            String daySuffix = new SimpleDateFormat("yyyyMMdd").format(new Date());
             int stampStart = pendingName.indexOf(".log.");
             if (stampStart >= 0 && pendingName.endsWith(".pending")) {
                 String pendingStamp = pendingName.substring(stampStart + 5,
                         pendingName.length() - ".pending".length());
+                // Lấy ngày của chính chunk đó: chunk cắt trước nửa đêm mà gửi được sau nửa
+                // đêm vẫn phải nằm trong file của ngày nó được ghi.
                 if (pendingStamp.matches("\\d{8}_\\d{6}_\\d{3}")) {
-                    timeSuffix = pendingStamp;
+                    daySuffix = pendingStamp.substring(0, 8);
                 }
             }
             String logType = pendingName.startsWith("refuel-anomaly.log")
                     ? "refuel-anomaly.log" : "fms.log";
-            String uploadFileName = truckNo + "-" + timeSuffix + "---" + tabletId
+            String uploadFileName = truckNo + "-" + daySuffix + "---" + tabletId
                     + "--." + logType + ".zip";
 
             con = httpClient.createConnection(url, "POST", "multipart/form-data; boundary=" + boundary);

@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 public class ReceiptModel extends BaseModel {
 
@@ -76,6 +78,45 @@ public class ReceiptModel extends BaseModel {
         int minute = (int)(n % 1440); n /= 1440;
         long day = n;
         return new long[]{ kho, xe, day, minute / 60, minute % 60, lan };
+    }
+
+    private static String appendNumericSuffix(String number, int suffix) {
+        String suffixText = String.valueOf(suffix);
+        if (number.endsWith("HT")) {
+            return number.substring(0, number.length() - 2) + suffixText + "HT";
+        }
+        return number + suffixText;
+    }
+
+    /**
+     * Bảo đảm số phiếu không trùng database local. Khi needNewNumber=true,
+     * luôn thêm hậu tố số ngay cả khi số cơ sở chưa tồn tại.
+     */
+    private static String ensureUniqueLocalNumber(String number, boolean needNewNumber) {
+        if (number == null || number.isEmpty()) return number;
+
+        FutureTask<String> numberTask = new FutureTask<>(() -> {
+            boolean exists = FMSApplication.getApplication().getRepository()
+                    .receiptNumberExists(number);
+            if (!needNewNumber && !exists) return number;
+
+            int suffix = 0;
+            String candidate;
+            do {
+                candidate = appendNumericSuffix(number, suffix++);
+            } while (FMSApplication.getApplication().getRepository()
+                    .receiptNumberExists(candidate));
+            return candidate;
+        });
+        new Thread(numberTask, "Receipt-Number-Check").start();
+        try {
+            return numberTask.get();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Không thể kiểm tra số phiếu do tác vụ bị gián đoạn", ex);
+        } catch (ExecutionException ex) {
+            throw new IllegalStateException("Không thể kiểm tra số phiếu trong database local", ex);
+        }
     }
 
     public static ReceiptModel createReceipt(List<RefuelItemData> refuels, String[] replacedReceipts, boolean isReturn, String oldNumber, boolean createNew) {
@@ -272,6 +313,7 @@ public class ReceiptModel extends BaseModel {
             number = genReceiptNumber(receiptCode, model.getEndTime(), lan);  // 8 ký tự
         }
         if (model.isReturn) number += "HT";
+        number = ensureUniqueLocalNumber(number, needNewNumber);
         model.setNumber(number);
         }
 
@@ -325,6 +367,14 @@ public class ReceiptModel extends BaseModel {
             model.setWeight(model.getWeight() + itemModel.getWeight());
             //model.setReturnAmount(model.getReturnAmount() + itemModel.getReturnAmount());
 
+
+            // Hai số đã được ghi vào mẻ ngay lúc tra nạp nên in lại lúc nào cũng có,
+            // không phải hỏi lại thiết bị.
+            if (isBlank(model.getDeviceSaleNumber()) && !isBlank(itemData.getSaleNumber()))
+                model.setDeviceSaleNumber(itemData.getSaleNumber().trim());
+
+            if (isBlank(model.getDeviceTicketNumber()) && !isBlank(itemData.getTicketNumber()))
+                model.setDeviceTicketNumber(itemData.getTicketNumber().trim());
 
             model.items.add(itemModel);
         }
@@ -380,6 +430,48 @@ public class ReceiptModel extends BaseModel {
 
     UserInfo user = FMSApplication.getApplication().getUser();
     TruckModel setting = FMSApplication.getApplication().getSetting();
+    /** Chiều cao ảnh chữ ký khi nạp vào máy in (xem ZebraWorker.storeImage). */
+    private static final int SIGNATURE_HEIGHT = 200;
+
+    /** 1 cm ở 203 dpi ≈ 80 dot. */
+    private static final int ONE_CM_DOTS = 80;
+
+    /**
+     * LCR gọi số này là Sale Number, TCS gọi là Ticket Number — in đúng tên của từng loại
+     * để nhân viên đối chiếu được với màn hình thiết bị.
+     */
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    /**
+     * In số của đồng hồ: chữ nhỏ, dưới ảnh chữ ký và cách 1cm.
+     *
+     * <p>Mỗi loại thiết bị chỉ in đúng một số theo cách gọi của nó: LCR in <b>Sale No.</b>
+     * (số bán hàng), TCS in <b>Ticket No.</b>. Cả hai số vẫn được lưu trong mẻ để đối chiếu,
+     * nhưng phiếu chỉ in số mà nhân viên dùng.
+     *
+     * @return chiều cao sau khi in
+     */
+    private int appendDeviceNumbers(StringBuilder builder, int height) {
+        boolean isTcs = setting != null && setting.getDeviceType() == TruckModel.DEVICE_TYPE.TCS;
+
+        String label = isTcs ? "Ticket No." : "Sale No.";
+        String value = isTcs ? deviceTicketNumber : deviceSaleNumber;
+
+        // TCS chỉ có một số, hai trường bằng nhau nên lấy trường còn lại nếu thiếu.
+        if (isTcs && isBlank(value)) value = deviceSaleNumber;
+
+        if (isBlank(value)) return height;
+
+        height += SIGNATURE_HEIGHT + ONE_CM_DOTS;
+        builder.append("^CFZ,18\n")
+                .append("^FO0,").append(height)
+                .append("^FB600,1,0,C,0^FD").append(label).append(": ")
+                .append(value.trim()).append("^FS\n");
+        return height + 25;
+    }
+
     public String createThermalText() {
         StringBuilder builder = new StringBuilder();
         int height = 80;
@@ -537,6 +629,9 @@ public class ReceiptModel extends BaseModel {
 //
 //// Tăng chiều cao label cho đủ chỗ QR
 //        height += 200;
+
+
+        height = appendDeviceNumbers(builder, height);
 
         builder.append("^PQ1");
         builder.append("^LH0,0\n" );
@@ -708,6 +803,9 @@ public class ReceiptModel extends BaseModel {
             height += 20;
             builder.append("^FO150," + height + "^XGE:SELLER.GRF,1,1^FS");
         }
+
+        height = appendDeviceNumbers(builder, height);
+
         builder.append("^PQ1");
         builder.append("^LH0,0\n" );
         builder.append("^XZ");
@@ -761,6 +859,28 @@ public class ReceiptModel extends BaseModel {
         builder.append("           Buyer                            Seller        \n");
         builder.append("  (Signature and full name)      (Signature and full name)     \n");
         return builder.toString();
+    }
+
+    /** Số bán hàng của mẻ (SALENUMBER của LCR / ticket của TCS), in nhỏ cuối bản in nhiệt. */
+    private String deviceSaleNumber;
+
+    /** Số ticket của mẻ đọc từ đồng hồ. Với LCR đây là số khác với số bán hàng. */
+    private String deviceTicketNumber;
+
+    public String getDeviceSaleNumber() {
+        return deviceSaleNumber;
+    }
+
+    public void setDeviceSaleNumber(String deviceSaleNumber) {
+        this.deviceSaleNumber = deviceSaleNumber;
+    }
+
+    public String getDeviceTicketNumber() {
+        return deviceTicketNumber;
+    }
+
+    public void setDeviceTicketNumber(String deviceTicketNumber) {
+        this.deviceTicketNumber = deviceTicketNumber;
     }
 
     private String number;

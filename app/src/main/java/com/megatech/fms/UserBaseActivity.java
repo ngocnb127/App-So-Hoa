@@ -1,6 +1,5 @@
 package com.megatech.fms;
 
-import android.Manifest;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -8,15 +7,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.StrictMode;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -39,20 +34,12 @@ import androidx.databinding.adapters.ImageViewBindingAdapter;
 import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.megatech.fms.helpers.DataHelper;
-import com.megatech.fms.helpers.HttpClient;
 import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.helpers.PrintWorker;
 import com.megatech.fms.helpers.ZebraWorker;
 import com.megatech.fms.model.LogEntryModel;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
-import static com.megatech.fms.BuildConfig.API_BASE_URL;
 import static com.megatech.fms.BuildConfig.DEBUG;
 
 public class UserBaseActivity extends BaseActivity {
@@ -94,7 +81,12 @@ public class UserBaseActivity extends BaseActivity {
     }
 
     protected void setTruckInfo() {
+        // Nhiều màn hình dùng layout không có thanh toolbar nên không có nhãn này. Trước đây
+        // chỗ đó ném NPE, bị catch ở onResume và ghi log — 136 dòng nhiễu mỗi ngày mỗi xe,
+        // đồng thời chặn luôn phần việc phía sau của setTruckInfo.
         TextView lblInventory = findViewById(R.id.lbltoolbar_Inventory);
+        if (lblInventory == null) return;
+
         String truckNo = currentApp.getTruckNo();
         String amountStr = String.format("%.0f", currentApp.getCurrentAmount());
 
@@ -291,7 +283,7 @@ public class UserBaseActivity extends BaseActivity {
     }
 
     private void invoice() {
-        Intent intent = new Intent(this, PrintReceiptActivity.class);
+        Intent intent = new Intent(this, TruckInvoiceActivity.class);
         startActivity(intent);
 
     }
@@ -352,7 +344,7 @@ public class UserBaseActivity extends BaseActivity {
             case R.id.action_printer_test:
 
                 if (BuildConfig.THERMAL_PRINTER){
-                    zebraWorker.setStateListener(new ZebraWorker.ZebraStateListener() {
+                    getZebraWorker().setStateListener(new ZebraWorker.ZebraStateListener() {
                         @Override
                         public void onConnectionError() {
 
@@ -377,7 +369,7 @@ public class UserBaseActivity extends BaseActivity {
                             });
                         }
                     });
-                    zebraWorker.prinTest();
+                    getZebraWorker().prinTest();
                 }
                 else {
                     printWorker = new PrintWorker();
@@ -417,7 +409,22 @@ public class UserBaseActivity extends BaseActivity {
     }
 
     PrintWorker printWorker = new PrintWorker();
-    ZebraWorker zebraWorker = new ZebraWorker(this);
+
+    /**
+     * Khởi tạo LƯỜI, không phải ở mức trường.
+     *
+     * <p>Trước đây là {@code ZebraWorker zebraWorker = new ZebraWorker(this);} — chạy trong
+     * constructor của Activity, tức TRƯỚC khi Android gắn Context. Constructor của ZebraWorker
+     * gọi ngay getSharedPreferences trên Context null nên nổ mọi lần mở màn hình: 98 dòng lỗi
+     * mỗi ngày mỗi xe, và đối tượng tạo ra không dùng được vào việc gì.
+     */
+    private ZebraWorker zebraWorker;
+
+    protected ZebraWorker getZebraWorker() {
+        if (zebraWorker == null)
+            zebraWorker = new ZebraWorker(this);
+        return zebraWorker;
+    }
     private void showUpdate() {
         Intent intent = new Intent(this, VersionUpdateActivity.class);
         startActivity(intent);
@@ -480,168 +487,6 @@ public class UserBaseActivity extends BaseActivity {
 */
     }
 
-    private void checkVersion() {
-
-    }
-
-    private Dialog dlg;
-    private String update_url;
-
-    private void showInfoDialog() {
-
-        dlg = new Dialog(this);
-
-        dlg.setContentView(R.layout.info_dialog);
-        dlg.setTitle(R.string.update_version);
-        TextView txt = dlg.findViewById(R.id.info_dialog_version);
-        txt.setText(String.format("%d", BuildConfig.VERSION_CODE));
-
-        dlg.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialog) {
-                new CheckVersionAsyncTask().execute(API_BASE_URL + "files/version.txt");
-            }
-        });
-
-        dlg.findViewById(R.id.btn_version_close).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dlg.dismiss();
-            }
-        });
-
-        dlg.findViewById(R.id.btn_version_update).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dlg.findViewById(R.id.btn_version_update).setEnabled(false);
-                ((Button) dlg.findViewById(R.id.btn_version_update)).setText(R.string.version_updating);
-                if (checkStoragePermission())
-                    new UpdateAsyncTask().execute(update_url);
-            }
-        });
-        dlg.show();
-    }
-
-
-    private final class CheckVersionAsyncTask extends AsyncTask<String, Integer, String> {
-        @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            HttpClient client = new HttpClient();
-            String data = client.getContent(url);
-            if (data != null) {
-                String[] info = data.split("-");
-                String version = info[0];
-                return data;
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String versionInfo) {
-            String[] info = versionInfo.split("\\-");
-            String version = info[0];
-            long newVersion = Long.parseLong(version);
-            long currentVersion = BuildConfig.VERSION_CODE;
-
-            if (newVersion > currentVersion) {
-                ((TextView) dlg.findViewById(R.id.version_check_message)).setText(getString(R.string.new_version_available));
-                dlg.findViewById(R.id.btn_version_update).setEnabled(true);
-            } else {
-                ((TextView) dlg.findViewById(R.id.version_check_message)).setText(getString(R.string.newest_version_using));
-            }
-            update_url = API_BASE_URL + "/files/" + "fms-release-" + versionInfo + ".apk";
-            if (DEBUG)
-                update_url = API_BASE_URL + "/files/" + "fms-debug-" + versionInfo + ".apk";
-
-            //super.onPostExecute(aLong);
-        }
-    }
-
-    private final class UpdateAsyncTask extends AsyncTask<String, Integer, String> {
-
-        @Override
-        protected String doInBackground(String... urls) {
-            try {
-
-                URL url = new URL(urls[0]);
-
-
-                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-
-                urlConnection.setRequestProperty("Content-Type", "application/octet-stream");
-                urlConnection.setRequestProperty("User-Agent", "Mozilla/5.0 ( compatible ) ");
-                urlConnection.setRequestProperty("Accept", "*/*");
-
-                urlConnection.connect();
-                File sdcard = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "fms");
-
-                if (!sdcard.exists())
-                    sdcard.mkdirs();
-                File file = new File(sdcard, "fms-release.apk");
-
-                FileOutputStream fileOutput = new FileOutputStream(file);
-                InputStream inputStream = urlConnection.getInputStream();
-
-                byte[] buffer = new byte[1024];
-                int bufferLength = 0;
-
-                while ((bufferLength = inputStream.read(buffer)) > 0) {
-                    fileOutput.write(buffer, 0, bufferLength);
-                }
-                fileOutput.close();
-                return file.toString();
-
-
-            } catch (IOException e) {
-                Log.e("FMS", e.getMessage());
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String filePath) {
-
-            try {
-                if (filePath != null) {
-                    StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
-                    StrictMode.setVmPolicy(builder.build());
-                    Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-
-                    //i.setDataAndType(Uri.fromFile(new File(filePath)), "application/vnd.android.package-archive");
-                    intent.setData(Uri.fromFile(new File(filePath)));
-                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                    getApplicationContext().startActivity(intent);
-                }
-            } catch (Exception ex) {
-                Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    private final int REQUEST_WRITE_PERMISSION = 1;
-
-    protected boolean checkStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED &&
-                    checkSelfPermission(Manifest.permission.REQUEST_INSTALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.REQUEST_INSTALL_PACKAGES}, REQUEST_WRITE_PERMISSION);
-                return false;
-            }
-            return true;
-        }
-        return true;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        new UpdateAsyncTask().execute(update_url);
-    }
 
     private void logout() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

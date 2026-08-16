@@ -422,6 +422,31 @@ public class LCRReader {
                 @NonNull ResponseField responseField,
                 @NonNull RequestField requestField) {
 
+            applyFieldValue(responseField, requestField, true);
+        }
+
+        /**
+         * Xử lý một giá trị trường nhận từ thiết bị, dùng chung cho hai callback của SDK.
+         *
+         * <p>SDK phân biệt rõ hai sự kiện:
+         * <ul>
+         *   <li>{@code onFieldReadDataChanged} — chỉ khi giá trị THAY ĐỔI</li>
+         *   <li>{@code onFieldDataRequestSuccess} — mỗi lần đọc thành công, KỂ CẢ khi không đổi</li>
+         * </ul>
+         *
+         * <p>Trước đây app chỉ nghe sự kiện đầu. Điều đó đúng cho màn hình tra nạp (số nhảy
+         * liên tục), nhưng sai cho màn hình in: lúc đó mẻ đã kết thúc, {@code GROSSQTY} đứng
+         * yên nên sự kiện "thay đổi" không bao giờ phát, và màn hình in luôn nhận Gross = 0.
+         *
+         * @param fromChangeEvent true nếu đến từ sự kiện thay đổi. Chỉ nhánh này mới ghi log:
+         *                        nhánh đọc định kỳ chạy mỗi giây cho từng trường, ghi log ở đó
+         *                        sẽ làm phình tệp log mà không thêm thông tin gì.
+         */
+        private void applyFieldValue(
+                @NonNull ResponseField responseField,
+                @NonNull RequestField requestField,
+                boolean fromChangeEvent) {
+
             // Temporary variables for unit information
             FieldItem responseFieldItem = responseField.getFieldItem();
 
@@ -582,7 +607,9 @@ public class LCRReader {
 
             if (responseFieldName.equals("DBMNODE")) {
                 isLCR600 = true;
-                removeFieldData(requestField.getItemToRequest());
+                // Chỉ gỡ một lần, ở nhánh thay đổi — nhánh đọc định kỳ chạy lại mỗi giây.
+                if (fromChangeEvent)
+                    removeFieldData(requestField.getItemToRequest());
             }
             if (responseFieldName.equals(FIELD_CHANGE.SALENUMBER.toString())) {
                 showInLog = true; // Cho phép log field này
@@ -591,7 +618,7 @@ public class LCRReader {
             if (responseFieldName.equals(FIELD_CHANGE.TICKETNUMBER.toString())) {
                 showInLog = true; // Cho phép log field này
             }
-            if (showInLog) {
+            if (showInLog && fromChangeEvent) {
                 String logText = "Field data arrive : "
                         + responseField.getFieldItem().getFieldName()
                         + " - " + responseField.getOldValue()
@@ -619,13 +646,14 @@ public class LCRReader {
                 @NonNull ResponseField responseField,
                 @NonNull RequestField requestField) {
 
-            // Not logging this event
-
             /*
              * NOTE!
              * This event return field data request values (ResponseField), even data has not change
+             *
+             * Đây là đường DUY NHẤT lấy được giá trị hiện tại của một trường đứng yên. Màn hình
+             * in đọc số sau khi mẻ đã kết thúc nên phụ thuộc hoàn toàn vào nhánh này.
              */
-            //raiseError("Field data request success " + requestField.getItemToRequest().getFieldName());
+            applyFieldValue(responseField, requestField, false);
         }
 
         /**
@@ -1366,6 +1394,39 @@ public class LCRReader {
     /** SDK LCP protocol address */
     private final Integer lcpSDKAddress = 20;
 
+    /**
+     * Chu kỳ hỏi các trường thay đổi liên tục trong lúc bơm.
+     *
+     * <p>Demo chính hãng của SDK dùng 1–5 giây. Trước đây chỗ này đặt
+     * {@code TimeSet(2, MILLISECONDS)} — nhanh gấp 500 lần so với thiết kế, gần như chắc chắn
+     * là nhầm đơn vị (ý định ban đầu là 2 giây). Với 9 trường, đó là ~4.500 yêu cầu mỗi giây
+     * trên một kênh LCP: hàng đợi bão hoà, trường nào cũng phải chờ lượt, và mỗi lần giá trị
+     * đổi lại kéo theo một lần ghi Room.
+     */
+    private static final TimeSet LIVE_FIELD_INTERVAL = new TimeSet(1, TimeUnit.SECONDS);
+
+    /** Chu kỳ cho các trường định danh, không nằm trong vòng đời một mẻ. */
+    private static final TimeSet STATIC_FIELD_INTERVAL = new TimeSet(5, TimeUnit.SECONDS);
+
+    /**
+     * Các trường thuộc VÒNG ĐỜI CỦA MỘT MẺ — đều phải ở chu kỳ nhanh.
+     *
+     * <p>Không chỉ gồm số liệu đang chạy. {@code DELIVERYFINISH} nhìn thì "tĩnh" nhưng
+     * {@code RefuelDetailActivity.onStopped()} chờ đúng trường này để chốt mẻ: nó kiểm tra ở
+     * giây thứ 2, 5, 8 rồi bỏ cuộc và bắt người dùng nhập tay. Đặt trường này ở chu kỳ 5 giây
+     * là tự đẩy mình vào nhánh nhập tay. {@code DELIVERYSTART}, {@code SALENUMBER},
+     * {@code TICKETNUMBER} cũng nằm trong đường chốt mẻ nên đi cùng nhóm.
+     */
+    private static final java.util.Set<String> LIVE_FIELDS = new java.util.HashSet<>(
+            java.util.Arrays.asList(
+                    "GROSSQTY", "GROSSMETERQTY", "AVGTEMP", "ANALOGPORTVALUELIVE",
+                    "DELIVERYSTART", "DELIVERYFINISH", "SALENUMBER", "TICKETNUMBER"));
+
+    private static TimeSet intervalOf(FieldItem field) {
+        return LIVE_FIELDS.contains(field.getFieldName())
+                ? LIVE_FIELD_INTERVAL : STATIC_FIELD_INTERVAL;
+    }
+
     private void requestFieldData(final FieldItem field) {
         if (field != null) {
             raiseError("Send request field " + field.getFieldName());
@@ -1373,7 +1434,7 @@ public class LCRReader {
                     getDeviceId(),
                     new RequestField(
                             field,
-                            new TimeSet(2, TimeUnit.MILLISECONDS)),
+                            intervalOf(field)),
                     new AsyncCallback() {
                         @Override
                         public void onAsyncReturn(@Nullable Throwable throwable) {

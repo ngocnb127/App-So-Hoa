@@ -34,6 +34,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -159,6 +160,7 @@ public class HttpClient {
                     //JSONObject json = new JSONObject(data);
 
                     RefuelItemData item = gson.fromJson(data, RefuelItemData.class);
+                    item.setRawJson(data);
                     return item;
                 } catch (Exception e) {
                     return null;
@@ -208,9 +210,21 @@ public class HttpClient {
         return lst;
     }
 
+    /**
+     * Nội dung của URL, hoặc null nếu không lấy được.
+     *
+     * sendGET() trả về chuỗi giữ chỗ ("Not Authorized", "GET request not worked") cho các
+     * mã lỗi HTTP, nên nếu trả thẳng ra thì phía gọi không phân biệt được "server trả 404"
+     * với "server trả đúng nội dung này". Ở đây chỉ trả nội dung khi thực sự HTTP 200.
+     */
     public String getContent(String url) {
         try {
-            return sendGET(url).getData();
+            HttpResponse response = sendGET(url);
+            if (response == null) return null;
+            if (response.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return null;
+            }
+            return response.getData();
         } catch (IOException ex) {
             return null;
         }
@@ -250,6 +264,25 @@ public class HttpClient {
             return new HttpResponse(HttpURLConnection.HTTP_GATEWAY_TIMEOUT, "socket timeout");
         } catch (IOException ex) {
             return new HttpResponse(HttpURLConnection.HTTP_BAD_GATEWAY, "IO Error");
+        }
+    }
+
+    /** Reads a binary response entirely in memory; no application file is created. */
+    public byte[] sendGETBytes(String url, String acceptType) throws IOException {
+        HttpURLConnection con = createConnection(url, "GET", acceptType);
+        if (con == null) return null;
+        con.setRequestProperty("Accept", acceptType);
+        try {
+            if (con.getResponseCode() != HttpURLConnection.HTTP_OK) return null;
+            try (InputStream input = new BufferedInputStream(con.getInputStream());
+                 ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                return output.toByteArray();
+            }
+        } finally {
+            con.disconnect();
         }
     }
 
@@ -514,6 +547,9 @@ public class HttpClient {
                         RefuelItemData item;
 
                         item = gson.fromJson(o.toString(), RefuelItemData.class);
+                        // Giữ chuỗi gốc: bước trộn theo quyền sở hữu trường cần biết khoá nào
+                        // server THỰC SỰ gửi, phân biệt với khoá vắng mặt (model điền mặc định).
+                        item.setRawJson(o.toString());
                         lst.add(item);
                     }
                 }
@@ -560,6 +596,8 @@ public class HttpClient {
 
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 RefuelItemData newItem = gson.fromJson(response.getData(), RefuelItemData.class);
+                if (newItem != null)
+                    newItem.setRawJson(response.getData());
                 Logger.appendLog("HTTP_REFUEL", "<< SUCCESS uid=" + refuelData.getUniqueId()
                         + " sau " + elapsed + "ms — serverId=" + (newItem != null ? newItem.getId() : "null"));
                 if (newItem != null && refuelData.getId() == 0)
@@ -815,7 +853,8 @@ public class HttpClient {
         try {
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-            con.setConnectTimeout(1000);
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(30000);
 
             con.setRequestMethod(method);
             con.setRequestProperty("Connection", "Keep-Alive");
@@ -824,17 +863,54 @@ public class HttpClient {
             con.setRequestProperty("Accept", "*/*");
             String USER_AGENT = "Mozilla/5.0";
             con.setRequestProperty("User-Agent", USER_AGENT);
-            con.setRequestProperty("Tablet-Id", setting.getTabletSerial());
-            con.setRequestProperty("App-Version", setting.getAppVersion());
-            con.setRequestProperty("Truck-Id", String.valueOf(setting.getTruckId()));
-            con.setRequestProperty("Truck-Code", setting.getTruckNo());
-            this.token = FMSApplication.getApplication().getUser().getToken();
+
+            TruckModel current = currentSetting();
+            con.setRequestProperty("Tablet-Id", header(current.getTabletSerial()));
+            con.setRequestProperty("App-Version", header(current.getAppVersion() != null
+                    ? current.getAppVersion() : BuildConfig.VERSION_NAME));
+            con.setRequestProperty("Truck-Id", String.valueOf(current.getTruckId()));
+            con.setRequestProperty("Truck-Code", header(current.getTruckNo()));
+            this.token = currentToken();
             if (this.token != null)
                 con.setRequestProperty("Authorization", "bearer " + this.token);
             return con;
         } catch (Exception ex) {
+            Log.e("HTTP", "createConnection failed: " + url, ex);
             return null;
         }
+    }
+
+    /**
+     * Setting ĐANG có của app, không phải bản chụp lúc dựng HttpClient.
+     *
+     * <p>DataHelper giữ một HttpClient static dùng lại suốt vòng đời process, nên bản chụp
+     * lúc khởi tạo có thể là setting rỗng của lần cài mới (chưa chọn xe). Giữ nguyên bản
+     * chụp đó thì mọi request sau khi chọn xe vẫn gửi Truck-Id = 0.
+     */
+    private TruckModel currentSetting() {
+        TruckModel current = FMSApplication.getApplication().getSetting();
+        if (current != null)
+            this.setting = current;
+        if (this.setting == null)
+            this.setting = new TruckModel();
+        return this.setting;
+    }
+
+    private String currentToken() {
+        try {
+            return FMSApplication.getApplication().getUser().getToken();
+        } catch (Exception ex) {
+            return this.token;
+        }
+    }
+
+    /**
+     * Giá trị header không được null: HttpURLConnection.setRequestProperty ném lỗi và
+     * createConnection trả về null ⇒ toàn bộ request hỏng. Lần cài mới có tabletSerial,
+     * appVersion và truckNo đều null, nên đây là đường đi bình thường chứ không phải biên.
+     */
+    private static String header(String value) {
+        return value == null ? "" : value;
     }
 
 
@@ -971,7 +1047,7 @@ public class HttpClient {
 
             Request request = new Request.Builder()
                     .url(url)
-                    .addHeader("Authorization", "Bearer " + token)
+                    .addHeader("Authorization", "Bearer " + currentToken())
                     .post(requestBody)
                     .build();
 
@@ -1194,6 +1270,7 @@ public class HttpClient {
 
 
                     RefuelItemData item = gson.fromJson(data, RefuelItemData.class);
+                    item.setRawJson(data);
                     return item;
                 } catch (Exception e) {
                     return null;
@@ -1252,7 +1329,7 @@ public class HttpClient {
             // ===== REQUEST =====
             Request request = new Request.Builder()
                     .url(url)
-                    .addHeader("Authorization", "Bearer " + token) // 🔥 BẮT BUỘC
+                    .addHeader("Authorization", "Bearer " + currentToken()) // 🔥 BẮT BUỘC
                     .post(requestBody)
                     .build();
 
@@ -1348,7 +1425,7 @@ public class HttpClient {
             // ===== REQUEST =====
             Request request = new Request.Builder()
                     .url(url)
-                    .addHeader("Authorization", "Bearer " + token) // 🔥 BẮT BUỘC
+                    .addHeader("Authorization", "Bearer " + currentToken()) // 🔥 BẮT BUỘC
                     .post(requestBody)
                     .build();
 
@@ -1409,4 +1486,3 @@ public class HttpClient {
 
 
 }
-

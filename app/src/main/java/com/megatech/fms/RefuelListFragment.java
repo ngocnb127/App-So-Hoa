@@ -18,6 +18,7 @@ import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.view.RefuelRecyclerView;
 import com.megatech.fms.view.RefuelRecyclerViewAdapter;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -62,36 +63,107 @@ public class RefuelListFragment extends Fragment {
         refreshdata(Activity.RESULT_OK);
     }
 
+    /**
+     * Chữ ký nội dung danh sách của lần vẽ gần nhất, để bỏ qua những lần làm mới không đổi gì.
+     * Kèm mốc thời gian vì màu ô giờ tra nạp phụ thuộc thời điểm hiện tại chứ không chỉ dữ liệu.
+     */
+    private String lastSignature = null;
+    private long lastBindTime = 0;
+    private static final long REBIND_INTERVAL = 30 * 1000;
+
     private void refreshdata(int resultOk) {
 
         final View view = this.getView();
         final Activity activity = getActivity();
         new Thread(() -> {
-            lstData = DataHelper.getRefuelList(_self, 0);
+            final List<RefuelItemData> data = DataHelper.getRefuelList(_self, 0);
             if (activity != null)
                 activity.runOnUiThread(() -> {
-                    if (lstData == null) {
+                    if (data == null) {
                         Toast.makeText(activity, R.string.no_internet_error, Toast.LENGTH_LONG).show();
                         //this.getActivity().finishAffinity();
                     } else {
-                        mAdapter = new RefuelRecyclerViewAdapter((UserBaseActivity) getActivity(), lstData);
-
-                        filter(filterQuery);
-
-                        if (rv == null)
-                            rv = (RefuelRecyclerView) view;
-
-                        if (rv != null) {
-                            rv.getRecycledViewPool().clear();
-
-                            rv.setAdapter(mAdapter);
-                        }
-
+                        lstData = data;
+                        applyData(view, data);
                     }
                 });
 
         }).start();
 
+    }
+
+    /**
+     * Đổ dữ liệu vào adapter đang có thay vì dựng adapter mới.
+     *
+     * <p>{@code RecyclerView.setAdapter()} đặt lại vị trí cuộn về đầu danh sách. Vì phiên đồng bộ
+     * chạy 30 giây một lần và mỗi phiên phát nhiều lần thông báo dữ liệu đổi, gọi lại setAdapter
+     * ở mỗi lần làm mới khiến danh sách liên tục nhảy về đầu, người dùng không kịp chọn chuyến.
+     */
+    private void applyData(View view, List<RefuelItemData> data) {
+        if (rv == null && view instanceof RefuelRecyclerView)
+            rv = (RefuelRecyclerView) view;
+
+        if (mAdapter == null) {
+            mAdapter = new RefuelRecyclerViewAdapter((UserBaseActivity) getActivity(), data);
+            if (rv != null)
+                rv.setAdapter(mAdapter);
+            filter(filterQuery);
+            lastSignature = signature(data);
+            lastBindTime = System.currentTimeMillis();
+            return;
+        }
+
+        // View vừa được dựng lại (onCreateView tạo RecyclerView mới): gắn lại adapter đang có,
+        // nếu không danh sách sẽ trống vì RecyclerView mới chưa có adapter nào.
+        if (rv != null && rv.getAdapter() != mAdapter) {
+            mAdapter.setData(data);
+            rv.setAdapter(mAdapter);
+            filter(filterQuery);
+            lastSignature = signature(data);
+            lastBindTime = System.currentTimeMillis();
+            return;
+        }
+
+        String sig = signature(data);
+        long now = System.currentTimeMillis();
+        // Không đổi gì và vừa vẽ xong: bỏ qua hẳn. Vẫn vẽ lại theo chu kỳ để ô giờ tra nạp
+        // đổi màu đúng lúc.
+        if (sig.equals(lastSignature) && now - lastBindTime < REBIND_INTERVAL)
+            return;
+
+        mAdapter.setData(data);
+        if (filterQuery != null && filterQuery.length() > 0)
+            filter(filterQuery);   // setData trả mDataFiltered về toàn bộ, phải lọc lại
+        lastSignature = sig;
+        lastBindTime = now;
+    }
+
+    private String signature(List<RefuelItemData> data) {
+        if (data == null)
+            return "null";
+        StringBuilder sb = new StringBuilder(data.size() * 48);
+        for (RefuelItemData item : data) {
+            if (item == null) {
+                sb.append("null\n");
+                continue;
+            }
+            sb.append(item.getUniqueId()).append('|')
+                    .append(item.getId()).append('|')
+                    .append(item.getStatus()).append('|')
+                    .append(item.isLocalModified() ? 1 : 0).append('|')
+                    .append(item.getFlightCode()).append('|')
+                    .append(item.getAircraftCode()).append('|')
+                    .append(item.getParkingLot()).append('|')
+                    .append(time(item.getRefuelTime())).append('|')
+                    .append(time(item.getApproachTime())).append('|')
+                    .append(time(item.getLeaveTime())).append('|')
+                    .append(item.getRealAmount()).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static long time(Date value) {
+        return value == null ? 0 : value.getTime();
     }
 
     private CharSequence filterQuery = "";

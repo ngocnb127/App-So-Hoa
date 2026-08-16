@@ -449,14 +449,19 @@ public class B2508NewItemFragement extends DialogFragment {
 
 
 
+    private boolean saving;
+
     private void save() {
+        if (saving) return;
+        saving = true;
 
         new AsyncTask<Void, Void, Boolean>() {
 
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                // Có thể thêm loading nếu muốn
+                View saveButton = getView() == null ? null : getView().findViewById(R.id.b2508_new_save);
+                if (saveButton != null) saveButton.setEnabled(false);
             }
 
             @Override
@@ -496,6 +501,9 @@ public class B2508NewItemFragement extends DialogFragment {
                             .show();
 
                 } else {
+                    saving = false;
+                    View saveButton = getView() == null ? null : getView().findViewById(R.id.b2508_new_save);
+                    if (saveButton != null) saveButton.setEnabled(true);
 
                     // ❌ Thông báo lỗi
                     new AlertDialog.Builder(getContext())

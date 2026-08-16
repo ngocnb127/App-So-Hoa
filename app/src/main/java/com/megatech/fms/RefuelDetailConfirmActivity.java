@@ -78,7 +78,7 @@ import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RefuelDetailConfirmActivity extends UserBaseActivity implements View.OnClickListener {
+public class RefuelDetailConfirmActivity extends UserBaseActivity implements View.OnClickListener, UpdateSensitiveScreen {
     private LCRWorker lcrWorker ;
 
     @Override
@@ -146,6 +146,7 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
             RefuelItemData itemData = null;
             if (mData != null && !mData.equals("")) {
                 itemData = RefuelItemData.fromJson(mData);
+                com.megatech.fms.helpers.RefuelIntent.restoreBaseline(itemData, b);
             }
 
             if (itemData != null ) {
@@ -437,7 +438,7 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         else {
             //sendScreenshot();
 
-            Logger.appendLog(LOG_TAG,"StartNumber: "+ mItem.getStartNumber() + " EndNumber: "+ mItem.getEndNumber() + " RealAmount: "+ mItem.getRealAmount() +" Temperature: "+ mItem.getManualTemperature() + " Density: "+ mItem.getDensity());
+            Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
             postData();
         }
     }
@@ -496,6 +497,19 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         updateBinding();
     }
 
+    /**
+     * Số đồng hồ là {@code double} và vượt 10^7, nên nối chuỗi thẳng sẽ ra ký hiệu khoa học
+     * ({@code 1.585646E7} thay vì {@code 15856460}) — đọc log rất dễ tưởng dữ liệu bị sai.
+     * Dùng cùng định dạng với log của DataHelper để hai nơi đối chiếu được với nhau.
+     */
+    private static String formatMeterLog(com.megatech.fms.model.RefuelItemData item) {
+        if (item == null) return "(null item)";
+        return String.format(java.util.Locale.US,
+                "StartNumber: %.0f EndNumber: %.0f RealAmount: %.0f Temperature: %.1f Density: %.4f",
+                item.getStartNumber(), item.getEndNumber(), item.getRealAmount(),
+                item.getManualTemperature(), item.getDensity());
+    }
+
     private final String LOG_TAG = "RFC";
     private void postData()
     {
@@ -512,7 +526,7 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
             @Override
             protected RefuelItemData doInBackground(Void... voids) {
                 Logger.appendLog(LOG_TAG, "Post item " + mItem.getId() + " UniqueId: " + mItem.getUniqueId());
-                Logger.appendLog(LOG_TAG,"StartNumber: "+ mItem.getStartNumber() + " EndNumber: "+ mItem.getEndNumber() + " RealAmount: "+ mItem.getRealAmount() +" Temperature: "+ mItem.getManualTemperature() + " Density: "+ mItem.getDensity());
+                Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
 
                 mItem = DataHelper.postRefuel(mItem,false);
                 return mItem;

@@ -60,6 +60,7 @@ import com.megatech.fms.databinding.SelectUserBinding;
 import com.megatech.fms.enums.INVOICE_TYPE;
 import com.megatech.fms.enums.RETURN_UNIT;
 import com.megatech.fms.exceptions.InvalidRefuelTimeException;
+import com.megatech.fms.helpers.BM2505Factory;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.Logger;
@@ -74,6 +75,7 @@ import com.megatech.fms.model.ProductModel;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.ReceiptModel;
 import com.megatech.fms.model.RefuelItemData;
+import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 import com.megatech.fms.view.AirlineArrayAdapter;
 import com.megatech.fms.view.BM2505ArrayAdapter;
@@ -100,7 +102,7 @@ import static com.megatech.fms.helpers.PrintWorker.PRINT_MODE;
 import static com.megatech.fms.helpers.PrintWorker.PrintStateListener;
 import static com.megatech.fms.model.RefuelItemData.GALLON_TO_LITTER;
 
-public class RefuelPreviewActivity extends UserBaseActivity implements View.OnClickListener {
+public class RefuelPreviewActivity extends UserBaseActivity implements View.OnClickListener, OnBM2505SavedListener {
 
     private PrintWorker printWorker;
     private final int REFUEL_WINDOW = 1;
@@ -401,7 +403,12 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
             setContentView(extractBinding.getRoot());
 
-
+            // Phiếu 75.01 nhập được ở mọi bản; riêng nút in nằm trong màn hình phiếu
+            // và chỉ hiện ở chế độ in nhiệt (docs/PLAN-BM7501 §17).
+            View btnOpen7501 = findViewById(R.id.btnOpen7501);
+            if (btnOpen7501 != null) {
+                btnOpen7501.setVisibility(View.VISIBLE);
+            }
         }
 
 
@@ -502,6 +509,17 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         }
 
         DataHelper.lockSync();
+    }
+
+    /** Mở phiếu BM 75.01 của ĐÚNG mẻ hút đang xem — phiếu và mẻ là quan hệ một-một. */
+    private void openBM7501() {
+        if (refuelData == null || refuelData.getUniqueId() == null) {
+            showErrorMessage(R.string.bm7501_missing_refuel);
+            return;
+        }
+        Intent intent = new Intent(this, B7501Activity.class);
+        intent.putExtra(B7501Activity.EXTRA_REFUEL_UNIQUE_ID, refuelData.getUniqueId());
+        startActivity(intent);
     }
 
     private boolean oldTemplate = true;
@@ -1097,6 +1115,10 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 isSplit = true;
                 showEditDialog(R.id.refuel_preview_invoice_number, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, true);
                 break;
+            case R.id.btnOpen7501:
+                openBM7501();
+                break;
+
             case R.id.btnBack:
                 exit();
                 break;
@@ -1120,21 +1142,13 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
             case R.id.btnLeave:
                 Button btnLeave = (Button) v;
+                // Chỉ khoá nút trong lúc chờ; ẩn nút và hiện nhãn sau khi biết đã lưu được.
                 btnLeave.setEnabled(false);
-                btnLeave.setVisibility(View.GONE);
 
-                // Ghi lại thời gian hiện tại
-                Date nowLeave = new Date();
-                refuelData.setLeaveTime(nowLeave);
-
-                // Hiển thị label
-                TextView lblLeaveTime = findViewById(R.id.lblLeaveTime);
-                String leaveTimeStr = DateUtils.formatDate(nowLeave, "dd/MM/yyyy HH:mm:ss");
-                lblLeaveTime.setText("Rời đi: " + leaveTimeStr);
-                lblLeaveTime.setVisibility(View.VISIBLE);
-
-                // Lưu xuống server/local DB
-                updateBinding();
+                // Chỉ patch LeaveTime trên bản ghi mới nhất trong Room. Trước đây chỗ này
+                // gọi updateBinding() -> postRefuels(allItems), tức POST lại toàn bộ snapshot
+                // đang giữ trên màn hình và ghi đè số liệu đồng hồ vừa chốt.
+                saveLeaveTime(new Date(), btnLeave);
                 break;
         }
 
@@ -1145,35 +1159,27 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         finish();
     }
 
-    public List<FlightModel> flightList = null;
-    private List<BM2505Model> dataList;
-    public List<BM2505ContainerModel> containerList;
-    public List<UserModel> userListbm2505 = null;
     boolean isSplit = false;
     public Date selectedDate = new Date();
+
     private void openNew() {
+        // Ngữ cảnh của phiếu; master data (sân bay, nhân viên, chuyến bay, loại bồn)
+        // do B2505NewItemFragement tự tải nên không còn phụ thuộc list bất đồng bộ của activity.
+        Bundle args = new Bundle();
+        args.putInt(BM2505Factory.ARG_TRUCK_ID, FMSApplication.getApplication().getTruckId());
+        args.putInt(BM2505Factory.ARG_AIRPORT_ID, BM2505Factory.getAccountAirportId());
+        args.putInt(BM2505Factory.ARG_FLIGHT_ID, refuelData.getFlightId());
+        args.putString(BM2505Factory.ARG_FLIGHT_CODE, refuelData.getFlightCode());
+        args.putString(BM2505Factory.ARG_AIRCRAFT_CODE, refuelData.getAircraftCode());
+
         FragmentManager fm = getSupportFragmentManager();
-        BM2505Model model = new BM2505Model();
-        model.flightCode = refuelData.getFlightCode();
-        model.aircraftCode = refuelData.getAircraftCode();
-        model.setFlightId(refuelData.getFlightId());
-        model.setTime(new Date());
-        model.setOperatorId(FMSApplication.getApplication().getUser().getUserId());
-        model.setTruckId(FMSApplication.getApplication().getTruckId());
-        B2505NewItemFragement newItemFragement = new B2505NewItemFragement(model);
-        newItemFragement.show(fm, "fragment_edit_name");
-        // setProgressDialog();
-        //String mData = b.getString("REFUEL", "");
-        new AsyncTask<Void, Void, List<BM2505Model>>() {
-            @Override
-            protected List<BM2505Model> doInBackground(Void... voids) {
-                userListbm2505 = DataHelper.getUsers();
-                flightList =  DataHelper.getFlights();
-                containerList = DataHelper.getBM2505ContainerList();
-                List<BM2505Model> lst = DataHelper.getBM2505List(selectedDate);
-                return lst;
-            }
-        }.execute();
+        B2505NewItemFragement.newInstance(args).show(fm, "fragment_edit_name");
+    }
+
+    @Override
+    public void onBM2505Saved(BM2505Model model) {
+        // Màn hình xem trước không hiển thị danh sách BM2505 nên không cần tải lại dữ liệu.
+        // Thông báo kết quả lưu đã do fragment đảm nhiệm.
     }
     private void showSplit() {
         isSplit = true;
@@ -1340,21 +1346,62 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void doRefuel() {
         if (refuelData != null) {
-            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
-
-            String data = gson.toJson(refuelData);
-
             Intent intent = new Intent(this, RefuelDetailActivity.class);
-            intent.putExtra("REFUEL", data);
+            com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
             startActivityForResult(intent, REFUEL_WINDOW);
             finish();
         }
+    }
+
+    /**
+     * Mẻ đã xuất hoá đơn hoặc đã kết xuất dữ liệu thì khoá sửa trên máy tính bảng, vì server
+     * đóng băng nhóm sản lượng của những mẻ này (chỉ còn nhận số đồng hồ): nếu vẫn cho sửa thì
+     * người dùng tưởng đã sửa xong trong khi hệ thống không nhận, và bản ghi trên server còn
+     * thành mâu thuẫn giữa chỉ số đồng hồ với sản lượng.
+     *
+     * <p>Chỉ xét {@code invoiceNumber} và {@code exported}. Ba dấu hiệu còn lại đều KHÔNG phải
+     * bằng chứng đã xuất chứng từ:
+     * <ul>
+     *   <li>{@code printed} bật ngay khi máy in báo xong, trước lúc nhập số chứng từ — in thử,
+     *       in hỏng hay huỷ hộp thoại đều để lại cờ này;</li>
+     *   <li>{@code receiptNumber} do server cấp sẵn cho mẻ, có từ khi mẻ còn chưa tra nạp xong
+     *       (đối chiếu dữ liệu máy DEMO-03 ngày 11/08: mẻ Status=0 đã mang số 26194DV);</li>
+     *   <li>{@code receiptCount} về 0 sau khi đồng bộ nên không phản ánh được số lần đã in.</li>
+     * </ul>
+     */
+    private boolean isDocumentIssued() {
+        if (refuelData == null) return false;
+        return !isNullOrEmpty(refuelData.getInvoiceNumber())
+                || refuelData.isExported();
+    }
+
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    /**
+     * @return true nếu thao tác sửa bị chặn (đã hiện thông báo tương ứng cho người dùng).
+     */
+    private boolean blockEditIfLocked() {
+        if (isDocumentIssued()) {
+            showErrorMessage(R.string.edit_locked_after_print);
+            return true;
+        }
+        if (!isEditable) {
+            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+            return true;
+        }
+        return false;
     }
 
     private List<UserModel> userList = null;
 
     private void showSelectUser() {
 
+        if (isDocumentIssued()) {
+            showErrorMessage(R.string.edit_locked_after_print);
+            return;
+        }
         if (!isEditable && !BuildConfig.FHS) {
             Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
             return;
@@ -1445,6 +1492,54 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private final String LOG_TAG = "PRW";
 
+    /**
+     * Lưu giờ rời đi mà không đụng tới business payload của phiếu.
+     * Giao diện chỉ đổi sau khi biết kết quả ghi, thất bại thì trả nút về trạng thái cũ.
+     */
+    private void saveLeaveTime(final Date leaveTime, final Button btnLeave) {
+        final String uniqueId = refuelData != null ? refuelData.getUniqueId() : null;
+        if (uniqueId == null || uniqueId.isEmpty()) {
+            btnLeave.setEnabled(true);
+            return;
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final DataHelper.PatchResult result = DataHelper.patchRefuel(uniqueId,
+                        latest -> latest.setLeaveTime(leaveTime));
+
+                Logger.appendLog(LOG_TAG, "patch LeaveTime uid=" + uniqueId
+                        + " applied=" + result.applied
+                        + (result.applied ? "" : " reason=" + result.reason));
+
+                runOnUiThread(() -> {
+                    if (!result.applied) {
+                        btnLeave.setEnabled(true);
+                        showErrorMessage(R.string.save_leave_time_failed);
+                        return;
+                    }
+
+                    if (result.data != null)
+                        refuelData = result.data;
+
+                    btnLeave.setVisibility(View.GONE);
+
+                    TextView lblLeaveTime = findViewById(R.id.lblLeaveTime);
+                    lblLeaveTime.setText("Rời đi: "
+                            + DateUtils.formatDate(leaveTime, "dd/MM/yyyy HH:mm:ss"));
+                    lblLeaveTime.setVisibility(View.VISIBLE);
+
+                    if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
+                        binding.invalidateAll();
+                        truckArrayAdapter.notifyDataSetChanged();
+                    } else
+                        extractBinding.invalidateAll();
+                });
+            }
+        }).start();
+    }
+
     private void updateBinding() {
         updateBinding(true);
     }
@@ -1476,10 +1571,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private PRINT_MODE printMode = PRINT_MODE.ALL_ITEM;
 
     private void openVatSpinner() {
-        if (!isEditable) {
-            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
-            return;
-        }
+        if (blockEditIfLocked()) return;
         String[] vat_array = getResources().getStringArray(R.array.vat_array);
         int pos = Arrays.asList(vat_array).indexOf(String.format("%.0f%%", refuelData.getTaxRate() * 100));
         AlertDialog.Builder b = new AlertDialog.Builder(this);
@@ -1501,10 +1593,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private void openProductSpinner() {
-        if (!isEditable) {
-            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
-            return;
-        }
+        if (blockEditIfLocked()) return;
 
         if (productList == null || productList.isEmpty()) {
             Toast.makeText(this, R.string.no_product_found, Toast.LENGTH_SHORT).show();
@@ -1732,10 +1821,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void showEditDialog(final int id, int inputType, String pattern, boolean required) {
 
-        if (!isEditable && !isSplit) {
-            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
-            return;
-        }
+        // Tách phiếu tạo ra mẻ mới nên vẫn cho nhập; các trường hợp còn lại theo khoá chung.
+        if (!isSplit && blockEditIfLocked()) return;
 
         Context context = this;
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -1989,19 +2076,67 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             }
         }*/
 
-        for (RefuelItemData item : printItems) {
-            item.setReceiptNumber(receiptNumber);
-            item.setReceiptUniqueId(uniqueId);
-            item.setWeightNote(String.format("%.0f",techlog));
-            item.setReceiptCount(item.getReceiptCount() + 1);
-            item.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
+        // CHỈ ghi các trường của receipt lên bản ghi MỚI NHẤT trong Room.
+        // Trước đây chỗ này POST lại toàn bộ snapshot đang giữ trên màn hình: nếu snapshot
+        // đã cũ (ví dụ bản server kéo về lúc mở Preview) thì số đồng hồ vừa chốt bị ghi đè —
+        // đúng sự cố 4940 bị kéo về 4922 trong log ngày 29/07.
+        new Thread(() -> patchAllPrintItems("receipt", latest -> {
+            latest.setReceiptNumber(receiptNumber);
+            latest.setReceiptUniqueId(uniqueId);
+            latest.setWeightNote(String.format("%.0f", techlog));
+            latest.setReceiptCount(latest.getReceiptCount() + 1);
+            latest.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
+        })).start();
 
-        }
-
-        new Thread(() -> DataHelper.postRefuels(printItems, true)).start();
         truckArrayAdapter.notifyDataSetChanged();
         binding.invalidateAll();
         return true;
+    }
+
+    /**
+     * Patch cùng một nhóm trường metadata lên tất cả phiếu đang in.
+     *
+     * <p>Mỗi phiếu được đọc lại từ Room rồi mới sửa, nên không có snapshot cũ nào của màn
+     * hình chen vào ghi đè dữ liệu nghiệp vụ. Kết quả được đưa ngược về object trên màn hình
+     * để lần thao tác sau đứng trên đúng phiên bản.
+     */
+    private void patchAllPrintItems(String what, DataHelper.RefuelPatch patch) {
+        for (RefuelItemData item : printItems) {
+            String uniqueId = item.getUniqueId();
+            DataHelper.PatchResult result = DataHelper.patchRefuel(uniqueId, patch);
+
+            Logger.appendLog(LOG_TAG, "patch " + what + " uid=" + uniqueId
+                    + " applied=" + result.applied
+                    + (result.applied ? "" : " reason=" + result.reason));
+
+            if (result.applied && result.data != null)
+                syncScreenCopy(result.data);
+            else
+                runOnUiThread(() -> showErrorMessage(R.string.save_print_info_failed));
+        }
+        DataHelper.Synchronize();
+    }
+
+    /** Đưa bản ghi vừa lưu về các object đang hiển thị để chúng không còn đứng trên bản cũ. */
+    private void syncScreenCopy(RefuelItemData saved) {
+        if (refuelData != null && saved.getUniqueId() != null
+                && saved.getUniqueId().equals(refuelData.getUniqueId()))
+            refuelData = saved;
+
+        for (int i = 0; i < allItems.size(); i++) {
+            if (saved.getUniqueId() != null
+                    && saved.getUniqueId().equals(allItems.get(i).getUniqueId()))
+                allItems.set(i, saved);
+        }
+        for (int i = 0; i < printItems.size(); i++) {
+            if (saved.getUniqueId() != null
+                    && saved.getUniqueId().equals(printItems.get(i).getUniqueId()))
+                printItems.set(i, saved);
+        }
+        runOnUiThread(() -> {
+            truckArrayAdapter.notifyDataSetChanged();
+            binding.invalidateAll();
+        });
     }
 
     private boolean updateAllInvoice(String invoiceNumber) {
@@ -2015,27 +2150,19 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             }
         }
 
-        for (RefuelItemData item : printItems) {
-            item.setInvoiceNumber(invoiceNumber);
-            item.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
+        final double price = refuelData.getPrice();
+        final double taxRate = refuelData.getTaxRate();
 
-            item.setPrice(refuelData.getPrice());
-            item.setTaxRate(refuelData.getTaxRate());
-            item.setPrintTemplate(printTemplate);
-            item.setInvoiceFormId(formId);
-
-            item.setWeightNote(String.format("%.0f",techlog));
-            item.setLocalModified(true);
-
-            //item.setInvoiceModel(invoiceModel);
-
-        }
-
-
-        new Thread(() -> {
-
-            DataHelper.postRefuels(printItems, true);
-        }).start();
+        // Cùng lý do với receipt: chỉ ghi các trường của hoá đơn lên bản ghi mới nhất.
+        new Thread(() -> patchAllPrintItems("invoice", latest -> {
+            latest.setInvoiceNumber(invoiceNumber);
+            latest.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
+            latest.setPrice(price);
+            latest.setTaxRate(taxRate);
+            latest.setPrintTemplate(printTemplate);
+            latest.setInvoiceFormId(formId);
+            latest.setWeightNote(String.format("%.0f", techlog));
+        })).start();
         if (printDialog != null)
             printDialog.dismiss();
         truckArrayAdapter.notifyDataSetChanged();
@@ -2188,12 +2315,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void postRefuelCompleted(RefuelItemData itemData) {
         if (itemData != null) {
-            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
-
-            String data = gson.toJson(itemData);
-
             Intent intent = new Intent(this, RefuelDetailActivity.class);
-            intent.putExtra("REFUEL", data);
+            com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, itemData);
             startActivityForResult(intent, REFUEL_WINDOW);
             finish();
         }

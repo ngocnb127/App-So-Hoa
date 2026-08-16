@@ -131,6 +131,109 @@ public class RefuelItemData extends BaseModel implements Cloneable {
     private long clientSeq = 0;
     private int serverRevision = 0;
 
+    /**
+     * Cờ tường minh của server: gói vừa POST có được ghi hay không.
+     *
+     * <p>{@code null} nghĩa là server CHƯA hỗ trợ trường này — khi đó phải suy đoán bằng
+     * cách đối chiếu giá trị chốt (xem {@link com.megatech.fms.helpers.RefuelSyncGuard#describeAck}).
+     * Không được coi {@code null} là {@code false}: nhầm như vậy sẽ đẩy toàn bộ phiếu vào
+     * trạng thái conflict trên mọi bản server cũ.
+     */
+    private Boolean applied;
+
+    /** Lý do server từ chối, chỉ có nghĩa khi {@link #applied} là {@code false}. */
+    private String rejectReason;
+
+    /**
+     * JSON NGUYÊN BẢN của bản ghi do server trả về, gắn thủ công tại tầng HTTP.
+     *
+     * <p>Cần thiết cho việc trộn theo quyền sở hữu trường: chỉ chuỗi thô mới phân biệt được
+     * "server không gửi trường này" (khoá vắng mặt) với "server xoá trường này" (khoá có mặt,
+     * giá trị null). Đi qua model là mất phân biệt đó, vì trường vắng mặt biến thành giá trị
+     * mặc định — đúng cơ chế đã làm FlightId về 0 và phiếu rơi khỏi chuyến bay.
+     *
+     * <p>{@code transient}: Gson bỏ qua ở cả hai chiều nên không bao giờ lọt vào jsonData
+     * lưu trong Room hay payload gửi lên server.
+     */
+    private transient String rawJson;
+
+    public Boolean getApplied() {
+        return applied;
+    }
+
+    public void setApplied(Boolean applied) {
+        this.applied = applied;
+    }
+
+    public String getRejectReason() {
+        return rejectReason;
+    }
+
+    public void setRejectReason(String rejectReason) {
+        this.rejectReason = rejectReason;
+    }
+
+    public String getRawJson() {
+        return rawJson;
+    }
+
+    public void setRawJson(String rawJson) {
+        this.rawJson = rawJson;
+    }
+
+    /**
+     * Phiên bản của bản ghi tại thời điểm snapshot này được đọc ra khỏi Room.
+     * Dùng làm precondition khi lưu: nếu row đã đổi so với lúc màn hình mở thì
+     * đây là conflict, không được lặng lẽ ghi đè.
+     *
+     * <p>{@code transient} — không serialize vào jsonData cũng như payload HTTP;
+     * giá trị luôn được đóng dấu lại từ cột entity mỗi lần dựng model.
+     * {@link #VERSION_UNKNOWN} nghĩa là snapshot không đến từ một row đã lưu.
+     */
+    public static final long VERSION_UNKNOWN = -1;
+
+    private transient long baseClientSeq = VERSION_UNKNOWN;
+    private transient int baseServerRevision = (int) VERSION_UNKNOWN;
+
+    /**
+     * Vân tay của payload nghiệp vụ tại thời điểm snapshot được đọc.
+     *
+     * <p>Chỉ có version là không đủ: Web/GET có thể sửa payload và tăng ServerRevision
+     * mà giữ nguyên ClientSeq. Fingerprint cho phép phân biệt "server chỉ cấp thêm
+     * metadata" (được rebase) với "dữ liệu nền đã bị đổi" (phải conflict).
+     *
+     * <p>{@code transient} — không serialize vào jsonData lẫn payload HTTP.
+     */
+    private transient String baseBusinessFingerprint;
+
+    public String getBaseBusinessFingerprint() {
+        return baseBusinessFingerprint;
+    }
+
+    public void setBaseBusinessFingerprint(String baseBusinessFingerprint) {
+        this.baseBusinessFingerprint = baseBusinessFingerprint;
+    }
+
+    public long getBaseClientSeq() {
+        return baseClientSeq;
+    }
+
+    public void setBaseClientSeq(long baseClientSeq) {
+        this.baseClientSeq = baseClientSeq;
+    }
+
+    public int getBaseServerRevision() {
+        return baseServerRevision;
+    }
+
+    public void setBaseServerRevision(int baseServerRevision) {
+        this.baseServerRevision = baseServerRevision;
+    }
+
+    public boolean hasBaseVersion() {
+        return baseClientSeq != VERSION_UNKNOWN;
+    }
+
     public long getClientSeq() {
         return clientSeq;
     }
@@ -171,11 +274,31 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         uniqueId = UUID.randomUUID().toString();
     }
 
+    /**
+     * Dựng lại model từ JSON.
+     *
+     * <p>Baseline (version + vân tay payload nền) KHÔNG nằm trong JSON và cũng không được
+     * suy ra ở đây: vân tay tính lúc parse là vân tay của payload người dùng đang sửa, không
+     * phải của bản nền đã đọc từ Room. Baseline phải đi kèm riêng — xem {@code RefuelIntent}.
+     */
     public static RefuelItemData fromJson(String jsonData) {
         RefuelItemData item = gson.fromJson(jsonData, RefuelItemData.class);
         if (item.getUniqueId() == null || item.getUniqueId().isEmpty())
             item.setUniqueId( UUID.randomUUID().toString());
+
+        // KHÔNG đóng dấu baseline ở đây: fingerprint tính tại thời điểm parse là vân tay của
+        // payload NGƯỜI DÙNG ĐANG SỬA, không phải của bản nền đã đọc từ Room. Baseline phải
+        // được truyền riêng (xem RefuelIntent) để snapshot qua Intent vẫn lưu được.
         return  item;
+    }
+
+    /**
+     * Bản sao thuần từ JSON, KHÔNG đóng dấu baseline — dùng cho việc chuẩn hoá/so sánh.
+     * Nếu dùng {@link #fromJson(String)} ở đó sẽ thành đệ quy vô hạn, vì fromJson lại
+     * đi tính fingerprint.
+     */
+    public RefuelItemData deepCopyRaw() {
+        return gson.fromJson(this.toJson(), RefuelItemData.class);
     }
 
     public RefuelItemData copy()
@@ -879,7 +1002,13 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         isSplit = split;
     }
 
-    private String flightUniqueId = UUID.randomUUID().toString();
+    /**
+     * KHÔNG khởi tạo bằng UUID ngẫu nhiên: JSON cũ thiếu FlightUniqueId sẽ nhận một giá trị
+     * khác nhau ở mỗi lần đọc, làm vân tay payload mất ổn định (cùng một row bị nhận nhầm là
+     * CONFLICT_PAYLOAD_CHANGED) và còn ghi UUID rác xuống Room. UUID chỉ được cấp ở luồng
+     * tạo phiếu mới có chủ đích (NewRefuelActivity).
+     */
+    private String flightUniqueId;
 
     public String getFlightUniqueId() {
         return flightUniqueId;
@@ -1093,14 +1222,21 @@ public class RefuelItemData extends BaseModel implements Cloneable {
     }
 
     // Thêm 2 field
+    /** Số bán hàng: SALENUMBER của LCR, hoặc số ticket của TCS. */
     private String saleNumber = "";
+
+    /**
+     * Số ticket đọc từ đồng hồ. LCR có cả SALENUMBER và TICKETNUMBER và chúng KHÁC nhau;
+     * TCS chỉ có một số nên hai trường bằng nhau. Lưu vào từng mẻ để in lại được mà không
+     * cần hỏi lại thiết bị.
+     */
     private String ticketNumber = "";
 
     // Thêm Getters & Setters
     public String getSaleNumber() { return saleNumber; }
     public void setSaleNumber(String saleNumber) { this.saleNumber = saleNumber; }
 
-    public String getTicketNumber() { return ticketNumber; }
+    public String getTicketNumber() { return ticketNumber == null ? "" : ticketNumber; }
     public void setTicketNumber(String ticketNumber) { this.ticketNumber = ticketNumber; }
 
 

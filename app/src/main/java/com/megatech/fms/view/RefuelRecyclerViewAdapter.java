@@ -56,10 +56,10 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
     public RefuelRecyclerViewAdapter(UserBaseActivity mContext, List<RefuelItemData> mData) {
         this.mContext = mContext;
-        // ✅ FIX 1: Initialize with empty list if null is passed
-        this.mData = (mData != null) ? mData : new ArrayList<>();
-        // ✅ FIX 2: Ensure mDataFiltered is never null
-        this.mDataFiltered = (mData != null) ? mData : new ArrayList<>();
+        // Giữ bản sao riêng: adapter sống lâu hơn một lần làm mới và setData() có clear() danh
+        // sách này, không được đụng vào list mà phía gọi đang giữ.
+        this.mData = (mData != null) ? new ArrayList<>(mData) : new ArrayList<>();
+        this.mDataFiltered = new ArrayList<>(this.mData);
         /*timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -181,13 +181,15 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
     }
 
     /**
-     * ✅ FIX 6: Public method to safely update data
+     * Cập nhật dữ liệu tại chỗ, giữ nguyên vị trí cuộn.
+     *
+     * <p>Dùng thay cho việc dựng adapter mới rồi setAdapter() — setAdapter() đưa danh sách về
+     * đầu, khiến người dùng mất chuyến đang định chọn mỗi lần đồng bộ chạy.
      */
     public void setData(List<RefuelItemData> newData) {
+        List<RefuelItemData> copy = (newData != null) ? new ArrayList<>(newData) : new ArrayList<>();
         this.mData.clear();
-        if (newData != null) {
-            this.mData.addAll(newData);
-        }
+        this.mData.addAll(copy);
         this.mDataFiltered = new ArrayList<>(this.mData);
         notifyDataSetChanged();
     }

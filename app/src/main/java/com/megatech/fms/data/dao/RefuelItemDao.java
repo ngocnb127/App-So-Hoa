@@ -74,6 +74,14 @@ public interface RefuelItemDao {
     @Query("Select * from RefuelItem where isLocalModified OR id = 0")
     List<RefuelItem> getModified();
 
+    /**
+     * Hàng đợi đồng bộ tự động: bỏ qua các row đang giữ conflict (postStatus = ERROR = 2).
+     * Dữ liệu local của chúng vẫn nguyên vẹn và vẫn isLocalModified; chúng chỉ quay lại
+     * hàng đợi khi người dùng sửa/lưu lại (xem DataHelper.resumeSync).
+     */
+    @Query("Select * from RefuelItem where (isLocalModified OR id = 0) AND postStatus <> 2")
+    List<RefuelItem> getModifiedForSync();
+
     @Query("Select Max(dateUpdated) from RefuelItem ")
     Date getLastModifiedDate();
 
@@ -105,4 +113,23 @@ public interface RefuelItemDao {
 
 
 
+
+    /**
+     * Dọn theo hạn lưu. Không đụng bản ghi còn thay đổi chưa gửi hoặc chưa có id server:
+     * đó là dữ liệu chỉ tồn tại trên máy này.
+     */
+    @Query("DELETE FROM RefuelItem WHERE NOT isLocalModified AND id > 0 AND refuelTime < :cutoff")
+    int deleteOlderThan(long cutoff);
+
+    /**
+     * Đưa các row đang giữ conflict trở lại hàng đợi đồng bộ.
+     *
+     * <p>{@code postStatus = 2} (ERROR) loại row khỏi {@link #getModifiedForSync()} cho tới khi
+     * người dùng mở ra sửa lại. Luật ACK cũ gắn cờ đó cho gần như mọi phiếu đã POST, nên sau khi
+     * sửa luật phải có một lần dọn — nếu không, phiếu cũ vẫn phải gõ tay dù bản vá đã cài.
+     *
+     * @return số row được đưa trở lại hàng đợi
+     */
+    @Query("UPDATE RefuelItem SET postStatus = 0 WHERE postStatus = 2")
+    int resumeConflictedRows();
 }

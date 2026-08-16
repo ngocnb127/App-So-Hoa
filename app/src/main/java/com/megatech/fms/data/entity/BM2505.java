@@ -27,6 +27,9 @@ public class BM2505 extends BaseEntity {
 
         BM2505Model model = gson.fromJson(this.getJsonData(), BM2505Model.class);
         model.setLocalId(this.getLocalId());
+        // id trong jsonData có thể còn là 0 (bản ghi tạo offline, sau đó mới được server cấp id),
+        // lấy theo entity để lần lưu sau là cập nhật chứ không tạo bản ghi mới.
+        model.setId(this.getId());
         model.setDeleted(this.isDeleted());
         return model;
 

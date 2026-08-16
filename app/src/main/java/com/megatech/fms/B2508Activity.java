@@ -32,7 +32,6 @@ import com.megatech.fms.databinding.ActivityInvoiceBinding;
 import com.megatech.fms.databinding.B2508FormBinding;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
-import com.megatech.fms.helpers.FileUploader;
 import com.megatech.fms.helpers.HttpResponse;
 import com.megatech.fms.helpers.ImageUtil;
 import com.megatech.fms.helpers.Logger;
@@ -58,7 +57,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class B2508Activity extends DateBaseActivity implements View.OnClickListener {
+public class B2508Activity extends DateBaseActivity implements View.OnClickListener, UpdateSensitiveScreen {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -154,7 +153,10 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
         return rootView.getDrawingCache();
     }
     private boolean autoNumber = true;
+    private boolean savingBM2508;
     private void save() {
+        if (savingBM2508) return;
+        savingBM2508 = true;
         Logger.appendLog("RECEIPT_WINDOW", "save receipt " + modelb2508.getNumber());
         setProgressDialog();
         sendScreenshot();
@@ -176,6 +178,7 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
 
     }
     private void postCompleted() {
+        savingBM2508 = false;
         closeProgressDialog();
         Logger.appendLog("RECEIPT_WINDOW", "save receipt completed " + modelb2508.getNumber());
         Intent returnIntent = new Intent();

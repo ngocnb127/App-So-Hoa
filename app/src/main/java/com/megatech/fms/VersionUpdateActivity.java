@@ -1,20 +1,14 @@
 package com.megatech.fms;
 
-import static com.megatech.fms.BuildConfig.API_BASE_URL;
-
-import android.Manifest;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.StrictMode;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -24,7 +18,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.megatech.fms.helpers.HttpClient;
+import com.megatech.fms.helpers.AppVersionInfo;
+import com.megatech.fms.helpers.VersionCheckManager;
+import com.megatech.fms.helpers.update.ApkValidator;
+import com.megatech.fms.helpers.update.UpdateChannel;
+import com.megatech.fms.helpers.update.UpdateSafetyGuard;
+import com.megatech.fms.helpers.update.UpdateStatus;
+import com.megatech.fms.helpers.update.ValidatedApk;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,18 +40,11 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
     public static final String PACKAGE_INSTALLED_ACTION =
             "com.megatech.fms.SESSION_API_PACKAGE_INSTALLED";
 
-    private static final int REQUEST_WRITE_PERMISSION = 1001;
     private static final int REQ_UNKNOWN_SOURCES = 1002;
 
-    private String update_url;
-    private String lastDownloadedPath;
-
-    /** FIX 6: nối URL an toàn, tránh "//" khi API_BASE_URL kết thúc bằng "/" */
-    private static String joinUrl(String base, String path) {
-        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
-        if (path.startsWith("/")) path = path.substring(1);
-        return base + "/" + path;
-    }
+    /** Phiên bản máy chủ công bố ở lần kiểm tra thành công gần nhất. */
+    private AppVersionInfo serverVersion;
+    private ValidatedApk pendingInstall;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,39 +52,77 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         setContentView(R.layout.activity_version_update);
 
         TextView txt = findViewById(R.id.info_dialog_version);
-        if (txt != null) txt.setText("Phiên bản: " + BuildConfig.VERSION_CODE + "-"+BuildConfig.PATCH_NUMBER );
+        if (txt != null) txt.setText("Phiên bản: " + BuildConfig.VERSION_CODE + "-"
+                + BuildConfig.BUILD_DATE + "." + BuildConfig.PATCH_NUMBER);
 
-        String versionFile = BuildConfig.THERMAL_PRINTER ? "files/thermalUpdate.txt" : "files/versionUpdate.txt";
-        String versionUrl = joinUrl(API_BASE_URL, versionFile);
-        Log.d(LOG_TAG, "Checking version from: " + versionUrl);
+        findViewById(R.id.btnUpdate).setEnabled(false);
 
-        new CheckVersionAsyncTask().execute(versionUrl);
+        VersionCheckManager.addListener(statusListener);
+        VersionCheckManager.forceCheck();
+    }
+
+    @Override
+    protected void onDestroy() {
+        VersionCheckManager.removeListener(statusListener);
+        super.onDestroy();
+    }
+
+    private final VersionCheckManager.Listener statusListener = this::renderStatus;
+
+    private void renderStatus(UpdateStatus status) {
+        if (isFinishing() || isDestroyed()) return;
+
+        TextView msg = findViewById(R.id.version_check_message);
+        Button btnUpdate = findViewById(R.id.btnUpdate);
+        if (msg == null || btnUpdate == null) return;
+
+        switch (status.phase) {
+            case CHECKING:
+                msg.setText(R.string.version_updating);
+                btnUpdate.setEnabled(false);
+                break;
+
+            case UPDATE_AVAILABLE:
+                serverVersion = status.metadata;
+                msg.setText(getString(R.string.new_version_available) + "\n" + status.metadata.raw);
+                btnUpdate.setEnabled(true);
+                break;
+
+            case UP_TO_DATE:
+                serverVersion = null;
+                msg.setText(R.string.newest_version_using);
+                btnUpdate.setEnabled(false);
+                break;
+
+            case CHECK_FAILED:
+                // Không hiển thị thông tin phiên bản của lần kiểm tra trước như thể nó
+                // đang sẵn sàng cài: chưa xác nhận được với máy chủ thì không cho tải.
+                serverVersion = null;
+                msg.setText(status.error != null ? status.error : getString(R.string.file_update_error));
+                btnUpdate.setEnabled(false);
+                break;
+
+            default:
+                btnUpdate.setEnabled(false);
+                break;
+        }
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.btnUpdate) {
-            Log.d(LOG_TAG, "Nút Cập nhật được bấm");
-            setUpdateButtonBusy(true);
-
-            if (!checkStoragePermission()) return;
-
-            if (update_url == null || update_url.trim().isEmpty()) {
-                Log.e(LOG_TAG, "Lỗi: update_url chưa được khởi tạo");
-                Toast.makeText(this, "URL cập nhật không hợp lệ", Toast.LENGTH_LONG).show();
-                setUpdateButtonBusy(false);
+            if (serverVersion == null) {
+                Toast.makeText(this, R.string.file_update_error, Toast.LENGTH_LONG).show();
                 return;
             }
-
-            Log.d(LOG_TAG, "Bắt đầu tải APK từ: " + update_url);
-            new UpdateAsyncTask().execute(update_url);
+            setUpdateButtonBusy(true);
+            new SafetyCheckTask().execute();
         } else if (id == R.id.btnBack) {
             finish();
         }
     }
 
-    /** FIX 5: gom quản lý trạng thái nút một chỗ, khôi phục đúng text khi lỗi */
     private void setUpdateButtonBusy(boolean busy) {
         Button btn = findViewById(R.id.btnUpdate);
         if (btn == null) return;
@@ -99,311 +130,227 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         btn.setText(busy ? R.string.version_updating : R.string.update_version);
     }
 
-    /*** Async: lấy version.txt / thermal.txt ***/
-    private final class CheckVersionAsyncTask extends AsyncTask<String, Integer, String> {
+    /**
+     * Kiểm tra dữ liệu nghiệp vụ trước khi tải. Truy vấn Room nên phải chạy nền.
+     */
+    private final class SafetyCheckTask extends AsyncTask<Void, Void, UpdateSafetyGuard.Decision> {
         @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            Log.d(LOG_TAG, "Đang tải nội dung từ: " + url);
-            HttpClient client = new HttpClient();
-            return client.getContent(url);
+        protected UpdateSafetyGuard.Decision doInBackground(Void... voids) {
+            return UpdateSafetyGuard.canInstallNow();
         }
 
         @Override
-        protected void onPostExecute(String versionInfo) {
-            if (versionInfo == null || versionInfo.trim().isEmpty()) {
-                Log.e(LOG_TAG, "Không nhận được dữ liệu version từ server");
-                TextView msg = findViewById(R.id.version_check_message);
-                if (msg != null) msg.setText(R.string.file_update_error);
+        protected void onPostExecute(UpdateSafetyGuard.Decision decision) {
+            if (isFinishing() || isDestroyed()) return;
+            if (!decision.safe) {
+                Toast.makeText(VersionUpdateActivity.this, decision.reason, Toast.LENGTH_LONG).show();
+                setUpdateButtonBusy(false);
                 return;
             }
-
-            versionInfo = versionInfo.trim().replace("\uFEFF", "");
-            Log.d(LOG_TAG, "Dữ liệu version nhận được: [" + versionInfo + "]");
-
-            try {
-                String[] info = versionInfo.split("-");
-                if (info.length < 3) {
-                    Log.e(LOG_TAG, "versionInfo sai định dạng (cần versionCode-patch-versionName): " + versionInfo);
-                    showErrorMessage(R.string.file_update_error);
-                    return;
-                }
-
-                long newVersionCode = Long.parseLong(info[0].trim());
-                long newPatchNumber = Long.parseLong(info[1].trim());
-                long currentVersionCode = BuildConfig.VERSION_CODE;
-                long currentPatchNumber = BuildConfig.PATCH_NUMBER;
-
-                update_url = joinUrl(API_BASE_URL, "files/" +
-                        (BuildConfig.THERMAL_PRINTER ? "thermal-" : "fms-release-") +
-                        versionInfo + ".apk");
-
-                Log.d(LOG_TAG, "So sánh: current=" + currentVersionCode + "." + currentPatchNumber
-                        + " | server=" + newVersionCode + "." + newPatchNumber
-                        + " -> update_url=" + update_url);
-
-                boolean hasUpdate = (newVersionCode > currentVersionCode)
-                        || (newVersionCode == currentVersionCode && newPatchNumber > currentPatchNumber);
-
-                TextView msg = findViewById(R.id.version_check_message);
-
-                if (hasUpdate) {   // ← ClickableSpan chuyển vào ĐÚNG chỗ này, nơi hasUpdate đã tồn tại
-                    String fullText = getString(R.string.new_version_available) + "\n" + update_url;
-                    android.text.SpannableString spannable = new android.text.SpannableString(fullText);
-
-                    int linkStart = fullText.indexOf(update_url);
-                    int linkEnd = linkStart + update_url.length();
-
-                    android.text.style.ClickableSpan clickableSpan = new android.text.style.ClickableSpan() {
-                        @Override
-                        public void onClick(@NonNull View widget) {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(update_url));
-                            startActivity(intent);
-                        }
-                    };
-                    spannable.setSpan(clickableSpan, linkStart, linkEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                    msg.setText(spannable);
-                    msg.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
-                    findViewById(R.id.btnUpdate).setEnabled(true);
-                } else {
-                    msg.setText(getString(R.string.newest_version_using));
-                }
-            } catch (Exception ex) {
-                Log.e(LOG_TAG, "Lỗi khi xử lý versionInfo", ex);
-                showErrorMessage(R.string.file_update_error);
-            }
+            new DownloadTask().execute(UpdateChannel.apkUrl(serverVersion.raw));
         }
     }
 
-    /*** Async: tải APK ***/
-    private final class UpdateAsyncTask extends AsyncTask<String, Integer, String> {
+    /**
+     * Tải APK vào file .part rồi mới đổi tên. Nếu ghi thẳng vào file đích, một lần mất mạng
+     * giữa chừng sẽ để lại APK cụt và lần cài sau đọc đúng file hỏng đó.
+     */
+    private final class DownloadTask extends AsyncTask<String, Void, File> {
         @Override
-        protected String doInBackground(String... urls) {
+        protected File doInBackground(String... urls) {
             HttpURLConnection conn = null;
+            File part = null;
             try {
-                URL url = new URL(urls[0]);
-                Log.d(LOG_TAG, "Kết nối đến: " + url);
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir != null && !dir.exists() && !dir.mkdirs()) {
+                    Log.e(LOG_TAG, "Không tạo được thư mục tải về");
+                    return null;
+                }
 
+                File dest = new File(dir, "fms-update.apk");
+                part = new File(dir, "fms-update.apk.part"); // cùng thư mục -> rename được
+
+                URL url = new URL(urls[0]);
+                Log.d(LOG_TAG, "Tải APK từ: " + url);
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "*/*");
-                // FIX 4: timeout - không set là treo vô hạn khi 4G chập chờn
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(60000);
                 conn.connect();
 
                 int code = conn.getResponseCode();
-                Log.d(LOG_TAG, "Response code: " + code);
-                if (code != 200) {
-                    Log.e(LOG_TAG, "Tải file thất bại. Mã lỗi HTTP: " + code);
+                if (code != HttpURLConnection.HTTP_OK) {
+                    Log.e(LOG_TAG, "Tải thất bại, HTTP " + code);
                     return null;
                 }
 
-                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                if (dir != null && !dir.exists()) dir.mkdirs();
-
-                File file = new File(dir, "fms-release.apk");
-                Log.d(LOG_TAG, "Lưu file về: " + file.getAbsolutePath());
-
+                long total = 0;
                 try (InputStream input = conn.getInputStream();
-                     FileOutputStream output = new FileOutputStream(file)) {
+                     FileOutputStream output = new FileOutputStream(part)) {
                     byte[] buffer = new byte[8192];
-                    int len, total = 0;
+                    int len;
                     while ((len = input.read(buffer)) > 0) {
                         output.write(buffer, 0, len);
                         total += len;
                     }
-                    Log.d(LOG_TAG, "Tải file thành công. Tổng bytes: " + total);
+                    output.flush();
+                    output.getFD().sync();
+                } // stream đóng hẳn trước khi đổi tên
+
+                if (total <= 0) {
+                    Log.e(LOG_TAG, "Tải về 0 byte");
+                    return null;
                 }
 
-                return file.getAbsolutePath();
+                // Xóa bản cũ có kiểm soát; rename không ghi đè được trên mọi hệ tệp.
+                if (dest.exists() && !dest.delete()) {
+                    Log.e(LOG_TAG, "Không xóa được APK cũ: " + dest);
+                    return null;
+                }
+                if (!part.renameTo(dest)) {
+                    Log.e(LOG_TAG, "Không đổi tên được " + part + " -> " + dest);
+                    return null;
+                }
+
+                Log.d(LOG_TAG, "Tải xong " + total + " byte -> " + dest);
+                return dest;
+
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Lỗi khi tải APK", e);
                 return null;
             } finally {
                 if (conn != null) conn.disconnect();
+                // File dở dang không bao giờ được để lại.
+                if (part != null && part.exists() && !part.delete()) {
+                    Log.w(LOG_TAG, "Không xóa được file tạm " + part);
+                }
             }
         }
 
         @Override
-        protected void onPostExecute(String filePath) {
-            if (filePath == null) {
-                Log.e(LOG_TAG, "Tải file không thành công, filePath null");
-                Toast.makeText(VersionUpdateActivity.this, "Không thể tải tệp cập nhật", Toast.LENGTH_LONG).show();
-                setUpdateButtonBusy(false);   // FIX 5
+        protected void onPostExecute(File apk) {
+            if (isFinishing() || isDestroyed()) return;
+            if (apk == null) {
+                Toast.makeText(VersionUpdateActivity.this,
+                        "Không thể tải tệp cập nhật", Toast.LENGTH_LONG).show();
+                setUpdateButtonBusy(false);
                 return;
             }
-            proceedInstall(filePath);
+            validateThenInstall(apk);
         }
     }
 
-    /** Gọi khi tải xong để tiến hành cài */
-    private void proceedInstall(String filePath) {
-        lastDownloadedPath = filePath;
-        if (!ensureCanInstallUnknownSources()) {
-            Log.w(LOG_TAG, "Chưa bật Install unknown apps -> mở Settings, chờ quay lại rồi retry.");
+    /**
+     * Không có đường nào đi thẳng từ file tải về tới trình cài đặt: installApp() chỉ nhận
+     * ValidatedApk, và chỉ ApkValidator tạo được kiểu đó.
+     */
+    private void validateThenInstall(File apk) {
+        try {
+            long expected = serverVersion != null ? serverVersion.versionCode : 0;
+            pendingInstall = ApkValidator.validate(this, apk, expected);
+        } catch (ApkValidator.ValidationException ex) {
+            Log.e(LOG_TAG, "APK không hợp lệ: " + ex.getMessage());
+            Toast.makeText(this, ex.getMessage(), Toast.LENGTH_LONG).show();
+            if (apk.exists() && !apk.delete()) {
+                Log.w(LOG_TAG, "Không xóa được APK không hợp lệ " + apk);
+            }
+            setUpdateButtonBusy(false);
             return;
         }
-        installApp(filePath);
+
+        if (!ensureCanInstallUnknownSources()) {
+            Log.w(LOG_TAG, "Chưa bật cài từ nguồn không xác định — mở Settings, chờ quay lại.");
+            return;
+        }
+        installApp(pendingInstall);
     }
 
-    /*** Cài APK ***/
-    private void installApp(String filePath) {
+    /**
+     * Cài bằng PackageInstaller trên mọi API level (API 21+ đã có). Bản trước chỉ dùng nó
+     * từ API 29 và rơi về ACTION_INSTALL_PACKAGE + Uri.fromFile kèm một thủ thuật
+     * StrictMode để né FileUriExposedException; đường đó đã bỏ hẳn.
+     */
+    private void installApp(ValidatedApk apk) {
+        PackageInstaller.Session session = null;
+        int sessionId = -1;
+        PackageInstaller installer = getPackageManager().getPackageInstaller();
         try {
-            Log.d(LOG_TAG, "installApp() filePath = " + filePath);
-            if (filePath == null || filePath.trim().isEmpty()) {
-                Toast.makeText(this, "Đường dẫn file không hợp lệ!", Toast.LENGTH_LONG).show();
-                return;
-            }
-            File apk = new File(filePath);
-            if (!apk.exists()) {
-                Toast.makeText(this, "Không tìm thấy file cài đặt!", Toast.LENGTH_LONG).show();
-                return;
+            PackageInstaller.SessionParams params =
+                    new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            params.setAppPackageName(BuildConfig.APPLICATION_ID);
+
+            sessionId = installer.createSession(params);
+            session = installer.openSession(sessionId);
+
+            try (InputStream in = new FileInputStream(apk.getFile());
+                 OutputStream out = session.openWrite("FMS-SESSION", 0, apk.getFile().length())) {
+                byte[] buf = new byte[65536];
+                int c;
+                while ((c = in.read(buf)) != -1) out.write(buf, 0, c);
+                session.fsync(out);
             }
 
-            logApkInfo(filePath);
+            Intent broadcast = new Intent(this, InstallBroadcastReceiver.class)
+                    .setAction(PACKAGE_INSTALLED_ACTION)
+                    .setPackage(getPackageName());
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                try (InputStream in = new FileInputStream(apk)) {
-                    installWithPackageInstaller(this, in);
-                }
-            } else {
-                StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
-                Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-                intent.setData(Uri.fromFile(apk));
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
+            // FLAG_MUTABLE là bắt buộc: PackageInstaller phải gắn thêm EXTRA_STATUS và
+            // EXTRA_INTENT vào PendingIntent khi trả kết quả. Với FLAG_IMMUTABLE, receiver
+            // nhận intent rỗng, không bao giờ thấy STATUS_PENDING_USER_ACTION, và người dùng
+            // bấm Cập nhật xong thì "không thấy gì xảy ra".
+            int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                piFlags |= PendingIntent.FLAG_MUTABLE;
             }
+            PendingIntent pi = PendingIntent.getBroadcast(this, sessionId, broadcast, piFlags);
+
+            session.commit(pi.getIntentSender());
+            Log.d(LOG_TAG, "Đã commit session cài đặt id=" + sessionId);
+            session.close();
+            session = null;
+
         } catch (Exception ex) {
             Log.e(LOG_TAG, "Lỗi khi cài đặt APK", ex);
-            Toast.makeText(this, ex.getMessage() != null ? ex.getMessage() : "Lỗi không xác định", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, ex.getMessage() != null ? ex.getMessage() : "Lỗi không xác định",
+                    Toast.LENGTH_LONG).show();
             setUpdateButtonBusy(false);
-        }
-    }
-
-    /** Dùng PackageInstaller + BroadcastReceiver nhận kết quả */
-    private void installWithPackageInstaller(Context ctx, InputStream in) throws Exception {
-        PackageInstaller installer = ctx.getPackageManager().getPackageInstaller();
-        PackageInstaller.SessionParams params =
-                new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        params.setAppPackageName(BuildConfig.APPLICATION_ID);
-
-        int sessionId = installer.createSession(params);
-        PackageInstaller.Session session = installer.openSession(sessionId);
-
-        try (OutputStream out = session.openWrite("FMS-SESSION", 0, -1)) {
-            byte[] buf = new byte[65536];
-            int c;
-            while ((c = in.read(buf)) != -1) out.write(buf, 0, c);
-            session.fsync(out);
-        }
-
-        Intent broadcast = new Intent(ctx, InstallBroadcastReceiver.class);
-        broadcast.setAction(PACKAGE_INSTALLED_ACTION);
-
-        // ===== FIX 1: PHẢI dùng FLAG_MUTABLE trên Android 12+ =====
-        // PackageInstaller cần GẮN THÊM extras (EXTRA_STATUS, EXTRA_INTENT)
-        // vào PendingIntent khi gửi kết quả. FLAG_IMMUTABLE cấm việc đó
-        // -> receiver nhận intent RỖNG, không bao giờ thấy
-        // STATUS_PENDING_USER_ACTION -> hộp thoại xác nhận cài không hiện
-        // -> người dùng bấm Update xong "không thấy gì xảy ra".
-        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            piFlags |= PendingIntent.FLAG_MUTABLE;
-        }
-        PendingIntent pi = PendingIntent.getBroadcast(ctx, sessionId, broadcast, piFlags);
-
-        session.commit(pi.getIntentSender());
-        session.close();
-        Log.d(LOG_TAG, "Đã commit session cài đặt id=" + sessionId + ", chờ callback...");
-    }
-
-    /** Chỉ xin WRITE_EXTERNAL_STORAGE cho Android 9-; Android 10+ không cần */
-    protected boolean checkStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return true;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            boolean hasWrite = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED;
-            if (!hasWrite) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_PERMISSION);
-                return false;
+            // Session không bỏ dở sẽ chiếm chỗ và làm lần cài sau khó chẩn đoán.
+            if (session != null) {
+                session.close();
+            }
+            if (sessionId >= 0) {
+                try {
+                    installer.abandonSession(sessionId);
+                } catch (Exception abandonEx) {
+                    Log.w(LOG_TAG, "Không hủy được session " + sessionId, abandonEx);
+                }
             }
         }
-        return true;
     }
 
-    /** Check & mở Settings nếu chưa bật "Install unknown apps" cho app */
     private boolean ensureCanInstallUnknownSources() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            boolean allowed = getPackageManager().canRequestPackageInstalls();
-            if (!allowed) {
-                Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + getPackageName()));
-                startActivityForResult(i, REQ_UNKNOWN_SOURCES);
-                return false;
-            }
-        }
-        return true;
+        if (getPackageManager().canRequestPackageInstalls()) return true;
+        Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:" + getPackageName()));
+        startActivityForResult(i, REQ_UNKNOWN_SOURCES);
+        return false;
     }
 
-    /** Retry sau khi bật unknown sources */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_UNKNOWN_SOURCES) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
-                    || getPackageManager().canRequestPackageInstalls()) {
-                if (lastDownloadedPath != null) {
-                    Log.d(LOG_TAG, "Đã bật Unknown sources, retry install: " + lastDownloadedPath);
-                    installApp(lastDownloadedPath);
-                }
-            } else {
-                Toast.makeText(this, "Chưa bật quyền cài từ nguồn không xác định", Toast.LENGTH_LONG).show();
-                setUpdateButtonBusy(false);
-            }
-        }
-    }
+        if (requestCode != REQ_UNKNOWN_SOURCES) return;
 
-    /** Logging thông tin gói APK tải về (packageName/version) */
-    private void logApkInfo(String apkPath) {
-        try {
-            PackageManager pm = getPackageManager();
-            PackageInfo pi;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pi = pm.getPackageArchiveInfo(apkPath, PackageManager.PackageInfoFlags.of(0));
-            } else {
-                //noinspection deprecation
-                pi = pm.getPackageArchiveInfo(apkPath, 0);
+        if (getPackageManager().canRequestPackageInstalls()) {
+            if (pendingInstall != null) {
+                Log.d(LOG_TAG, "Đã bật cài từ nguồn không xác định, cài tiếp");
+                installApp(pendingInstall);
             }
-            if (pi != null) {
-                long verCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                        ? pi.getLongVersionCode() : pi.versionCode;
-                Log.d(LOG_TAG, "APK info -> pkg=" + pi.packageName
-                        + ", verName=" + pi.versionName + ", verCode=" + verCode);
-                if (!BuildConfig.APPLICATION_ID.equals(pi.packageName)) {
-                    Log.e(LOG_TAG, "CANH BAO: packageName APK khac APPLICATION_ID hien tai!");
-                }
-            } else {
-                Log.w(LOG_TAG, "Không đọc được PackageInfo của APK");
-            }
-        } catch (Throwable t) {
-            Log.e(LOG_TAG, "Lỗi đọc APK info", t);
-        }
-    }
-
-    /** runtime permission callback */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_PERMISSION) {
-            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            if (!granted) {
-                Toast.makeText(this, "Thiếu quyền ghi bộ nhớ (Android 9-)", Toast.LENGTH_LONG).show();
-                setUpdateButtonBusy(false);   // FIX 5
-            } else if (update_url != null) {
-                new UpdateAsyncTask().execute(update_url);
-            }
+        } else {
+            Toast.makeText(this, "Chưa bật quyền cài từ nguồn không xác định",
+                    Toast.LENGTH_LONG).show();
+            setUpdateButtonBusy(false);
         }
     }
 }

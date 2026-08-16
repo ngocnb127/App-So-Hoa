@@ -52,7 +52,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-public class NewRefuelActivity extends UserBaseActivity implements View.OnClickListener {
+public class NewRefuelActivity extends UserBaseActivity implements View.OnClickListener, UpdateSensitiveScreen {
 
     private EditText arrival, departure;
     private int mYear, mMonth, mDay, mHour, mMinute;
@@ -462,12 +462,8 @@ public class NewRefuelActivity extends UserBaseActivity implements View.OnClickL
             refuelData.setId(response.getId());
             refuelData.setAlert(currentApp.getCurrentAmount() < refuelData.getEstimateAmount());
             if (refuelData != null) {
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
-
-                String data = gson.toJson(refuelData);
-
                 Intent intent = new Intent(this, RefuelDetailActivity.class);
-                intent.putExtra("REFUEL", data);
+                com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
                 startActivity(intent);
                 finish();
             }

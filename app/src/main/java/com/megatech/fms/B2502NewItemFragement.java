@@ -275,6 +275,10 @@ public class B2502NewItemFragement extends DialogFragment {
             return; // Dừng lại, không tiếp tục lưu
         }
 
+        // ID server vẫn bằng 0 cho tới khi đồng bộ xong. Dùng cả localId để tránh
+        // xem một phiếu đang chờ đồng bộ là phiếu mới khi người dùng mở sửa lại.
+        final boolean isNewRecord = model.getId() == 0 && model.getLocalId() == 0;
+
         new AsyncTask<Void, Void, Boolean>() {
             @Override
             protected Boolean doInBackground(Void... voids) {
@@ -295,7 +299,10 @@ public class B2502NewItemFragement extends DialogFragment {
                     return;
                 }
 
-                if (model.getId() == 0) {
+                // QC No gần nhất phải phản ánh cả thao tác tạo mới lẫn chỉnh sửa.
+                activity.currentApp.setQCNo(model.getQcNo());
+
+                if (isNewRecord) {
                     if (!model.getFullVolumn())
                         activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo());
                     else

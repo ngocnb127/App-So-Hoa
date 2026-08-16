@@ -236,6 +236,7 @@ public class B2508FormItemFragement extends DialogFragment {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
+                boolean attachmentSaved = false;
 
                 // ✅ Lấy đường dẫn chữ ký từ Activity gốc (nếu có)
                 if (activityb25.modelb2508.getUserSkypecSignaturePath() != null)
@@ -249,9 +250,10 @@ public class B2508FormItemFragement extends DialogFragment {
                 // model.setAirlineSignaturePath(null);
 
                 // ✅ Chỉ upload ảnh chữ ký lên server, không chạm dữ liệu khác
+                boolean hasCompleteAttachments = com.megatech.fms.helpers.DataHelper.hasCompleteBM2508Attachments(model);
                 try {
                     com.megatech.fms.helpers.ReceiptAPI client = new com.megatech.fms.helpers.ReceiptAPI();
-                    client.postMultipartBM2508(model);
+                    attachmentSaved = !hasCompleteAttachments || client.postMultipartBM2508(model) != null;
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -260,7 +262,9 @@ public class B2508FormItemFragement extends DialogFragment {
                 com.megatech.fms.data.AppDatabase db = com.megatech.fms.data.AppDatabase.getInstance(getContext());
                 com.megatech.fms.data.DataRepository repo = com.megatech.fms.data.DataRepository.getInstance(db);
                 com.megatech.fms.data.entity.BM2508 entity = com.megatech.fms.data.entity.BM2508.fromModel(model);
+                entity.setAttachmentPending(hasCompleteAttachments && !attachmentSaved);
                 repo.insertBM2508(entity);
+                if (!attachmentSaved) com.megatech.fms.helpers.DataHelper.Synchronize();
 
                 return null;
             }

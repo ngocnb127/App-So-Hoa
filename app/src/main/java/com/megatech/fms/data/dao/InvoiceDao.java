@@ -35,4 +35,7 @@ public interface InvoiceDao {
 
     @Query("Select *  from Invoice where not isDeleted and (date between :start  and :end ) order by date desc" )
     List<Invoice> getAll(long start, long end);
+
+    @Query("DELETE FROM Invoice WHERE NOT isLocalModified AND id > 0 AND date < :cutoff")
+    int deleteOlderThan(long cutoff);
 }

@@ -146,6 +146,11 @@ public class LoginActivity extends BaseActivity {
     private void showMain() {
         //Intent intent = new Intent(this, MainActivity.class);
         //startActivity(intent);
+
+        // Bảo trì sau đăng nhập, đều chạy nền và đều không được phép chặn luồng đăng nhập.
+        com.megatech.fms.data.DataRetention.purgeAfterLogin(this);
+        com.megatech.fms.helpers.DataHelper.runUpgradeMaintenance(this);
+
         setResult(LOGIN_RESULT_OK);
         finish();
     }

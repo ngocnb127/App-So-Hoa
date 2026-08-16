@@ -43,6 +43,7 @@ import com.megatech.fms.model.LCRDataModel;
 import com.megatech.fms.model.TruckModel;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 
 //import static com.megatech.fms.BuildConfig.IMEI_LIST;
@@ -79,7 +80,11 @@ public class SettingActivity extends UserBaseActivity {
         final EditText txtIMEI = findViewById(R.id.txtIMEI);
 
 
-        new LoadTrucksAsync(this).execute();
+        // Lấy Tablet-Id TRƯỚC khi gọi API danh sách xe: request gửi đi kèm header Tablet-Id,
+        // và lần cài mới thì serial chỉ có sau khi hỏi quyền READ_PHONE_STATE.
+        getDeviceIMEI();
+
+        loadTrucks();
 
         txtIp.setText(settingModel.getDeviceIP());
         txtPrinter.setText(settingModel.getPrinterIP());
@@ -112,8 +117,6 @@ public class SettingActivity extends UserBaseActivity {
             settingModel.setDeviceType(TruckModel.DEVICE_TYPE.LCR);
         }
 
-
-        getDeviceIMEI();
 
         btnBack.setOnClickListener(view -> finish());
         btnTest.setOnClickListener(v -> {
@@ -291,6 +294,10 @@ public class SettingActivity extends UserBaseActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_READ_PHONE_STATE) {
             assignIMEI();
+            // Lần cài mới: danh sách xe nạp lúc chưa có Tablet-Id có thể rỗng, tải lại
+            // ngay khi đã có serial thay vì bắt người dùng thoát ra vào lại.
+            if (loadedTruckCount == 0)
+                loadTrucks();
         }
     }
 
@@ -384,11 +391,27 @@ public class SettingActivity extends UserBaseActivity {
 
         @Override
         protected void onPostExecute(List<TruckModel> trucks) {
-            activityWeakReference.get().populateTrucks(trucks);
+            SettingActivity activity = activityWeakReference.get();
+            if (activity == null || activity.isFinishing() || activity.isDestroyed())
+                return;
+            activity.populateTrucks(trucks);
         }
     }
 
+    /** Số xe đang hiển thị trên spinner — dùng để biết còn phải tải lại hay không. */
+    private int loadedTruckCount = 0;
+
+    private void loadTrucks() {
+        new LoadTrucksAsync(this).execute();
+    }
+
     private void populateTrucks(List<TruckModel> trucks) {
+
+        if (trucks == null)
+            trucks = new ArrayList<>();
+        loadedTruckCount = trucks.size();
+        if (trucks.isEmpty())
+            showMessage(getString(R.string.no_truck_list), false);
 
         ArrayAdapter<TruckModel> spinnerAdapter =
                 new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item, trucks);

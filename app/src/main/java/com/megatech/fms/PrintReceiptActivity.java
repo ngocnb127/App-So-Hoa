@@ -64,7 +64,7 @@ import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PrintReceiptActivity extends UserBaseActivity implements View.OnClickListener {
+public class PrintReceiptActivity extends UserBaseActivity implements View.OnClickListener, UpdateSensitiveScreen {
 
     // Device connection fields
     private LCRReader reader = null;
@@ -72,12 +72,27 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
     private IDevice tcsDevice;
     private String storedIP;
     private static DeviceDataView tcsData;
+    /** Số ticket đọc được từ thiết bị, in ở cuối bản in nhiệt. */
+    private String deviceTicketNumber = "";   // chỉ dùng để đối chiếu/cảnh báo tại màn hình này
     private TextView txtGrossValue;
     private TextView txtTotalValue;
     private boolean deviceConnected = false;
     private double lastReceivedGross = 0;
     private double lastReceivedTotal = 0;
     private boolean deviceDataChecked = false;  // ← Chỉ check một lần
+
+    /** Thời điểm nhận được giá trị đầu tiên từ thiết bị; 0 nghĩa là chưa có gì. */
+    private long firstDeviceValueAt = 0;
+
+    /**
+     * Hạn chờ giá trị còn lại sau khi đã nhận được giá trị đầu tiên.
+     *
+     * <p>Chu kỳ hỏi trường của {@link com.megatech.fms.helpers.LCRReader} là 1 giây, nên 4 giây
+     * là dư cho một vòng đọc đủ. Vẫn phải có hạn chờ vì có trường hợp đồng hồ KHÔNG BAO GIỜ trả
+     * lượng mẻ — in lại phiếu cũ sau khi thanh ghi mẻ đã reset — và khi đó màn hình không được
+     * treo vô hạn.
+     */
+    private static final long DEVICE_READ_TIMEOUT_MS = 4000;
 
     private boolean deviceDisconnected = false;
 
@@ -244,6 +259,21 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                 }
             }
 
+            // Không đọc được lượng mẻ thì KHÔNG đối chiếu được — phải nói ra.
+            // Trước đây nhánh cảnh báo đòi lastReceivedGross > 0, nên khi thiết bị không trả
+            // được số (đúng ca đang gặp) toàn bộ việc đối chiếu im lặng bỏ qua: người in tưởng
+            // đã kiểm tra xong, thực chất chưa kiểm tra gì.
+            if (lastReceivedGross <= 0) {
+                final String message = String.format(
+                        "⚠️ Chưa đọc được lượng nạp từ đồng hồ (Meter cuối = %.0f) — chưa đối chiếu được với phiếu",
+                        lastReceivedTotal);
+                runOnUiThread(() -> Toast.makeText(PrintReceiptActivity.this,
+                        message, Toast.LENGTH_LONG).show());
+                Logger.appendLog("PRINT_CHECK", "Không đối chiếu được: thiếu Gross. Total="
+                        + lastReceivedTotal);
+                return;
+            }
+
             // ← Nếu không tìm thấy item nào thoả mãn
             if (!found && lastReceivedGross > 0) {
                 final String message = String.format(
@@ -336,9 +366,22 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR && lcrModel != null) {
                 grossValue = lcrModel.getGrossQty();
                 totalValue = lcrModel.getEndMeterNumber();
-            } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS && tcsData != null) {
-                grossValue = tcsData.getGrossQtyRound();
-                totalValue = tcsData.getGrossTotalRound();
+                // Không đọc SALENUMBER ở đây: requestData() chỉ hỏi các trường số liệu,
+                // SALENUMBER phải yêu cầu riêng và đã được ghi vào phiếu từ lúc tra nạp.
+                if (lcrModel.getSaleNumber() != null && !lcrModel.getSaleNumber().isEmpty())
+                    deviceTicketNumber = lcrModel.getSaleNumber();
+            } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
+                // Lấy thẳng từ thiết bị tại thời điểm callback. Trước đây đọc một field static
+                // không bao giờ được gán, nên Gross/Total luôn bằng 0 và không thể kết luận
+                // hợp lệ / không hợp lệ.
+                if (tcsDevice != null) tcsData = tcsDevice.getDeviceDataView();
+
+                if (tcsData != null) {
+                    grossValue = tcsData.getGrossQtyRound();
+                    totalValue = tcsData.getGrossTotalRound();
+                    if (tcsData.getTicketNumber() > 0)
+                        deviceTicketNumber = String.valueOf(tcsData.getTicketNumber());
+                }
             }
 
             lastReceivedGross = grossValue;
@@ -352,18 +395,40 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                 txtTotalValue.setText(String.format("%.0f", finalTotalValue));
             });
 
-            // Chỉ check và ngắt kết nối MỘT LẦN khi đã nhận đủ dữ liệu thực tế
-            if (!deviceDataChecked && deviceConnected && totalValue > 0) {
+            // Mốc nhận được giá trị ĐẦU TIÊN, để tính hạn chờ giá trị còn lại.
+            if (firstDeviceValueAt == 0 && (totalValue > 0 || grossValue > 0))
+                firstDeviceValueAt = System.currentTimeMillis();
+
+            // Đợi ĐỦ CẢ HAI số rồi mới đối chiếu và ngắt kết nối.
+            //
+            // Trước đây cổng này chỉ xét totalValue. GROSSMETERQTY và GROSSQTY là hai trường
+            // riêng, đến không cùng lúc; trường nào về trước cũng mở cổng, và ngắt kết nối
+            // ngay làm trường còn lại không bao giờ về tới. Thực tế Gross = 0 ở 11/12 lần.
+            boolean hasBothValues = totalValue > 0 && grossValue > 0;
+            boolean waitedTooLong = firstDeviceValueAt > 0
+                    && System.currentTimeMillis() - firstDeviceValueAt > DEVICE_READ_TIMEOUT_MS;
+
+            if (!deviceDataChecked && deviceConnected && totalValue > 0
+                    && (hasBothValues || waitedTooLong)) {
+
+                if (!hasBothValues)
+                    Logger.appendLog("PRINT", String.format(java.util.Locale.US,
+                            "Hết hạn chờ %dms mà chưa đủ số (Gross=%.0f, Total=%.0f)"
+                                    + " — vẫn đi tiếp và báo cho người dùng",
+                            DEVICE_READ_TIMEOUT_MS, finalGrossValue, finalTotalValue));
+
                 checkDeviceDataAfterConnection();
                 deviceDataChecked = true;
 
                 // Đã lấy được số cần thiết -> ngắt kết nối ngay, chỉ giữ lại giá trị vừa nhận
                 disconnectDeviceOnce();
-                Logger.appendLog("PRINT", "Đã lấy được số Gross=" + finalGrossValue
-                        + ", Total=" + finalTotalValue + " -> ngắt kết nối thiết bị");
+                Logger.appendLog("PRINT", String.format(java.util.Locale.US,
+                        "Đã lấy được số Gross=%.0f, Total=%.0f -> ngắt kết nối thiết bị",
+                        finalGrossValue, finalTotalValue));
             }
 
-            Logger.appendLog("PRINT", "Thiết bị - Gross: " + grossValue + ", Total: " + totalValue);
+            Logger.appendLog("PRINT", String.format(java.util.Locale.US,
+                    "Thiết bị - Gross: %.0f, Total: %.0f", grossValue, totalValue));
         } catch (Exception e) {
             Logger.appendLog("PRINT_DISPLAY", "Lỗi cập nhật hiển thị: " + e.getMessage());
         }
