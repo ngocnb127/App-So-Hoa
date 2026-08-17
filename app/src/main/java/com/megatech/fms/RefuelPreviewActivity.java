@@ -1159,6 +1159,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         finish();
     }
 
+
     boolean isSplit = false;
     public Date selectedDate = new Date();
 
@@ -2340,6 +2341,11 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     @Override
     protected void onDestroy() {
+        // Khoá sync phải được mở dù người dùng rời màn hình bằng đường nào. Trước đây chỉ
+        // exit() mở khoá, nên bấm Back / về Home / hệ thống thu hồi activity là khoá treo
+        // lại và TOÀN BỘ đồng bộ chết tới khi khởi động lại app — dữ liệu vẫn vào Room đủ
+        // nhưng không bao giờ lên tới server.
+        DataHelper.unlockSync();
         super.onDestroy();
         refuelData = null;
         Runtime.getRuntime().gc();

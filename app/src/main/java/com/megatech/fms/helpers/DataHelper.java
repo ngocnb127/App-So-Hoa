@@ -73,6 +73,15 @@ public class DataHelper {
     private static final Object REFUEL_WRITE_LOCK = new Object();
     private static final AtomicBoolean processing = new AtomicBoolean(false);
     private static final AtomicBoolean syncLocked = new AtomicBoolean(false);
+    private static long lastSyncLockSkipLog = 0L;
+
+    /** Nén log bỏ qua vì khoá: mỗi 30 giây một dòng là đủ để biết khoá đang treo. */
+    private static synchronized boolean shouldLogSyncLockSkip() {
+        long now = System.currentTimeMillis();
+        if (now - lastSyncLockSkipLog < 30_000L) return false;
+        lastSyncLockSkipLog = now;
+        return true;
+    }
     private static final AtomicBoolean syncPending = new AtomicBoolean(false);
     private static final AtomicInteger activeSyncTasks = new AtomicInteger(0);
     private static final ExecutorService syncExecutor = Executors.newSingleThreadExecutor(runnable ->
@@ -391,11 +400,20 @@ public class DataHelper {
         syncLocked.set(true);
     }
 
+    /** Còn lượt sync nào đang bị khoá nuốt và chưa được chạy lại không. */
+    @androidx.annotation.VisibleForTesting
+    public static boolean hasPendingSyncRequest() {
+        return syncPending.get();
+    }
+
     public static void unlockSync() {
         syncLocked.set(false);
+        Logger.appendLog("SYNC", "UNLOCK sync"
+                + (syncPending.get() ? " (có lượt đang chờ, chạy ngay)" : ""));
         if (syncPending.getAndSet(false)) {
             Synchronize();
         }
+        if (syncPending.getAndSet(false)) Synchronize();
     }
 
     public static RefuelItemData getItemToRefuel(Integer flightId) {
@@ -560,7 +578,13 @@ public class DataHelper {
 //            return;
 //        }
         if (syncLocked.get()) {
+            // Thoát IM LẶNG ở đây từng làm không thể chẩn đoán: đo trên máy thật 17-08,
+            // người dùng bấm Rời đi rồi xuất chứng từ, dữ liệu vào Room đủ nhưng server
+            // không nhận được gì suốt 3,5 phút — vì màn hình xem trước giữ khoá và mọi
+            // Synchronize() trả về không để lại một dòng nào.
             syncPending.set(true);
+            if (shouldLogSyncLockSkip())
+                Logger.appendLog("SYNC", "SKIP sync (đang khoá bởi màn hình xem trước)");
             return;
         }
         if (processing.compareAndSet(false, true)) {   // chỉ MỘT phiên sync vào được

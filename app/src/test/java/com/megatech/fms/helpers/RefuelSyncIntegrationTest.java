@@ -871,4 +871,28 @@ public class RefuelSyncIntegrationTest {
             return null;
         }
     }
+
+    /**
+     * Đo trên máy thật 17-08 21:46: bấm Rời đi rồi xuất chứng từ, dữ liệu vào Room đủ nhưng
+     * server không nhận gì suốt 3,5 phút. Màn hình xem trước khoá sync lúc mở và chỉ mở khoá
+     * trong exit(); mọi Synchronize() trong lúc đó thoát im lặng, và lượt đang chờ nằm lại
+     * cho tới khi có sự kiện khác gọi sync.
+     */
+    @Test
+    public void unlockSyncRunsThePendingRequest() {
+        seedRow(1110, 60166240, 5, 8, true);
+        http.postResponse = payload(1110, 60166240, 5, 9);
+        int before = http.postCount;
+
+        DataHelper.lockSync();
+        DataHelper.syncModifiedRefuels();   // đường POST, gọi trực tiếp như các test khác
+        assertEquals("bản thân POST không bị khoá chặn", before + 1, http.postCount);
+
+        // Nhưng lượt sync đi qua Synchronize() thì bị nuốt, và phải được chạy lại khi mở khoá.
+        DataHelper.Synchronize();
+        DataHelper.unlockSync();
+
+        assertFalse("mở khoá không được để lượt chờ nằm lại",
+                DataHelper.hasPendingSyncRequest());
+    }
 }
