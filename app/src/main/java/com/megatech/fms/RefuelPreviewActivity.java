@@ -1516,6 +1516,11 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                         + " applied=" + result.applied
                         + (result.applied ? "" : " reason=" + result.reason));
 
+                // Bấm -> ghi local -> đồng bộ ngay. patchRefuel có gọi Synchronize(), nhưng
+                // màn hình này đang giữ khoá sync nên lượt đó bị nuốt tới lúc rời màn hình.
+                // Đẩy thẳng, không đi qua khoá.
+                if (result.applied) DataHelper.pushPendingInBackground();
+
                 runOnUiThread(() -> {
                     if (!result.applied) {
                         btnLeave.setEnabled(true);
@@ -1526,18 +1531,22 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     if (result.data != null)
                         refuelData = result.data;
 
-                    btnLeave.setVisibility(View.GONE);
-
-                    TextView lblLeaveTime = findViewById(R.id.lblLeaveTime);
-                    lblLeaveTime.setText("Rời đi: "
-                            + DateUtils.formatDate(leaveTime, "dd/MM/yyyy HH:mm:ss"));
-                    lblLeaveTime.setVisibility(View.VISIBLE);
+                    // Layout tự quyết định nút và nhãn theo mItem:
+                    //   visibility = mItem.leaveTime == null ? VISIBLE : GONE
+                    // nên phải ĐƯA BẢN MỚI vào binding. Trước đây chỗ này ẩn nút bằng tay
+                    // rồi gọi invalidateAll(), mà mItem vẫn là object CŨ chưa có leaveTime —
+                    // biểu thức tính lại ra VISIBLE và ghi đè lệnh ẩn, còn setEnabled(false)
+                    // lúc bấm thì không ai gỡ. Kết quả: nút hiện lại và bị xám, nhìn như treo.
+                    btnLeave.setEnabled(true);
 
                     if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
+                        binding.setMItem(refuelData);
                         binding.invalidateAll();
                         truckArrayAdapter.notifyDataSetChanged();
-                    } else
+                    } else {
+                        extractBinding.setMItem(refuelData);
                         extractBinding.invalidateAll();
+                    }
                 });
             }
         }).start();
