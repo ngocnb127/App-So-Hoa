@@ -28,7 +28,7 @@ public final class RefuelSyncGuard {
     }
 
     /**
-     * Vân tay của payload nghiệp vụ, dùng làm baseline cho precondition khi lưu.
+     * Vân tay của phần payload DO CLIENT SỞ HỮU, dùng làm baseline cho precondition khi lưu.
      *
      * <p>SHA-256 trên canonical JSON — không dùng {@code String.hashCode()} vì 32 bit và
      * đụng độ dễ tạo được.
@@ -45,10 +45,18 @@ public final class RefuelSyncGuard {
      * trường sẽ cho object khác nhau ở mỗi lần đọc và vân tay mất ổn định — cùng một row
      * bị nhận nhầm thành CONFLICT_PAYLOAD_CHANGED. Băm thẳng JSON thì chỉ những khoá THỰC SỰ
      * có mặt mới tham gia, nên kết quả ổn định tuyệt đối với mọi dữ liệu legacy.
+     *
+     * <p>CHỈ tính trên nhóm trường CLIENT sở hữu. Nhóm server sở hữu bị loại vì lượt pull
+     * nền chạy 30 giây một lần và thường xuyên đổi chúng (flightStatus ASSIGNED→REFUELING
+     * ngay khi mẻ bắt đầu là ca gặp mỗi lần tra nạp). Nếu tính cả nhóm đó thì mọi màn hình
+     * đang mở mất quyền lưu ngay giữa mẻ, và toàn bộ số liệu đồng hồ, nhiệt độ, tỉ trọng
+     * người dùng nhập sau đó bị bỏ đi không một lời báo. Thay đổi của server ở nhóm này
+     * không phải xung đột với người dùng — nó được RE-BASE vào payload sắp ghi, xem
+     * {@link #adoptServerOwned(RefuelItemData, String)}.
      */
     public static String businessFingerprintOfJson(String json) {
         if (json == null || json.isEmpty()) return null;
-        return sha256(canonicalBusinessJson(json));
+        return sha256(canonicalClientOwnedJson(json));
     }
 
     private static String sha256(String value) {
@@ -145,6 +153,12 @@ public final class RefuelSyncGuard {
                 && longOf(merged, key) != 0)
             return;
 
+        // Không ghi lại khoá KHÔNG đổi. Ghi đè vô điều kiện làm row bị viết lại ở mỗi lượt
+        // pull dù nội dung y hệt, kéo theo vân tay tính lại và nền của màn hình đang mở
+        // thành cũ. So theo NGHĨA (RefuelValues) chứ không so chuỗi, nên khác cách định
+        // dạng cùng một giá trị cũng không sinh ra lần ghi thừa.
+        if (RefuelValues.equal(key, merged.get(key), remote.get(key))) return;
+
         merged.add(key, remote.get(key));
     }
 
@@ -228,26 +242,11 @@ public final class RefuelSyncGuard {
         merged.setLocalModified(localItem.isLocalModified());
 
         localItem.setJsonData(mergedJson);
-        if (merged.getId() != null && merged.getId() > 0)
-            localItem.setId(merged.getId());
-        if (!isBlank(merged.getUniqueId()))
-            localItem.setUniqueId(merged.getUniqueId());
-        if (!isBlank(merged.getTruckNo()))
-            localItem.setTruckNo(merged.getTruckNo());
-        if (merged.getTruckId() != 0)
-            localItem.setTruckId(merged.getTruckId());
-        localItem.setFlightId(merged.getFlightId());
-        if (merged.getRefuelTime() != null)
-            localItem.setRefuelTime(merged.getRefuelTime());
-        if (merged.getStatus() != null)
-            localItem.setStatus(RefuelItem.REFUEL_ITEM_STATUS.getStatus(merged.getStatus().getValue()));
-        if (merged.getRefuelItemType() != null)
-            localItem.setRefuelItemType(
-                    RefuelItem.REFUEL_ITEM_TYPE.getValue(merged.getRefuelItemType().ordinal()));
-        if (merged.getDateUpdated() != null)
-            localItem.setDateUpdated(merged.getDateUpdated());
-        localItem.setClientSeq(merged.getClientSeq());
-        localItem.setServerRevision(merged.getServerRevision());
+
+        // Chiếu XUỐNG CỘT bằng đúng một đường dùng chung. Gán tay từng trường ở đây đã bỏ
+        // sót parkingLot, flightCode và toàn bộ số liệu mẻ, nên cột nói một đằng jsonData
+        // nói một nẻo — màn hình đọc theo cột sẽ thấy mẻ 0 GL.
+        localItem.projectColumnsFrom(merged);
 
         return merged;
     }
@@ -295,6 +294,317 @@ public final class RefuelSyncGuard {
         for (String key : NON_BUSINESS_KEYS) source.remove(key);
 
         return canonicalize(source).toString();
+    }
+
+    /**
+     * Liệt kê những khoá NGHIỆP VỤ khác nhau giữa hai bản JSON.
+     *
+     * <p>Chỗ này sinh ra vì sự cố 17-08-2026 không tra được nguyên nhân từ log: nhánh chặn
+     * chỉ ghi "payload đã đổi" mà không nói đổi ở đâu, nên không phân biệt được thay đổi
+     * thật của người dùng với thay đổi do chính lượt đồng bộ nền ghi đè lên jsonData.
+     *
+     * @param serverOwnedOnly true thì chỉ xét nhóm server sở hữu, false thì chỉ xét phần
+     *                        client sở hữu — hai nhóm này có ý nghĩa chẩn đoán khác hẳn nhau
+     */
+    public static String describeJsonDiff(String jsonA, String jsonB, boolean serverOwnedOnly) {
+        if (isBlank(jsonA) || isBlank(jsonB)) return null;
+
+        com.google.gson.JsonObject a;
+        com.google.gson.JsonObject b;
+        try {
+            a = com.google.gson.JsonParser.parseString(jsonA).getAsJsonObject();
+            b = com.google.gson.JsonParser.parseString(jsonB).getAsJsonObject();
+        } catch (RuntimeException ex) {
+            return null;
+        }
+
+        java.util.TreeSet<String> keys = new java.util.TreeSet<>(a.keySet());
+        keys.addAll(b.keySet());
+
+        StringBuilder diff = new StringBuilder();
+        for (String key : keys) {
+            if (RefuelFieldOwnership.of(key) == RefuelFieldOwnership.Ownership.LOCAL_ONLY)
+                continue;
+            if (RefuelFieldOwnership.isServerOwned(key) != serverOwnedOnly) continue;
+            if (RefuelValues.equal(key, a.get(key), b.get(key))) continue;
+
+            diff.append(key);
+            // Chỉ vài trường số liệu được in kèm GIÁ TRỊ. Phần còn lại chỉ ghi tên khoá:
+            // log này chạy mỗi lượt đồng bộ cho mọi phiếu, in hết giá trị vừa phình log
+            // vừa rải thông tin chuyến bay/khách hàng ra file gửi lên server.
+            if (LOGGABLE_VALUE_KEYS.contains(key))
+                diff.append('(').append(a.get(key)).append("->").append(b.get(key)).append(')');
+            diff.append(' ');
+        }
+
+        return diff.length() == 0 ? null : diff.toString().trim();
+    }
+
+    /** Chỉ những khoá thực sự cần con số để chẩn đoán mới được in giá trị ra log. */
+    private static final java.util.Set<String> LOGGABLE_VALUE_KEYS = new java.util.HashSet<>(
+            java.util.Arrays.asList("EndTime", "StartTime", "Status", "RealAmount", "StartNumber", "EndNumber",
+                    "ManualTemperature", "Density", "FlightStatus", "ClientSeq",
+                    "ServerRevision"));
+
+    /**
+     * Mọi khoá JSON mà {@link RefuelItemData} biết, suy ra TỪ CHÍNH MODEL.
+     *
+     * <p>Cố ý không duy trì bằng tay. Một danh sách chép tay chắc chắn sẽ thiếu trường
+     * ({@code Price}, {@code TaxRate}, {@code Unit}, {@code ProductId}...) và mỗi trường
+     * thiếu là một xung đột thật không được phát hiện. Đọc thẳng từ model thì thêm trường
+     * mới vào model là guard tự biết.
+     *
+     * <p>Đọc theo đúng quy ước của Gson đang dùng: {@code @SerializedName} nếu có, còn lại
+     * là {@code UPPER_CAMEL_CASE}. Bỏ {@code transient}/{@code static} vì chúng không bao
+     * giờ nằm trong JSON.
+     */
+    private static final java.util.Set<String> MODEL_KEYS = buildModelKeys();
+
+    private static java.util.Set<String> buildModelKeys() {
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        for (Class<?> type = RefuelItemData.class; type != null; type = type.getSuperclass()) {
+            for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                int modifiers = field.getModifiers();
+                if (java.lang.reflect.Modifier.isStatic(modifiers)
+                        || java.lang.reflect.Modifier.isTransient(modifiers)) continue;
+
+                com.google.gson.annotations.SerializedName named =
+                        field.getAnnotation(com.google.gson.annotations.SerializedName.class);
+                if (named != null) {
+                    keys.add(named.value());
+                    continue;
+                }
+                String name = field.getName();
+                keys.add(Character.toUpperCase(name.charAt(0)) + name.substring(1));
+            }
+        }
+        return java.util.Collections.unmodifiableSet(keys);
+    }
+
+    /** Khoá JSON mà model app biết — dùng cho cả vân tay lẫn lúc ghi giữ khoá lạ. */
+    public static java.util.Set<String> modelKeys() {
+        return MODEL_KEYS;
+    }
+
+    /** Chỉ giữ nhóm client sở hữu, CHUẨN HOÁ giá trị rồi mới băm. */
+    private static String canonicalClientOwnedJson(String json) {
+        com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseString(json);
+        if (!parsed.isJsonObject()) return json;
+
+        com.google.gson.JsonObject source = parsed.getAsJsonObject();
+        com.google.gson.JsonObject owned = new com.google.gson.JsonObject();
+        for (String key : source.keySet()) {
+            if (!RefuelFieldOwnership.isClientFingerprintKey(key)) continue;
+            com.google.gson.JsonElement normalized = RefuelValues.normalize(key, source.get(key));
+            if (normalized != null) owned.add(key, normalized);
+        }
+
+        return canonicalize(owned).toString();
+    }
+
+    /**
+     * Ghi payload của model lên JSON đang có mà GIỮ NGUYÊN các khoá model không biết.
+     *
+     * <p>Server gửi xuống nhiều trường ngoài model ({@code TechLog}, {@code Weight},
+     * {@code Invoice}...). Cách ghi cũ — thay toàn bộ {@code jsonData} bằng
+     * {@code gson.toJson(model)} — xoá sạch chúng ở mỗi lần lưu local, tức app âm thầm làm
+     * mất dữ liệu của server và đẩy bản thiếu đó lên trong lần POST kế tiếp.
+     *
+     * <p>Khoá model BIẾT thì lấy theo model, kể cả khi vắng mặt (Gson bỏ qua null, nên
+     * vắng mặt nghĩa là người dùng vừa xoá giá trị — phải xoá thật). Khoá model KHÔNG biết
+     * thì giữ nguyên.
+     */
+    /**
+     * Nguồn của {@code modelJson} — quyết định NGHĨA của một khoá vắng mặt.
+     *
+     * <p>Gson bỏ qua field null, nên "khoá vắng mặt" một mình KHÔNG phân biệt được
+     * "người dùng vừa xoá giá trị" với "bản này vốn không nói gì về trường đó". Người gọi
+     * phải khai báo, không được đoán.
+     */
+    public enum ModelPayloadSource {
+        /**
+         * Model ĐẦY ĐỦ, dựng từ chính row (toRefuelItemData) hoặc từ màn hình đang giữ cả
+         * phiếu. Ở đây vắng mặt = null = người dùng đã xoá ⇒ xoá thật.
+         */
+        COMPLETE_MODEL,
+        /**
+         * Bản MỘT PHẦN: response/projection của server, patch chỉ mang vài trường. Vắng mặt
+         * là "không nói gì" ⇒ giữ nguyên giá trị đang có. Đây là chiều an toàn duy nhất:
+         * hiểu nhầm projection thiếu trường thành "người dùng xoá" chính là kiểu mất dữ liệu
+         * mà toàn bộ tài liệu này đang đi chữa.
+         */
+        PARTIAL
+    }
+
+    public static String mergePreservingUnknown(String previousJson, String modelJson) {
+        return mergePreservingUnknown(previousJson, modelJson,
+                ModelPayloadSource.COMPLETE_MODEL);
+    }
+
+    public static String mergePreservingUnknown(String previousJson, String modelJson,
+                                                ModelPayloadSource source) {
+        if (isBlank(previousJson)) return modelJson;
+        if (isBlank(modelJson)) return previousJson;
+
+        com.google.gson.JsonObject previous;
+        com.google.gson.JsonObject model;
+        try {
+            previous = com.google.gson.JsonParser.parseString(previousJson).getAsJsonObject();
+            model = com.google.gson.JsonParser.parseString(modelJson).getAsJsonObject();
+        } catch (RuntimeException ex) {
+            return modelJson;
+        }
+
+        com.google.gson.JsonObject merged = previous.deepCopy();
+
+        // Khoá model BIẾT: theo model. Vắng mặt chỉ được coi là "đã xoá" khi bản này là
+        // model đầy đủ; với bản một phần thì giữ nguyên giá trị cũ.
+        for (String key : MODEL_KEYS) {
+            if (model.has(key)) merged.add(key, model.get(key));
+            else if (source == ModelPayloadSource.COMPLETE_MODEL) merged.remove(key);
+        }
+
+        // Khoá model KHÔNG biết: luôn giữ nguyên bản đang có. Chỉ nhận thêm nếu chính
+        // modelJson mang tới (trường hợp payload đi kèm khoá ngoài model).
+        for (String key : model.keySet())
+            if (!MODEL_KEYS.contains(key)) merged.add(key, model.get(key));
+
+        return merged.toString();
+    }
+
+    /**
+     * Ảnh chụp riêng nhóm trường SERVER sở hữu, dùng làm CHIỀU THỨ BA khi lưu.
+     *
+     * <p>Chỉ giữ những khoá THỰC SỰ có trong nguồn: khoá vắng mặt phải giữ nguyên là vắng
+     * mặt, nếu không lúc so sẽ thành "người dùng vừa xoá trường này".
+     */
+    public static String serverOwnedProjection(String json) {
+        if (isBlank(json)) return null;
+
+        com.google.gson.JsonElement parsed;
+        try {
+            parsed = com.google.gson.JsonParser.parseString(json);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+        if (!parsed.isJsonObject()) return null;
+
+        com.google.gson.JsonObject source = parsed.getAsJsonObject();
+        com.google.gson.JsonObject projection = new com.google.gson.JsonObject();
+        for (String key : SERVER_OWNED_KEYS)
+            if (source.has(key)) projection.add(key, source.get(key));
+
+        return projection.toString();
+    }
+
+    /**
+     * Nhận vào snapshot đang chuẩn bị lưu những thay đổi mà SERVER đã gửi xuống trong lúc
+     * màn hình mở (đổi chuyến, đổi bãi đỗ, trạng thái chuyến, giờ dự kiến...).
+     *
+     * <p>Không có bước này thì snapshot của màn hình ghi đè ngược các trường đó về giá trị
+     * lúc mở màn hình, và POST kế tiếp đẩy luôn giá trị cũ lên server.
+     *
+     * <p>TRỘN BA CHIỀU, KHÔNG phải phủ đè. Người dùng sửa được chính vài trường trong nhóm
+     * này (bãi đỗ, số hiệu/loại tàu bay, hãng, chặng — xem RefuelDetailActivity và
+     * RefuelPreviewActivity), nên luật là:
+     * <ul>
+     *   <li>trường snapshot KHÔNG đụng tới ⇒ lấy giá trị mới của server;</li>
+     *   <li>trường người dùng ĐÃ sửa ⇒ giữ nguyên bản của người dùng.</li>
+     * </ul>
+     *
+     * <p>Không có baseline để đối chiếu thì KHÔNG nhận gì cả: khi đó không phân biệt được
+     * "người dùng vừa sửa" với "server vừa đổi", và giữ dữ liệu người dùng luôn là chiều
+     * an toàn hơn.
+     *
+     * @param storedJson  jsonData của row đang có trong Room
+     * @param baseServerOwnedJson giá trị nhóm trường server tại thời điểm màn hình đọc row
+     * @return mô tả các trường server vừa được nhận, hoặc null nếu không nhận gì
+     */
+    /** Kết quả của một lần nhận trường server: mô tả thay đổi, kèm các xung đột SHARED thật. */
+    public static final class AdoptResult {
+        public final String diff;
+        public final java.util.List<String> conflictKeys;
+
+        AdoptResult(String diff, java.util.List<String> conflictKeys) {
+            this.diff = diff;
+            this.conflictKeys = conflictKeys;
+        }
+
+        public boolean hasConflict() {
+            return !conflictKeys.isEmpty();
+        }
+    }
+
+    public static AdoptResult adoptServerOwned(RefuelItemData target, String storedJson,
+                                               String baseServerOwnedJson) {
+        java.util.List<String> conflicts = new java.util.ArrayList<>();
+        if (target == null || isBlank(storedJson) || isBlank(baseServerOwnedJson))
+            return new AdoptResult(null, conflicts);
+
+        com.google.gson.JsonObject base;
+        com.google.gson.JsonObject stored;
+        com.google.gson.JsonObject ours;
+        try {
+            base = com.google.gson.JsonParser.parseString(baseServerOwnedJson).getAsJsonObject();
+            stored = com.google.gson.JsonParser.parseString(storedJson).getAsJsonObject();
+            ours = com.google.gson.JsonParser.parseString(target.toJson()).getAsJsonObject();
+        } catch (RuntimeException ex) {
+            return new AdoptResult(null, conflicts);
+        }
+
+        com.google.gson.JsonObject adoptable = new com.google.gson.JsonObject();
+        for (String key : SERVER_OWNED_KEYS) {
+            if (!stored.has(key)) continue;
+
+            boolean userChanged = !RefuelValues.equal(key, base.get(key), ours.get(key));
+            boolean rowChanged = !RefuelValues.equal(key, base.get(key), stored.get(key));
+
+            // SHARED mà CẢ HAI phía cùng đổi sang giá trị khác nhau là xung đột THẬT. Lấy
+            // bản người dùng làm mặc định ở đây nghĩa là âm thầm xoá thay đổi của điều độ
+            // (đổi bãi đỗ, đổi số hiệu tàu bay, đổi giá) — đúng kiểu mất dữ liệu ngược chiều.
+            if (RefuelFieldOwnership.isShared(key) && userChanged && rowChanged
+                    && !RefuelValues.equal(key, ours.get(key), stored.get(key))) {
+                conflicts.add(key);
+                continue;
+            }
+
+            if (userChanged) continue;             // người dùng đã sửa ⇒ giữ bản người dùng
+            adoptable.add(key, stored.get(key));
+        }
+        if (!conflicts.isEmpty()) return new AdoptResult(null, conflicts);
+        if (adoptable.size() == 0) return new AdoptResult(null, conflicts);
+
+        RefuelItemData merged;
+        try {
+            merged = GSON.fromJson(
+                    mergeByOwnership(target.toJson(), adoptable.toString(), false),
+                    RefuelItemData.class);
+        } catch (RuntimeException ex) {
+            return new AdoptResult(null, conflicts);
+        }
+        if (merged == null) return new AdoptResult(null, conflicts);
+
+        String diff = describeServerOwnedDiff(target, merged);
+
+        target.setFlightId(merged.getFlightId());
+        target.setFlightUniqueId(merged.getFlightUniqueId());
+        target.setFlightCode(merged.getFlightCode());
+        target.setFlightStatus(merged.getFlightStatus());
+        target.setParkingLot(merged.getParkingLot());
+        target.setRouteName(merged.getRouteName());
+        target.setArrivalTime(merged.getArrivalTime());
+        target.setDepartureTime(merged.getDepartureTime());
+        target.setRefuelTime(merged.getRefuelTime());
+        target.setAircraftCode(merged.getAircraftCode());
+        target.setAircraftType(merged.getAircraftType());
+        target.setAirlineId(merged.getAirlineId());
+        target.setAirlineModel(merged.getAirlineModel());
+        target.setInternational(merged.isInternational());
+        target.setDeleted(merged.isDeleted());
+        target.setSortOrder(merged.getSortOrder());
+        target.setEstimateAmount(merged.getEstimateAmount());
+
+        return new AdoptResult(diff, conflicts);
     }
 
     private static com.google.gson.JsonElement canonicalize(com.google.gson.JsonElement element) {
@@ -435,6 +745,30 @@ public final class RefuelSyncGuard {
     /** Server đã ghi hay chưa thì không kết luận được — không phải conflict thật. */
     public static final String LEGACY_PROJECTION_UNKNOWN = "LEGACY_PROJECTION_UNKNOWN";
 
+    /**
+     * Dung sai khi đối chiếu nhiệt độ và tỉ trọng của response.
+     *
+     * <p>BIÊN: điều kiện báo lệch là {@code |a - b| > tolerance}, nên chênh lệch ĐÚNG BẰNG
+     * dung sai vẫn được coi là khớp. Chọn chiều này có chủ ý — hai giá trị chỉ khác nhau
+     * đúng một đơn vị cuối là kết quả làm tròn của backend, không phải dữ liệu bị mất.
+     * Nhiệt độ hiển thị 2 số lẻ, tỉ trọng 4 số lẻ, dung sai bằng đúng một đơn vị cuối đó.
+     */
+    private static final double TEMPERATURE_TOLERANCE = 0.01d;
+
+    private static final double DENSITY_TOLERANCE = 0.0001d;
+
+    /**
+     * So sánh có dung sai, ổn định với biểu diễn nhị phân của {@code double}.
+     *
+     * <p>{@code 30.01 - 30.00} ra {@code 0.0100000000000016}, tức là so thẳng
+     * {@code > 0.01} sẽ báo lệch cho đúng cái ca mà dung sai sinh ra để bỏ qua. Nới thêm một
+     * lượng nhỏ hơn mọi sai số biểu diễn ở dải giá trị này (nhiệt độ, tỉ trọng đều nhỏ hơn
+     * 1000) để biên "chênh đúng bằng dung sai ⇒ vẫn khớp" thành đúng thật.
+     */
+    private static boolean differsBeyond(double a, double b, double tolerance) {
+        return Math.abs(a - b) > tolerance + 1e-9d;
+    }
+
     public static boolean isInconclusive(String ackReason) {
         return LEGACY_PROJECTION_UNKNOWN.equals(ackReason);
     }
@@ -484,6 +818,36 @@ public final class RefuelSyncGuard {
                 && truncateToSecond(expected.getEndTime()) != truncateToSecond(actual.getEndTime()))
             diff.append(String.format(java.util.Locale.US, "endTime(%s->%s) ",
                     expected.getEndTime(), actual.getEndTime()));
+
+        // Với mẻ đã chốt, số đồng hồ không phải toàn bộ hợp đồng. Nhiệt độ, tỉ trọng và số
+        // hoá nghiệm là dữ liệu người dùng nhập ở màn hình xác nhận; nếu không đối chiếu
+        // chúng thì một response chỉ echo lại nhóm số đồng hồ vẫn được coi là ACK, row bị
+        // xoá cờ dirty và ba trường kia không bao giờ lên tới server — mất im lặng.
+        //
+        // Chỉ đòi khi gói gửi lên THỰC SỰ có giá trị: phiếu chưa nhập thì không có gì để đối
+        // chiếu, và bắt bẻ một trường rỗng chỉ tạo ra non-ACK giả.
+        // So bằng DUNG SAI, không so tuyệt đối: backend lưu các trường này ở kiểu có độ
+        // chính xác khác (decimal(x,y)) nên chênh lệch làm tròn là bình thường. So tuyệt đối
+        // sẽ biến mọi phiếu thành non-ACK và giữ chúng ở trạng thái chờ vĩnh viễn — đổi một
+        // kiểu hỏng lấy một kiểu hỏng khác.
+        if (requestStatus == REFUEL_ITEM_STATUS.DONE) {
+            if (expected.getManualTemperature() > 0
+                    && differsBeyond(expected.getManualTemperature(),
+                    actual.getManualTemperature(), TEMPERATURE_TOLERANCE))
+                diff.append(String.format(java.util.Locale.US, "temp(%.2f->%.2f) ",
+                        expected.getManualTemperature(), actual.getManualTemperature()));
+
+            if (expected.getDensity() > 0
+                    && differsBeyond(expected.getDensity(), actual.getDensity(),
+                    DENSITY_TOLERANCE))
+                diff.append(String.format(java.util.Locale.US, "density(%.4f->%.4f) ",
+                        expected.getDensity(), actual.getDensity()));
+
+            if (!isBlank(expected.getQualityNo())
+                    && !Objects.equals(expected.getQualityNo(), actual.getQualityNo()))
+                diff.append(String.format("qc(%s->%s) ",
+                        expected.getQualityNo(), actual.getQualityNo()));
+        }
 
         return diff.length() == 0 ? null : diff.toString().trim();
     }
@@ -567,8 +931,50 @@ public final class RefuelSyncGuard {
         localItem.setServerRevision(mergedRevision);
         if (serverData.getDateUpdated() != null)
             localItem.setDateUpdated(serverData.getDateUpdated());
-        localItem.setJsonData(preserved.toJson());
+        // KHÔNG serialize lại toàn bộ model vào jsonData. Đường ACK chỉ cần cập nhật
+        // metadata, nhưng đi qua model là đi qua các giá trị mặc định của nó: đo trên máy
+        // thật 17-08, server gửi "ReceiptCount":null và "WaterSensor":null, model biến chúng
+        // thành 0.0, vân tay của row đổi, và mọi màn hình đang mở mất quyền lưu — đúng dòng
+        // VERSION_CONFLICT duy nhất còn lại của mẻ 843 GL.
+        //
+        // Chỉ đắp đúng nhóm metadata lên JSON THÔ, giữ nguyên mọi thứ còn lại từng byte.
+        localItem.setJsonData(overlayMetadata(localItem.getJsonData(), mergedId, mergedUniqueId,
+                mergedClientSeq, mergedRevision, serverData.getDateUpdated()));
         localItem.setLocalModified(keepLocalModified);
+    }
+
+    /**
+     * Đắp nhóm metadata lên JSON thô, KHÔNG đụng tới bất kỳ khoá nghiệp vụ nào.
+     *
+     * <p>Đây là toàn bộ những gì đường ACK được phép ghi vào payload. Đi vòng qua model để
+     * làm việc này là đổi luôn những khoá mà model có giá trị mặc định khác JSON đang lưu —
+     * lỗi đã đo được với {@code null → 0.0}.
+     */
+    private static String overlayMetadata(String json, int id, String uniqueId,
+                                          long clientSeq, int serverRevision,
+                                          java.util.Date dateUpdated) {
+        if (isBlank(json)) return json;
+
+        com.google.gson.JsonObject obj;
+        try {
+            obj = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+        } catch (RuntimeException ex) {
+            return json;
+        }
+
+        if (id > 0) obj.addProperty("Id", id);
+        if (!isBlank(uniqueId)) obj.addProperty("UniqueId", uniqueId);
+        obj.addProperty("ClientSeq", clientSeq);
+        obj.addProperty("ServerRevision", serverRevision);
+        if (dateUpdated != null)
+            obj.addProperty("DateUpdated", new java.text.SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).format(dateUpdated));
+
+        // Cờ runtime của phiên POST không bao giờ được lưu xuống Room.
+        obj.remove("Applied");
+        obj.remove("RejectReason");
+
+        return obj.toString();
     }
 
     private static boolean isBlank(String value) {

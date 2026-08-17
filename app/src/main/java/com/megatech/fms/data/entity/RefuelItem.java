@@ -46,27 +46,92 @@ public class RefuelItem extends BaseEntity {
         // vì không đi qua các giá trị mặc định của model.
         itemData.setBaseBusinessFingerprint(
                 com.megatech.fms.helpers.RefuelSyncGuard.businessFingerprintOfJson(getJsonData()));
+        // Nguyên văn payload lúc đọc: lúc lưu còn phân biệt được trường nào người dùng đã
+        // sửa, trường nào chỉ server đổi — và ghép lại được sau một lần bị chặn.
+        itemData.setBaseJson(getJsonData());
+
+        // Trạng thái hàng đợi đồng bộ nằm ở CỘT, không nằm trong jsonData. Không chép sang
+        // thì model giữ giá trị mặc định SUCCESS và màn hình báo "đã gửi" cho một row đang
+        // kẹt lỗi.
+        // Hai enum cùng thứ tự NONE/SUCCESS/ERROR nên ánh xạ thẳng theo ordinal.
+        if (getPostStatus() != null)
+            itemData.setPostStatus(
+                    RefuelItemData.ITEM_POST_STATUS.values()[getPostStatus().ordinal()]);
         return  itemData;
     }
 
     public static RefuelItem fromRefuelItemData(RefuelItemData itemData)
     {
         RefuelItem item = new RefuelItem();
-        item.setId(itemData.getId());
-        item.setTruckNo(itemData.getTruckNo());
-        item.setTruckId(itemData.getTruckId());
-        item.setRefuelTime(itemData.getRefuelTime());
-        item.setStatus(REFUEL_ITEM_STATUS.getStatus(itemData.getStatus().getValue()));
         item.setJsonData(gson.toJson(itemData));
+        item.projectColumnsFrom(itemData);
         item.setLocalId(itemData.getLocalId());
-        item.setDateUpdated(itemData.getDateUpdated());
-        item.setFlightId(itemData.getFlightId());
-        item.setRefuelItemType(REFUEL_ITEM_TYPE.getValue(itemData.getRefuelItemType().ordinal()));
         if (itemData.getUniqueId() !=null)
             item.setUniqueId(itemData.getUniqueId());
-        item.setClientSeq(itemData.getClientSeq());
-        item.setServerRevision(itemData.getServerRevision());
         return  item;
+    }
+
+    /**
+     * Chiếu payload xuống CÁC CỘT của Room.
+     *
+     * <p>Trước đây chỉ vài cột được ghi (id, truckNo, truckId, refuelTime, status, flightId,
+     * refuelItemType, version) còn toàn bộ số liệu nghiệp vụ nằm im ở giá trị mặc định. Đo
+     * trên máy thật 17-08 với mẻ 843 GL: {@code jsonData} đúng hoàn toàn trong khi cột
+     * {@code realAmount}, {@code startNumber}, {@code endNumber}, {@code density},
+     * {@code manualTemperature}, {@code qualityNo}, {@code flightCode}, {@code parkingLot},
+     * {@code price} đều là 0/null. Mọi màn hình hay truy vấn đọc theo cột sẽ thấy mẻ 0 GL.
+     *
+     * <p>Gọi ở MỌI đường ghi — {@link #fromRefuelItemData}, {@link #updateData} và đường
+     * nhận bản server ({@code RefuelSyncGuard.applyRemote}) — để cột và {@code jsonData}
+     * không bao giờ nói hai chuyện khác nhau.
+     *
+     * <p>{@code weight} và {@code volume} cố ý không gán: entity tính chúng từ
+     * {@code realAmount}/{@code density} bằng getter.
+     */
+    public void projectColumnsFrom(RefuelItemData data) {
+        setId(data.getId());
+        setFlightId(data.getFlightId());
+        setFlightCode(data.getFlightCode());
+        setAircraftCode(data.getAircraftCode());
+        setAircraftType(data.getAircraftType());
+        setParkingLot(data.getParkingLot());
+        setRouteName(data.getRouteName());
+        setRefuelTime(data.getRefuelTime());
+        setArrivalTime(data.getArrivalTime());
+        setDepartureTime(data.getDepartureTime());
+        setEstimateAmount(data.getEstimateAmount());
+        setRealAmount(data.getRealAmount());
+        setStartNumber(data.getStartNumber());
+        setEndNumber(data.getEndNumber());
+        setTemperature(data.getTemperature());
+        setManualTemperature(data.getManualTemperature());
+        setDensity(data.getDensity());
+        setQualityNo(data.getQualityNo());
+        setPrice(data.getPrice());
+        setTaxRate(data.getTaxRate());
+        setProductId(data.getProductId());
+        setProductName(data.getProductName());
+        setAirlineId(data.getAirlineId());
+        setUserId(data.getUserId());
+        setTruckId(data.getTruckId());
+        setTruckNo(data.getTruckNo());
+        if (data.getStartTime() != null) setStartTime(data.getStartTime());
+        if (data.getEndTime() != null) setEndTime(data.getEndTime());
+        setDateUpdated(data.getDateUpdated());
+        setStatus(REFUEL_ITEM_STATUS.getStatus(data.getStatus().getValue()));
+        // getStatus() trả null cho giá trị model không có trong enum này (CANCELLED=4).
+        // Ghi null xuống rồi để converter nổ là cách hỏng tệ nhất; giữ giá trị cũ.
+        FLIGHT_STATUS mappedFlight = data.getFlightStatus() == null
+                ? FLIGHT_STATUS.NONE
+                : FLIGHT_STATUS.getStatus(data.getFlightStatus().ordinal());
+        if (mappedFlight != null) setFlightStatus(mappedFlight);
+        setRefuelItemType(REFUEL_ITEM_TYPE.getValue(data.getRefuelItemType().ordinal()));
+        ITEM_PRINT_STATUS mappedPrint = data.getPrintStatus() == null
+                ? ITEM_PRINT_STATUS.NONE
+                : ITEM_PRINT_STATUS.getStatus(data.getPrintStatus().ordinal());
+        if (mappedPrint != null) setPrintStatus(mappedPrint);
+        setClientSeq(data.getClientSeq());
+        setServerRevision(data.getServerRevision());
     }
 
     public void updateData(RefuelItemData itemData) {
@@ -80,13 +145,17 @@ public class RefuelItem extends BaseEntity {
         if (currentData.isPrinted() && !itemData.isPrinted())
             itemData.setPrinted(true);
 
-        item.setId(itemData.getId());
-        item.setTruckNo(itemData.getTruckNo());
-        item.setTruckId(itemData.getTruckId());
-        item.setRefuelTime(itemData.getRefuelTime());
-        item.setStatus(REFUEL_ITEM_STATUS.getStatus(itemData.getStatus().getValue()));
+        // Cột và jsonData phải luôn nói cùng một chuyện — xem projectColumnsFrom.
+        item.projectColumnsFrom(itemData);
 
-        item.setJsonData(gson.toJson(itemData));
+        // GIỮ các khoá server gửi xuống mà model không biết (TechLog, Weight, Invoice...).
+        // Thay nguyên jsonData bằng bản serialize từ model sẽ xoá sạch chúng ở mỗi lần lưu
+        // local, rồi đẩy bản thiếu đó lên server ở lần POST kế tiếp.
+        // itemData luôn là model ĐẦY ĐỦ ở đường này: nó đến từ toRefuelItemData hoặc từ
+        // một màn hình đang giữ cả phiếu, nên trường vắng mặt đúng là người dùng đã xoá.
+        item.setJsonData(com.megatech.fms.helpers.RefuelSyncGuard.mergePreservingUnknown(
+                item.getJsonData(), gson.toJson(itemData),
+                com.megatech.fms.helpers.RefuelSyncGuard.ModelPayloadSource.COMPLETE_MODEL));
 
         item.setDateUpdated(itemData.getDateUpdated());
         item.setFlightId(itemData.getFlightId());
@@ -461,7 +530,8 @@ public class RefuelItem extends BaseEntity {
 
         @TypeConverter
         public static Integer getInt(REFUEL_ITEM_TYPE status) {
-            return status.value;
+            // Không bao giờ để converter nổ: một NPE ở đây giết cả lượt sync.
+            return status == null ? REFUEL.value : status.value;
         }
     }
 
@@ -489,7 +559,8 @@ public class RefuelItem extends BaseEntity {
 
         @TypeConverter
         public static Integer getInt(ITEM_PRINT_STATUS status) {
-            return status.value;
+            // Không bao giờ để converter nổ: một NPE ở đây giết cả lượt sync.
+            return status == null ? NONE.value : status.value;
         }
     }
 
@@ -517,7 +588,8 @@ public class RefuelItem extends BaseEntity {
 
         @TypeConverter
         public static Integer getInt(ITEM_POST_STATUS status) {
-            return status.value;
+            // Không bao giờ để converter nổ: một NPE ở đây giết cả lượt sync.
+            return status == null ? NONE.value : status.value;
         }
     }
 
@@ -555,7 +627,10 @@ public class RefuelItem extends BaseEntity {
 
         @TypeConverter
         public static Integer getInt(FLIGHT_STATUS status) {
-            return status.value;
+            // Model có CANCELLED(4), enum này thì không, nên getStatus(4) trả null và
+            // Room gọi converter với null. Đo trên xe thật 17-08: NPE ở đây làm HỎNG CẢ
+            // LƯỢT SYNC ("SYNC core failed") mỗi 30 giây, suốt nhiều giờ.
+            return status == null ? NONE.value : status.value;
         }
     }
 
@@ -583,7 +658,8 @@ public class RefuelItem extends BaseEntity {
 
         @TypeConverter
         public static Integer getInt(REFUEL_ITEM_STATUS status) {
-            return status.value;
+            // Không bao giờ để converter nổ: một NPE ở đây giết cả lượt sync.
+            return status == null ? NONE.value : status.value;
         }
 
 

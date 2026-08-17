@@ -271,6 +271,11 @@
     <string name="error_same_user">Không thể chọn cùng 1 nhân viên cho 2 vị trí</string>
     <string name="invalid_truck_info">Thông tin xe tra nạp không đúng, vui lòng cập nhật.</string>
     <string name="error_data">Lỗi dữ liệu</string>
+    <string name="retry">Thử lại</string>
+    <string name="warn_refuel_background_save_failed">Số liệu chưa được lưu vào máy. Không đóng ứng dụng. Khi kết thúc, hệ thống sẽ thử lưu lại và chỉ cho phép đi tiếp khi lưu thành công.</string>
+    <string name="error_refuel_end_save_failed">Chưa ghi được số liệu mẻ vào máy. KHÔNG rời màn hình này — bấm Thử lại. Nếu vẫn không được, ghi lại số đồng hồ đầu/cuối rồi báo kỹ thuật.</string>
+    <string name="error_refuel_save_conflict">Phiếu này đã được chốt bằng số liệu khác nên không ghi đè được. Dữ liệu bạn nhập vẫn còn nguyên trên màn hình. Vui lòng đối chiếu lại số đồng hồ trước khi lưu, hoặc chụp màn hình và báo kỹ thuật.</string>
+    <string name="error_refuel_save_failed">Chưa lưu được số liệu. Dữ liệu bạn nhập vẫn còn nguyên trên màn hình — vui lòng bấm Xác nhận lại. Nếu vẫn không được, chụp màn hình và báo kỹ thuật.</string>
     <string name="accept">Đồng ý</string>
     <string name="refuelling_status">Đồng hồ đang ở trạng thái tra nạp. Bạn muốn tiếp tục hay bắt đầu lại?</string>
     <string name="refuel_continue">Tiếp tục tra nạp</string>

@@ -525,11 +525,32 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         new AsyncTask<Void, Void, RefuelItemData>() {
             @Override
             protected RefuelItemData doInBackground(Void... voids) {
-                Logger.appendLog(LOG_TAG, "Post item " + mItem.getId() + " UniqueId: " + mItem.getUniqueId());
-                Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
+                try {
+                    Logger.appendLog(LOG_TAG, "Post item " + mItem.getId() + " UniqueId: " + mItem.getUniqueId());
+                    Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
 
-                mItem = DataHelper.postRefuel(mItem,false);
-                return mItem;
+                    RefuelItemData saved = DataHelper.postRefuel(mItem, false);
+
+                    // Lưu thường bị precondition từ chối: thử lại theo kiểu PATCH — đọc row
+                    // mới nhất dưới khoá ghi rồi chỉ đắp đúng những trường màn hình này cho
+                    // nhập. Nếu cùng một trường hai phía cùng đổi, hoặc mẻ đã được chốt bằng
+                    // bộ số khác, patch sẽ tự chặn và trả CONFLICT.
+                    if (saved != null
+                            && saved.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                        Logger.appendLog(LOG_TAG, "Lưu bị chặn, thử lại bằng ConfirmFieldsPatch");
+                        saved = DataHelper.saveConfirmFields(mItem);
+                    }
+
+                    // Chỉ khi dữ liệu THỰC SỰ vào Room mới được gán bản ghi trả về lên mItem.
+                    // Gán lúc bị chặn là xoá sạch số liệu mẻ và nhiệt độ/tỉ trọng vừa nhập —
+                    // đúng cách màn hình này từng hiện về 0 GL.
+                    if (RefuelItemData.isCommitted(saved))
+                        mItem = saved;
+                    return saved;
+                } catch (Throwable ex) {
+                    Logger.appendLog(LOG_TAG, "Lưu lỗi: " + ex);
+                    return null;
+                }
             }
 
             @Override
@@ -596,9 +617,21 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         }
         return imagePath;
     }
-    private void postRefuelCompleted(RefuelItemData mItem) {
+    private void postRefuelCompleted(RefuelItemData saved) {
         closeProgressDialog();
 
+        // Điều hướng CHỈ sau khi dữ liệu đã vào Room. null cũng là thất bại: đi tiếp là mất
+        // trắng số liệu vừa nhập mà người dùng không hề biết.
+        if (!RefuelItemData.isCommitted(saved)) {
+            Logger.appendLog(LOG_TAG, "Chưa lưu được ("
+                    + (saved == null ? "FAILED" : saved.getSaveOutcome())
+                    + "), giữ nguyên màn hình xác nhận");
+            showErrorMessage(saved != null
+                    && saved.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT
+                    ? R.string.error_refuel_save_conflict
+                    : R.string.error_refuel_save_failed);
+            return;
+        }
 
         openPreview();
 

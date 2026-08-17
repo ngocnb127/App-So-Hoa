@@ -308,8 +308,14 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
             // TIẾP CẬN
             binding.btnApproach.setOnClickListener(v -> {
-                itemData.setApproachTime(new Date());
-                saveAndUpdate(itemData);
+                final Date approachTime = new Date();
+                itemData.setApproachTime(approachTime);
+                // Ngoài màn hình tra nạp, mọi thay đổi đều do người dùng chủ động bấm nên
+                // PHẢI được chấp thuận. Precondition chỉ tồn tại để chặn số đồng hồ nhảy
+                // lung tung trong lúc tra nạp; đem nó ra đây chỉ tạo ra "Cập nhật phiếu chưa
+                // lưu được" trên một thao tác hoàn toàn hợp lệ. Patch đọc bản mới nhất rồi
+                // đặt đúng một trường lên trên, không cần nền cũ.
+                patchAndUpdate(itemData, latest -> latest.setApproachTime(approachTime));
             });
 
             // RỜI ĐI
@@ -345,7 +351,9 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
                                 // 🚀 DB + SYNC CHẠY BACKGROUND
                                 new Thread(() -> {
-                                    DataHelper.postRefuel(itemData, false);
+                                    boolean ok = RefuelItemData.isCommitted(
+                                            DataHelper.postRefuel(itemData, false));
+                                    warnIfNotSaved(ok);
 
                                     // 🔄 UPDATE UI
                                     activity.runOnUiThread(() -> {
@@ -365,19 +373,16 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
                 }
 
                 // ===== CÓ TRA NẠP → RỜI ĐI BÌNH THƯỜNG =====
-                itemData.setLeaveTime(new Date());
+                final Date leaveTime = new Date();
+                itemData.setLeaveTime(leaveTime);
                 itemData.setLocalModified(true);
 
-                new Thread(() -> {
-                    DataHelper.postRefuel(itemData, false);
+                // Cập nhật danh sách NGAY, không chờ ghi xong: trước đây nút phải đợi cả
+                // lượt postRefuel rồi mới vẽ lại nên bấm xong thấy như không ăn.
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) notifyItemChanged(pos);
 
-                    activity.runOnUiThread(() -> {
-                        int pos = getAdapterPosition();
-                        if (pos != RecyclerView.NO_POSITION) {
-                            notifyItemChanged(pos);
-                        }
-                    });
-                }).start();
+                patchAndUpdate(itemData, latest -> latest.setLeaveTime(leaveTime));
             });
 
 
@@ -385,12 +390,43 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
         }
 
+        /**
+         * Ghi một thao tác chủ động của người dùng ở màn hình danh sách.
+         *
+         * <p>Đọc bản mới nhất trong Room rồi đặt trường cần đổi lên trên, nên KHÔNG phụ
+         * thuộc vào nền chụp lúc mở danh sách — nền đó bị lượt pull nền làm cũ liên tục và
+         * là lý do các thao tác Tiếp cận / Rời đi bị báo "chưa lưu được" dù hoàn toàn hợp lệ.
+         */
+        private void patchAndUpdate(RefuelItemData item,
+                                    DataHelper.RefuelPatch change) {
+            new Thread(() -> {
+                boolean ok = false;
+                try {
+                    DataHelper.PatchResult result =
+                            DataHelper.patchRefuel(item.getUniqueId(), change);
+                    ok = result != null && result.applied;
+                } catch (Exception ex) {
+                    Logger.appendLog("FMS", "Patch phiếu lỗi: " + ex.getMessage());
+                }
+                warnIfNotSaved(ok);
+
+                Context context = itemView.getContext();
+                if (context instanceof Activity) {
+                    ((Activity) context).runOnUiThread(() -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) notifyItemChanged(pos);
+                    });
+                }
+            }).start();
+        }
+
         private void saveAndUpdate(RefuelItemData item) {
 
             new Thread(() -> {
                 try {
                     Logger.appendLog("FMS", "Posting refuel update...");
-                    DataHelper.postRefuel(item, false);
+                    warnIfNotSaved(RefuelItemData.isCommitted(
+                            DataHelper.postRefuel(item, false)));
 
                 } catch (Exception ex) {
                     Logger.appendLog("ERR", ex.getMessage());
@@ -418,6 +454,17 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
 
 
+        /**
+         * Ghi nhận tiếp cận/rời đi bị chặn thì phải báo: các thao tác này ghi thẳng vào
+         * phiếu, im lặng bỏ qua là mất dữ liệu mà không ai biết.
+         */
+        private void warnIfNotSaved(boolean committed) {
+            if (committed) return;
+            Logger.appendLog("FMS", "Cập nhật phiếu chưa lưu được");
+            ((Activity) ctx).runOnUiThread(() ->
+                    ctx.showErrorMessage(R.string.error_refuel_save_failed));
+        }
+
         private void postData(RefuelItemData itemData) {
             new AsyncTask<Void, Void, RefuelItemData>() {
                 @Override
@@ -436,7 +483,7 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
         private void postDataCompleted(RefuelItemData itemData) {
             ctx.closeProgressDialog();
-            if (itemData == null || itemData.isLocalModified())
+            if (!RefuelItemData.isCommitted(itemData) || itemData.isLocalModified())
                 ctx.showErrorMessage(R.string.sync_error_title, R.string.sync_error);
             else {
                 ctx.showMessage(R.string.sync, R.string.sync_completed_message, R.drawable.ic_checked_circle, null);

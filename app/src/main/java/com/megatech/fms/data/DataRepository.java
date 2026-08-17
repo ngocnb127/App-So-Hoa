@@ -235,6 +235,11 @@ public class DataRepository {
         return db.refuelItemDao().getModified();
     }
 
+    /** Toàn bộ phiếu — chỉ dùng cho bảo trì một lần khi nâng cấp (chiếu lại cột từ JSON). */
+    public List<RefuelItem> getAllRefuels() {
+        return db.refuelItemDao().getAll();
+    }
+
     public List<AirlineModel> getAirlines() {
         List<Airline> localList = db.airlineDao().getAll();
         List<AirlineModel> returnList = new ArrayList();

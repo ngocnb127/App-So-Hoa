@@ -21,6 +21,7 @@ public final class RefuelIntent {
     private static final String EXTRA_BASE_SEQ = "REFUEL_BASE_SEQ";
     private static final String EXTRA_BASE_REV = "REFUEL_BASE_REV";
     private static final String EXTRA_BASE_FINGERPRINT = "REFUEL_BASE_FP";
+    private static final String EXTRA_BASE_JSON = "REFUEL_BASE_JSON";
 
     private RefuelIntent() {
     }
@@ -33,6 +34,7 @@ public final class RefuelIntent {
         intent.putExtra(EXTRA_BASE_SEQ, data.getBaseClientSeq());
         intent.putExtra(EXTRA_BASE_REV, data.getBaseServerRevision());
         intent.putExtra(EXTRA_BASE_FINGERPRINT, data.getBaseBusinessFingerprint());
+        intent.putExtra(EXTRA_BASE_JSON, data.getBaseJson());
     }
 
     /** Đọc phiếu từ Intent và khôi phục đúng baseline đã gửi kèm. */
@@ -54,5 +56,6 @@ public final class RefuelIntent {
         data.setBaseClientSeq(bundle.getLong(EXTRA_BASE_SEQ, RefuelItemData.VERSION_UNKNOWN));
         data.setBaseServerRevision(bundle.getInt(EXTRA_BASE_REV, (int) RefuelItemData.VERSION_UNKNOWN));
         data.setBaseBusinessFingerprint(bundle.getString(EXTRA_BASE_FINGERPRINT, null));
+        data.setBaseJson(bundle.getString(EXTRA_BASE_JSON, null));
     }
 }

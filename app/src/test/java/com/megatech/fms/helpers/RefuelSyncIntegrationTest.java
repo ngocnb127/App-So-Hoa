@@ -2,6 +2,7 @@ package com.megatech.fms.helpers;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -481,9 +482,16 @@ public class RefuelSyncIntegrationTest {
         assertEquals(gets + 1, http.getCount);
     }
 
-    /** Ba lượt thất bại ⇒ row chuyển ERROR và rời hàng đợi. */
+    /**
+     * Ba lượt thất bại ⇒ row Ở LẠI hàng đợi, chỉ bị hoãn.
+     *
+     * <p>Trước đây chỗ này đánh {@code postStatus = ERROR} để row rời hàng đợi. Trạng thái
+     * đó nằm trong DB nên khởi động lại app cũng không cứu: dữ liệu người dùng đứng lại
+     * vĩnh viễn ở máy mà không ai biết. Nay row vẫn chờ gửi, và không bao giờ mang nhãn
+     * SUCCESS trong lúc chưa lên được server.
+     */
     @Test
-    public void thirdFailedVerificationMovesRowOutOfQueue() {
+    public void rowStaysQueuedAfterRepeatedUnconfirmedPosts() {
         seedRow(1110, 60166240, 5, 8, true);
         http.postResponse = payload(0, 60166240, 9, 6);
         http.remoteItem = null;
@@ -493,9 +501,12 @@ public class RefuelSyncIntegrationTest {
             DataHelper.expireVerificationBackoff(UID);
         }
 
-        assertEquals(RefuelItem.ITEM_POST_STATUS.ERROR, repo.getRefuel(UID).getPostStatus());
-        assertTrue(repo.getModifiedRefuel().isEmpty());
-        assertTrue(repo.getRefuel(UID).isLocalModified());
+        RefuelItem row = repo.getRefuel(UID);
+        assertNotEquals(RefuelItem.ITEM_POST_STATUS.ERROR, row.getPostStatus());
+        assertNotEquals("chưa lên được server thì không được báo thành công",
+                RefuelItem.ITEM_POST_STATUS.SUCCESS, row.getPostStatus());
+        assertTrue("row phải còn trong hàng đợi đồng bộ", row.isLocalModified());
+        assertEquals(1110d, row.toRefuelItemData().getRealAmount(), 0d);
     }
 
     /** No-op direct call trong thời gian backoff không được phát POST. */
@@ -564,9 +575,15 @@ public class RefuelSyncIntegrationTest {
                 row.isLocalModified());
     }
 
-    /** Ca 2: hết ba lượt GET không xác nhận ⇒ row rời hàng đợi tự động. */
+    /**
+     * Ca 2: hết ba lượt GET không xác nhận ⇒ row bị HOÃN, không bị loại khỏi hàng đợi.
+     *
+     * <p>Điểm phải giữ: dữ liệu local nguyên vẹn và row vẫn còn cơ hội gửi lại. Điểm phải
+     * tránh: quay vòng POST + GET liên tục với server — nên lượt sync ngay sau đó không
+     * được phát thêm request nào.
+     */
     @Test
-    public void rowLeavesQueueAfterVerificationAttemptsExhausted() {
+    public void rowIsBackedOffButStaysQueuedAfterVerificationExhausted() {
         seedRow(1110, 60166240, 5, 8, true);
 
         http.postResponse = payload(0, 60166240, 9, 6);
@@ -578,11 +595,16 @@ public class RefuelSyncIntegrationTest {
             DataHelper.expireVerificationBackoff(UID);
         }
 
-        assertEquals(RefuelItem.ITEM_POST_STATUS.ERROR, repo.getRefuel(UID).getPostStatus());
-        assertTrue(repo.getModifiedRefuel().isEmpty());
+        RefuelItem row = repo.getRefuel(UID);
+        assertNotEquals(RefuelItem.ITEM_POST_STATUS.ERROR, row.getPostStatus());
+        assertTrue("dữ liệu local phải nguyên vẹn", row.isLocalModified());
+        assertEquals(1110d, row.toRefuelItemData().getRealAmount(), 0d);
         assertEquals(1, repo.getAllModifiedRefuel().size());
-        assertTrue("dữ liệu local phải nguyên vẹn",
-                repo.getRefuel(UID).isLocalModified());
+
+        int postsBefore = http.postCount;
+        DataHelper.syncModifiedRefuels();
+        assertEquals("đang trong thời gian hoãn thì không được gửi tiếp",
+                postsBefore, http.postCount);
     }
 
     /** Ca 3: GET có revision cao hơn response POST ⇒ row lưu revision của GET. */

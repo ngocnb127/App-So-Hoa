@@ -1549,11 +1549,19 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             @Override
             public void run() {
                 Logger.appendLog(LOG_TAG, "post all refuels");
-                if (updateAll)
-                    DataHelper.postRefuels(allItems, true);
-                else
-                    DataHelper.postRefuel(refuelData, true);
+                boolean committed = updateAll
+                        ? DataHelper.postRefuels(allItems, true)
+                        : RefuelItemData.isCommitted(DataHelper.postRefuel(refuelData, true));
 
+                // Lưu bị chặn mà màn hình vẫn vẽ lại như cũ thì người dùng tin là đã sửa
+                // xong, trong khi Room giữ nguyên giá trị cũ.
+                if (!committed) {
+                    Logger.appendLog(LOG_TAG, "Sửa phiếu chưa lưu được");
+                    runOnUiThread(() -> {
+                        if (!isFinishing())
+                            showErrorMessage(R.string.error_refuel_save_failed);
+                    });
+                }
             }
         }).start();
         if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
@@ -2042,7 +2050,15 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
 
         }
-        new Thread(() -> DataHelper.postRefuels(printItems, false)).start();
+        new Thread(() -> {
+            if (!DataHelper.postRefuels(printItems, false)) {
+                Logger.appendLog(LOG_TAG, "Ghi nhận đánh giá chưa lưu được");
+                runOnUiThread(() -> {
+                    if (!isFinishing())
+                        showErrorMessage(R.string.error_refuel_save_failed);
+                });
+            }
+        }).start();
         binding.invalidateAll();
     }
     private boolean calculateReturnAmount(double returnAmount, RETURN_UNIT unit) {

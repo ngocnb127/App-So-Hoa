@@ -457,7 +457,8 @@ public class NewRefuelActivity extends UserBaseActivity implements View.OnClickL
     }
 
     private void postRefuelCompleted(RefuelItemData response) {
-        if (response != null) {
+        // Chỉ mở màn hình tra nạp khi phiếu đã thực sự nằm trong Room.
+        if (RefuelItemData.isCommitted(response)) {
 
             refuelData.setId(response.getId());
             refuelData.setAlert(currentApp.getCurrentAmount() < refuelData.getEstimateAmount());

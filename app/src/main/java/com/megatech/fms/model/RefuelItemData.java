@@ -206,6 +206,119 @@ public class RefuelItemData extends BaseModel implements Cloneable {
      */
     private transient String baseBusinessFingerprint;
 
+    /** Kết quả của lần lưu vừa rồi. {@code null} cũng như {@link #FAILED}: KHÔNG thành công. */
+    public enum SAVE_OUTCOME {
+        /** Dữ liệu đã nằm trong Room. Chỉ trạng thái này mới được phép điều hướng tiếp. */
+        COMMITTED,
+        /** Precondition từ chối: dữ liệu người dùng chưa được ghi, phải giữ lại trên màn hình. */
+        CONFLICT,
+        /** Lỗi ngoài dự kiến. */
+        FAILED
+    }
+
+    /**
+     * Kết quả lần lưu vừa rồi.
+     *
+     * <p>Trước đây "đã lưu" và "bị chặn" cùng trả về bản ghi đang có trong Room nên không
+     * phân biệt được: màn hình xác nhận gán đè kết quả lên dữ liệu người dùng vừa nhập rồi
+     * đi tiếp — số liệu mẻ biến mất và hiện về 0.
+     *
+     * <p>{@code transient} — không serialize vào jsonData lẫn payload HTTP.
+     */
+    private transient SAVE_OUTCOME saveOutcome;
+
+    public SAVE_OUTCOME getSaveOutcome() {
+        return saveOutcome;
+    }
+
+    public void setSaveOutcome(SAVE_OUTCOME saveOutcome) {
+        this.saveOutcome = saveOutcome;
+    }
+
+    /** Chỉ đúng khi dữ liệu THỰC SỰ đã vào Room. Mọi điều hướng phải đi qua đây. */
+    public static boolean isCommitted(RefuelItemData result) {
+        return result != null && result.saveOutcome == SAVE_OUTCOME.COMMITTED;
+    }
+
+    /**
+     * Lần lưu này chính là lần đưa mẻ từ chưa xong sang {@code DONE}.
+     *
+     * <p>Tồn xe chỉ được trừ đúng một lần, tại lần chuyển trạng thái đó. Nút End bấm lại
+     * hay callback thiết bị lặp không được trừ lần hai.
+     */
+    private transient boolean transitionedToDone;
+
+    public boolean isTransitionedToDone() {
+        return transitionedToDone;
+    }
+
+    public void setTransitionedToDone(boolean transitionedToDone) {
+        this.transitionedToDone = transitionedToDone;
+    }
+
+    /**
+     * Nguyên văn {@code jsonData} của row tại thời điểm snapshot được đọc.
+     *
+     * <p>Chiều thứ ba của mọi phép trộn khi lưu. Vân tay là mã băm nên chỉ nói "có đổi",
+     * không nói "đổi ở đâu" — không đủ để phân biệt "người dùng vừa sửa bãi đỗ" với "server
+     * vừa đổi chuyến", cũng không đủ để ghép lại dữ liệu sau một lần bị chặn.
+     *
+     * <p>{@code transient} — không serialize vào jsonData lẫn payload HTTP.
+     */
+    private transient String baseJson;
+
+    /**
+     * Bản sao ĐỘC LẬP để đưa vào hàng đợi ghi, kèm nguyên baseline.
+     *
+     * <p>Xếp hàng bằng tham chiếu là sai: đối tượng trên màn hình còn bị luồng đọc đồng hồ
+     * và nút End sửa tiếp sau khi task đã xếp hàng. Hệ quả thật đã gặp — task autosave của
+     * số đo `400` chạy sau khi End đã đặt `DONE` lên cùng object, nên chính autosave thực
+     * hiện việc chuyển trạng thái; cờ {@code transitionedToDone} rơi vào kết quả bị bỏ đi,
+     * còn lần ghi của End thấy row đã DONE nên báo false và TỒN XE KHÔNG BAO GIỜ ĐƯỢC TRỪ.
+     *
+     * <p>Baseline là {@code transient} nên không đi theo JSON, phải chép tay.
+     */
+    public RefuelItemData snapshotForSave() {
+        RefuelItemData copy = gson.fromJson(this.toJson(), RefuelItemData.class);
+        copy.setBaseClientSeq(baseClientSeq);
+        copy.setBaseServerRevision(baseServerRevision);
+        copy.setBaseBusinessFingerprint(baseBusinessFingerprint);
+        copy.setBaseJson(baseJson);
+        return copy;
+    }
+
+    /**
+     * Nhận lại danh tính và baseline mà một lần ghi vừa xác lập.
+     *
+     * <p>Vì hàng đợi ghi thao tác trên bản sao, đối tượng của màn hình không tự biết phiên
+     * bản mới. Không chép lại thì lần lưu kế tiếp đứng trên baseline cũ và bị precondition
+     * hiểu nhầm là snapshot lỗi thời. CHỈ chép nhóm danh tính/phiên bản — dữ liệu nghiệp vụ
+     * của màn hình có thể đã mới hơn.
+     */
+    public void adoptSaveState(RefuelItemData saved) {
+        if (saved == null) return;
+
+        if (saved.getId() != null && saved.getId() > 0) setId(saved.getId());
+        if (saved.getLocalId() > 0) setLocalId(saved.getLocalId());
+        if (saved.getUniqueId() != null && !saved.getUniqueId().isEmpty())
+            setUniqueId(saved.getUniqueId());
+        setClientSeq(Math.max(clientSeq, saved.getClientSeq()));
+        setServerRevision(Math.max(serverRevision, saved.getServerRevision()));
+
+        setBaseClientSeq(saved.getBaseClientSeq());
+        setBaseServerRevision(saved.getBaseServerRevision());
+        setBaseBusinessFingerprint(saved.getBaseBusinessFingerprint());
+        setBaseJson(saved.getBaseJson());
+    }
+
+    public String getBaseJson() {
+        return baseJson;
+    }
+
+    public void setBaseJson(String baseJson) {
+        this.baseJson = baseJson;
+    }
+
     public String getBaseBusinessFingerprint() {
         return baseBusinessFingerprint;
     }

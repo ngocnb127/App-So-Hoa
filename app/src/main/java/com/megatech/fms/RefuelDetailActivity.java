@@ -95,6 +95,22 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     boolean checkTCS = true;
 
     private RefuelItemData mItem;
+
+    /**
+     * MỌI lần ghi phiếu của màn hình này đi qua đúng một luồng, theo thứ tự gọi.
+     *
+     * <p>Ca phải bảo đảm: đồng hồ chạy 398 → 399 → 400 rồi HỒI LƯU về 399, người dùng bấm
+     * End. Giá trị chốt hợp lệ là 399 — số cuối, không phải số lớn nhất. Điều đó chỉ đúng
+     * nếu lần ghi của End diễn ra SAU lần ghi 400. Trước đây các lần lưu nằm rải trên
+     * {@code AsyncTask} (có thứ tự) lẫn {@code new Thread} thô (không có thứ tự), nên hai
+     * nhóm đó có thể đảo nhau và một số đo trung gian ghi đè số chốt.
+     *
+     * <p>Hàng đợi một luồng cho toàn bộ vòng đời mẻ là cách hẹp nhất để có thứ tự đó. Tuyệt
+     * đối KHÔNG giải quyết bằng luật "chỉ nhận số lớn nhất": hồi lưu là nghiệp vụ hợp lệ.
+     */
+    private final java.util.concurrent.ExecutorService saveExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(
+                    r -> new Thread(r, "Refuel-Save"));
     private Activity activity;
     private final boolean isEditing = false;
     private final boolean restartRequest = false;
@@ -894,13 +910,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     }
 
     private void updateBinding() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Logger.appendLog("RFW", "Data changed - post item");
-                DataHelper.postRefuel(mItem, false);
-            }
-        }).start();
+        enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
 
         showData();
 
@@ -1123,9 +1133,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 v.setVisibility(View.GONE);
 
                 // Lưu dữ liệu lại local
-                new Thread(() -> {
-                    DataHelper.postRefuel(mItem, false);
-                }).start();
+                enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
                 break;
         }
 
@@ -1880,7 +1888,6 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
      * ngay trong callback thiết bị và lưu local ở thread nền để không chặn UI.
      */
     private void recordStartEvent() {
-        final RefuelItemData itemToSave;
         final Date eventTime;
 
         synchronized (startEventLock) {
@@ -1900,13 +1907,11 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             mItem.setTruckId(currentApp.getTruckId());
             mItem.setTruckNo(currentApp.getTruckNo());
             mItem.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
-            itemToSave = mItem;
         }
 
         Logger.appendLog("RFW", "Meter started at " + eventTime.getTime()
                 + ", save local item immediately");
-        new Thread(() -> DataHelper.postRefuel(itemToSave, false),
-                "Refuel-Start-Save").start();
+        enqueueSave(false, this::warnIfNotSaved);
     }
 
     private void requestSaleNumberAndTicket() {
@@ -1997,9 +2002,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     }
                 }
 
-                boolean isExtract = mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.EXTRACT;
-                currentApp.setCurrentAmount(currentApp.getCurrentAmount() + (float) (isExtract ? mItem.getRealAmount() : -mItem.getRealAmount()));
-
+                // Tồn xe KHÔNG được cập nhật ở đây. Trước đây trừ ngay tại chỗ này, trước
+                // khi mẻ được ghi: lần lưu bị chặn thì tồn đã trừ 399 GL trong khi phiếu
+                // vẫn là 0 GL. Nay chỉ trừ sau khi Room xác nhận, và chỉ ở đúng lần commit
+                // tạo ra chuyển trạng thái sang DONE — xem postRefuelCompleted().
                 mItem.setStatus(REFUEL_ITEM_STATUS.DONE);
 
                 if (!BuildConfig.FHS) {
@@ -2219,65 +2225,225 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         finish();
     }
 
-    private void saveData() {
-        new AsyncTask<Void, Void, RefuelItemData>() {
-            @Override
-            protected RefuelItemData doInBackground(Void... voids) {
-                //Logger.appendLog("RFW", "saving item");
-                return DataHelper.postRefuel(mItem, false);
-            }
+    /**
+     * Xếp một lần ghi vào hàng đợi, thao tác trên BẢN SAO chụp ngay tại đây.
+     *
+     * <p>Hai luật bắt buộc:
+     * <ul>
+     *   <li>bản sao độc lập — đối tượng của màn hình còn bị luồng đồng hồ và nút End sửa
+     *       tiếp sau khi task đã xếp hàng;</li>
+     *   <li>chỉ {@code finalize = true} (đường End) mới được mang trạng thái {@code DONE}.
+     *       Autosave chốt mẻ hộ là nguồn của lỗi mất trừ tồn xe.</li>
+     * </ul>
+     */
+    private long lastAutosaveAt = 0;
 
-            @Override
-            protected void onPostExecute(RefuelItemData itemData) {
-                //Logger.appendLog("RFW", "saving item completed");
-                if (itemData!=null) {
-                    if (itemData.getId() != mItem.getId())
-                        mItem.setId(itemData.getId());
-                    if (itemData.getLocalId() != mItem.getLocalId())
-                        mItem.setLocalId(itemData.getLocalId());
-                    if (itemData.getUniqueId() != mItem.getUniqueId())
-                        mItem.setUniqueId(itemData.getUniqueId());
-                    currentApp.saveCurrentRefuel(mItem.getId(), mItem.getLocalId());
+    /**
+     * Nhịp tối thiểu giữa hai lần LƯU SỐ ĐO TRUNG GIAN.
+     *
+     * <p>Thiết bị TCS gọi {@code OnRecivedData} theo TỪNG GÓI dữ liệu — vài lần mỗi giây,
+     * khác LCR vốn một giây một lần. Lưu theo từng gói vừa nặng vừa làm ngập log: đo trên xe
+     * thật 17-08 16:36, ba đến bốn lần lưu mỗi giây với cùng một bộ số. Số đo trung gian chỉ
+     * cần đủ dày để không mất nhiều khi app bị kill; lần chốt của End không bao giờ bị hoãn.
+     */
+    private static final long MIN_AUTOSAVE_INTERVAL_MS = 1000L;
+
+    private void enqueueSave(boolean finalize,
+                             java.util.function.Consumer<RefuelItemData> onResult) {
+        final RefuelItemData source = mItem;
+        if (source == null) return;
+
+        if (!finalize) {
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - lastAutosaveAt < MIN_AUTOSAVE_INTERVAL_MS) return;
+            lastAutosaveAt = now;
+        }
+
+        final RefuelItemData snapshot = source.snapshotForSave();
+
+        if (!finalize && snapshot.getStatus() == REFUEL_ITEM_STATUS.DONE) {
+            // Mẻ đã được End chốt; autosave không còn việc gì ở đây.
+            Logger.appendLog("RFW", "Bỏ autosave trên mẻ đã DONE, để đường End tự lưu");
+            return;
+        }
+
+        if (saveExecutor.isShutdown()) {
+            Logger.appendLog("RFW", "Bỏ lần lưu vì hàng đợi đã đóng");
+            return;
+        }
+
+        try {
+            saveExecutor.execute(() -> {
+            RefuelItemData result;
+            try {
+                // Dữ liệu nghiệp vụ phải là ảnh chụp lúc enqueue, nhưng baseline phải là
+                // phiên bản mới nhất do task đứng ngay trước vừa commit. Nếu giữ baseline
+                // cũ chụp cùng lúc với dữ liệu, End xếp sau autosave sẽ tự conflict vì
+                // autosave đã tăng clientSeq trong khi End còn nằm chờ trong hàng đợi.
+                snapshot.adoptSaveState(source);
+                result = DataHelper.postRefuel(snapshot, false);
+
+                // Lần chốt mẻ bị precondition chặn: thử lại theo kiểu PATCH — đọc row mới
+                // nhất dưới khoá ghi rồi chỉ đắp đúng nhóm trường của vòng đời mẻ. Không có
+                // bước này thì conflict thật lúc End là ngõ cụt: bấm "Thử lại" gửi lại đúng
+                // baseline cũ nên hỏng mãi, số liệu mẻ nằm lại trên màn hình cho tới khi mất.
+                if (finalize && result != null
+                        && result.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                    Logger.appendLog("RFW", "Chốt mẻ bị chặn, thử lại bằng EndFieldsPatch");
+                    result = DataHelper.saveEndFields(snapshot);
                 }
-                super.onPostExecute(itemData);
-
+            } catch (Throwable ex) {
+                Logger.appendLog("RFW", "Lưu lỗi: " + ex);
+                result = null;
             }
-        }.execute();
+
+            // Hàng đợi ghi làm việc trên bản sao, nên phải trả phiên bản mới về cho đối
+            // tượng của màn hình, nếu không lần lưu kế tiếp đứng trên baseline cũ.
+            if (RefuelItemData.isCommitted(result))
+                source.adoptSaveState(snapshot);
+
+            final RefuelItemData delivered = result;
+            runOnUiThread(() -> onResult.accept(delivered));
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ex) {
+            // onDestroy có thể đóng queue đúng lúc callback thiết bị vừa yêu cầu autosave.
+            // Không để race vòng đời này làm crash ứng dụng.
+            Logger.appendLog("RFW", "Bỏ lần lưu vì hàng đợi vừa đóng");
+        }
     }
 
+    /**
+     * Lưu số đo trung gian. Xếp cùng hàng đợi với lần lưu của End nên số đo cuối luôn là
+     * số được ghi sau cùng — kể cả khi đồng hồ hồi lưu từ 400 về 399.
+     */
+    private void saveData() {
+        enqueueSave(false, result -> {
+            if (!RefuelItemData.isCommitted(result)) {
+                warnIfNotSaved(result);
+                return;
+            }
+            if (mItem == null) return;
+            currentApp.saveCurrentRefuel(mItem.getId(), mItem.getLocalId());
+        });
+    }
+
+    /**
+     * Lưu lần chốt của mẻ.
+     *
+     * <p>Xếp vào CUỐI hàng đợi: mọi số đo trung gian chắc chắn ghi xong trước. Đây cũng là
+     * đường DUY NHẤT được phép tạo chuyển trạng thái sang DONE, nên cờ
+     * {@code transitionedToDone} — thứ quyết định việc trừ tồn xe — luôn về đúng chỗ.
+     */
     private void postData() {
+        if (mItem != null)
+            Logger.appendLog("RFW", String.format(java.util.Locale.US,
+                    "Post item chốt mẻ, EndNumber=%.0f RealAmount=%.0f",
+                    mItem.getEndNumber(), mItem.getRealAmount()));
 
-        new AsyncTask<Void, Void, RefuelItemData>() {
-            @Override
-            protected RefuelItemData doInBackground(Void... voids) {
-                Logger.appendLog("RFW", "Post item");
-                return DataHelper.postRefuel(mItem, false);
-            }
+        enqueueSave(true, result -> {
+            Logger.appendLog("RFW", "Post item completed");
+            postRefuelCompleted(result);
+        });
+    }
 
-            @Override
-            protected void onPostExecute(RefuelItemData itemData) {
-                Logger.appendLog("RFW", "Post item completed");
+    private long lastSaveWarningAt = 0;
 
-                postRefuelCompleted(itemData);
-                super.onPostExecute(itemData);
+    /** Khoảng cách tối thiểu giữa hai lần nhắc người dùng về lỗi lưu nền. */
+    private static final long SAVE_WARNING_INTERVAL_MS = 30_000L;
 
-            }
-        }.execute();
+    /**
+     * Lưu nền bị chặn thì phải báo — nhưng KHÔNG bằng hộp thoại chặn màn hình.
+     *
+     * <p>Timer đọc đồng hồ lưu mỗi giây, nên một lỗi kéo dài sẽ sinh ra hàng chục hộp thoại
+     * chồng lên nhau ngay giữa lúc đang bơm: người dùng không thao tác được, mà cũng không
+     * đọc được cái nào. Đây là lỗi đã gặp thật khi chạy thử trên xe.
+     *
+     * <p>Nền thì báo bằng Toast, tối đa mỗi {@link #SAVE_WARNING_INTERVAL_MS} một lần. Hộp
+     * thoại chặn chỉ dành cho hai thời điểm người dùng thực sự phải quyết định: bấm End và
+     * bấm Xác nhận. Log thì vẫn ghi đủ mọi lần.
+     */
+    private int suppressedSaveWarnings = 0;
+
+    private void warnIfNotSaved(RefuelItemData result) {
+        if (RefuelItemData.isCommitted(result)) return;
+
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastSaveWarningAt < SAVE_WARNING_INTERVAL_MS) {
+            // Ghi từng lần sẽ ngập fms.log rồi ngập cả file gửi lên server: đo trên xe thật
+            // 17-08 16:36 là 3-4 dòng mỗi giây. Nén lại nhưng PHẢI đếm, nếu không việc nén
+            // biến thành mất bằng chứng.
+            suppressedSaveWarnings++;
+            return;
+        }
+
+        Logger.appendLog("RFW", String.format(java.util.Locale.US,
+                "Lưu nền chưa thành công: %s%s",
+                result == null ? "FAILED" : result.getSaveOutcome(),
+                suppressedSaveWarnings > 0
+                        ? " (đã nén " + suppressedSaveWarnings + " lần giống hệt)" : ""));
+        suppressedSaveWarnings = 0;
+        lastSaveWarningAt = now;
+
+        runOnUiThread(() -> {
+            if (!isFinishing())
+                android.widget.Toast.makeText(this,
+                        R.string.warn_refuel_background_save_failed,
+                        android.widget.Toast.LENGTH_LONG).show();
+        });
     }
 
     private void postRefuelCompleted(RefuelItemData itemData) {
-        if (itemData != null) {
-            if (itemData.getId() != mItem.getId())
-                mItem.setId(itemData.getId());
-            if (itemData.getLocalId() != mItem.getLocalId())
-                mItem.setLocalId(itemData.getLocalId());
-            if (itemData.getUniqueId() != mItem.getUniqueId())
-                mItem.setUniqueId(itemData.getUniqueId());
+        if (mItem == null) return;   // màn hình đã bị huỷ trong lúc ghi
+
+        // Kết thúc mẻ mà chưa ghi được xuống Room thì KHÔNG đi tiếp: mở màn hình xác nhận
+        // lúc này là đưa người dùng đi nhập tiếp lên một phiếu chưa hề tồn tại số liệu.
+        if (!RefuelItemData.isCommitted(itemData)) {
+            Logger.appendLog("RFW", "Chưa lưu được mẻ ("
+                    + (itemData == null ? "FAILED" : itemData.getSaveOutcome())
+                    + "), ở lại màn hình để thử lại");
+            setRefuelStatus(REFUEL_STATUS.ENDED);
+            showEndSaveFailed();
+            return;
         }
+
+        if (itemData.getId() != mItem.getId())
+            mItem.setId(itemData.getId());
+        if (itemData.getLocalId() != mItem.getLocalId())
+            mItem.setLocalId(itemData.getLocalId());
+        if (itemData.getUniqueId() != mItem.getUniqueId())
+            mItem.setUniqueId(itemData.getUniqueId());
+
+        // Tồn xe chỉ đổi đúng một lần, tại lần commit thực sự chuyển mẻ sang DONE.
+        if (itemData.isTransitionedToDone())
+            applyStockChange();
+
         if (cancelled)
             finish();
         else
             openConfirm();
+    }
+
+    /**
+     * Cập nhật tồn xe sau khi mẻ đã được ghi. Gọi đúng một lần cho mỗi mẻ: cờ
+     * {@code transitionedToDone} chỉ bật ở lần lưu tạo ra chuyển trạng thái.
+     */
+    private void applyStockChange() {
+        boolean isExtract = mItem.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.EXTRACT;
+        float delta = (float) (isExtract ? mItem.getRealAmount() : -mItem.getRealAmount());
+        currentApp.setCurrentAmount(currentApp.getCurrentAmount() + delta);
+
+        Logger.appendLog("RFW", String.format(java.util.Locale.US,
+                "Cập nhật tồn xe %+.0f sau khi mẻ đã ghi, uid=%s", delta, mItem.getUniqueId()));
+    }
+
+    private void showEndSaveFailed() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.error)
+                .setMessage(R.string.error_refuel_end_save_failed)
+                .setPositiveButton(R.string.retry, (dialog, which) -> postData())
+                .setNegativeButton(R.string.back, (dialog, which) -> dialog.dismiss())
+                .setCancelable(false)
+                .show();
     }
 
     private void showApproachConfirmIfNeeded() {
@@ -2309,7 +2475,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     }
 
                     // Lưu lại
-                    new Thread(() -> DataHelper.postRefuel(mItem, false)).start();
+                    enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
 
                     dialog.dismiss();
                 })
@@ -2356,6 +2522,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         if (tmrCheckData != null) {
             tmrCheckData.cancel();
         }
+
+        // shutdown() chứ KHÔNG shutdownNow(): các lần ghi đã xếp hàng phải chạy cho xong.
+        // Huỷ giữa chừng là vứt đúng số liệu mẻ mà màn hình vừa nhận được.
+        saveExecutor.shutdown();
         mItem = null;
         Runtime.getRuntime().gc();
     }
