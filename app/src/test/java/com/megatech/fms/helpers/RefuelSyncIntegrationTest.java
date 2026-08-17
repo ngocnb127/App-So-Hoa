@@ -879,20 +879,23 @@ public class RefuelSyncIntegrationTest {
      * cho tới khi có sự kiện khác gọi sync.
      */
     @Test
-    public void unlockSyncRunsThePendingRequest() {
+    public void previewLockBlocksPullButStillPushesPendingWork() {
         seedRow(1110, 60166240, 5, 8, true);
         http.postResponse = payload(1110, 60166240, 5, 9);
         int before = http.postCount;
 
         DataHelper.lockSync();
-        DataHelper.syncModifiedRefuels();   // đường POST, gọi trực tiếp như các test khác
-        assertEquals("bản thân POST không bị khoá chặn", before + 1, http.postCount);
-
-        // Nhưng lượt sync đi qua Synchronize() thì bị nuốt, và phải được chạy lại khi mở khoá.
         DataHelper.Synchronize();
-        DataHelper.unlockSync();
 
-        assertFalse("mở khoá không được để lượt chờ nằm lại",
-                DataHelper.hasPendingSyncRequest());
+        // Lượt ĐẦY ĐỦ vẫn bị khoá và xếp lại cho lúc mở khoá...
+        assertTrue("lượt đầy đủ phải được xếp lại", DataHelper.hasPendingSyncRequest());
+
+        // ...nhưng phiếu đã chốt vẫn phải lên tới server ngay, không đợi rời màn hình.
+        DataHelper.pushPendingOnly();
+        assertEquals("đang khoá vẫn phải đẩy phiếu chờ", before + 1, http.postCount);
+        assertFalse(repo.getRefuel(UID).isLocalModified());
+
+        DataHelper.unlockSync();
+        assertFalse(DataHelper.hasPendingSyncRequest());
     }
 }

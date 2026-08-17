@@ -400,6 +400,81 @@ public class DataHelper {
         syncLocked.set(true);
     }
 
+
+    /**
+     * Đẩy các chứng từ còn chờ gửi.
+     *
+     * <p>Tách khỏi worker "core" để có thể đẩy chứng từ NGAY cả khi lượt sync đầy đủ đang
+     * bị khoá. Chứng từ là kết quả cuối cùng của một mẻ tra nạp, nên nó phải lên tới server
+     * sớm nhất có thể, không đợi người dùng rời màn hình xem trước.
+     */
+    @androidx.annotation.VisibleForTesting
+    static void syncModifiedReceipts() {
+            List<Receipt> modifiedReceipt = requireRepository().getModifiedReceipt();
+            ReceiptAPI client = new ReceiptAPI();
+            if (modifiedReceipt.size() > 0) {
+                for (Receipt item : modifiedReceipt) {
+
+                    // chốt: nếu bản này đã được luồng khác sync xong thì bỏ qua (phòng race còn sót)
+                    if (!item.isLocalModified()) {
+                        Logger.appendLog("DTH", "Sync SKIP đã sync num=" + item.getNumber());
+                        continue;
+                    }
+
+                    ReceiptModel itemData = item.toModel();
+                    Logger.appendLog("DTH", "Sync POST num=" + itemData.getNumber()
+                            + " uniqueId=" + itemData.getUniqueId()
+                            + " localId=" + item.getLocalId()
+                            + " thread=" + Thread.currentThread().getName());
+
+                    ReceiptModel newData = client.post(itemData);
+
+                    Logger.appendLog("DTH", "Sync RESULT num=" + itemData.getNumber()
+                            + " uniqueId=" + itemData.getUniqueId()
+                            + " serverId=" + (newData == null ? "null" : newData.getId()));
+
+                    if (newData != null) {
+                        newData.setPdfPath(itemData.getPdfPath());
+                        newData.setSignaturePath(itemData.getSignaturePath());
+                        newData.setSellerSignaturePath(itemData.getSellerSignaturePath());
+                        newData.setSignImageString(null);
+                        newData.setPdfImageString(null);
+
+                        item.setLocalModified(false);
+                        item.setId(newData.getId());
+                        item.setJsonData(newData.toJson());
+                        requireRepository().insertReceipt(item);
+                    }
+                }
+            }
+    }
+
+    /**
+     * Chỉ ĐẨY những gì còn chờ gửi, không kéo bản server về.
+     *
+     * <p>Khoá của màn hình xem trước tồn tại để lượt pull không ghi đè phiếu đang xem/đang
+     * in — nó không có lý do gì để giữ lại dữ liệu người dùng vừa chốt. Đo trên máy thật
+     * 17-08 21:46: bấm Rời đi rồi xuất chứng từ xong, dữ liệu nằm đủ trong Room nhưng
+     * server không nhận được gì, vì người dùng còn đứng ở màn hình đó.
+     */
+    public static void pushPendingInBackground() {
+        new Thread(DataHelper::pushPendingOnly, "FMS-Push-Only").start();
+    }
+
+    @androidx.annotation.VisibleForTesting
+    static void pushPendingOnly() {
+        try {
+            syncModifiedRefuels();
+        } catch (Throwable ex) {
+            Logger.appendLog("SYNC", "push-only refuel lỗi: " + ex.getMessage());
+        }
+        try {
+            syncModifiedReceipts();
+        } catch (Throwable ex) {
+            Logger.appendLog("SYNC", "push-only receipt lỗi: " + ex.getMessage());
+        }
+    }
+
     /** Còn lượt sync nào đang bị khoá nuốt và chưa được chạy lại không. */
     @androidx.annotation.VisibleForTesting
     public static boolean hasPendingSyncRequest() {
@@ -413,7 +488,6 @@ public class DataHelper {
         if (syncPending.getAndSet(false)) {
             Synchronize();
         }
-        if (syncPending.getAndSet(false)) Synchronize();
     }
 
     public static RefuelItemData getItemToRefuel(Integer flightId) {
@@ -582,9 +656,13 @@ public class DataHelper {
             // người dùng bấm Rời đi rồi xuất chứng từ, dữ liệu vào Room đủ nhưng server
             // không nhận được gì suốt 3,5 phút — vì màn hình xem trước giữ khoá và mọi
             // Synchronize() trả về không để lại một dòng nào.
+            // Khoá chặn CẢ HAI CHIỀU trong suốt thời gian màn hình xem trước còn mở, nên
+            // phiếu đã chốt nằm lại trong Room cho tới khi người dùng rời màn hình. Đo trên
+            // máy thật 17-08 21:46. Chưa đổi hành vi: khoá cũng đang bảo vệ bất biến chống
+            // POST song song, nới nó ra là một quyết định về nghiệp vụ.
             syncPending.set(true);
             if (shouldLogSyncLockSkip())
-                Logger.appendLog("SYNC", "SKIP sync (đang khoá bởi màn hình xem trước)");
+                Logger.appendLog("SYNC", "Khoá pull (màn hình xem trước) - vẫn đẩy phiếu chờ");
             return;
         }
         if (processing.compareAndSet(false, true)) {   // chỉ MỘT phiên sync vào được
@@ -663,43 +741,8 @@ public class DataHelper {
                         }
                     }
 
-                    List<Receipt> modifiedReceipt = requireRepository().getModifiedReceipt();
-                    ReceiptAPI client = new ReceiptAPI();
-                    if (modifiedReceipt.size() > 0) {
-                        for (Receipt item : modifiedReceipt) {
+                    syncModifiedReceipts();
 
-                            // chốt: nếu bản này đã được luồng khác sync xong thì bỏ qua (phòng race còn sót)
-                            if (!item.isLocalModified()) {
-                                Logger.appendLog("DTH", "Sync SKIP đã sync num=" + item.getNumber());
-                                continue;
-                            }
-
-                            ReceiptModel itemData = item.toModel();
-                            Logger.appendLog("DTH", "Sync POST num=" + itemData.getNumber()
-                                    + " uniqueId=" + itemData.getUniqueId()
-                                    + " localId=" + item.getLocalId()
-                                    + " thread=" + Thread.currentThread().getName());
-
-                            ReceiptModel newData = client.post(itemData);
-
-                            Logger.appendLog("DTH", "Sync RESULT num=" + itemData.getNumber()
-                                    + " uniqueId=" + itemData.getUniqueId()
-                                    + " serverId=" + (newData == null ? "null" : newData.getId()));
-
-                            if (newData != null) {
-                                newData.setPdfPath(itemData.getPdfPath());
-                                newData.setSignaturePath(itemData.getSignaturePath());
-                                newData.setSellerSignaturePath(itemData.getSellerSignaturePath());
-                                newData.setSignImageString(null);
-                                newData.setPdfImageString(null);
-
-                                item.setLocalModified(false);
-                                item.setId(newData.getId());
-                                item.setJsonData(newData.toJson());
-                                requireRepository().insertReceipt(item);
-                            }
-                        }
-                    }
                     List<Invoice> modifiedInvoice = requireRepository().getModifiedInvoice();
                     InvoiceAPI invoiceAPI = new InvoiceAPI();
                     if (modifiedInvoice.size() > 0) {
@@ -2474,6 +2517,10 @@ public class DataHelper {
         localModel.setLocalModified(true);
         long rowId = requireRepository().insertReceipt(localModel);
         Logger.appendLog("DTH", "postReceipt INSERT rowId=" + rowId + " num=" + model.getNumber());
+
+        // Chứng từ là kết quả cuối cùng của mẻ tra nạp — đẩy ngay khi vừa lưu xong, không
+        // đợi lượt sync định kỳ và không đợi người dùng rời màn hình xem trước.
+        pushPendingInBackground();
         if (rowId > 0) {
             Synchronize();
         }

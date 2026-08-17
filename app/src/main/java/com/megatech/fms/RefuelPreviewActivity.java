@@ -1156,6 +1156,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void exit() {
         DataHelper.unlockSync();
+        // Chứng từ là kết quả cuối cùng của mẻ tra nạp: đẩy ngay, không đợi lượt sync định kỳ.
+        DataHelper.pushPendingInBackground();
         finish();
     }
 
