@@ -173,6 +173,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:lineSpacingExtra="4dp"
+                        android:text="@string/version_release_note_update_gate"
+                        android:textColor="#212121"
+                        android:textSize="16sp" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:lineSpacingExtra="4dp"
                         android:text="@string/version_release_note_print_quality"
                         android:textColor="#212121"
                         android:textSize="16sp" />

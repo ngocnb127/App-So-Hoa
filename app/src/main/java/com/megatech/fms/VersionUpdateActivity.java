@@ -143,12 +143,34 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         @Override
         protected void onPostExecute(UpdateSafetyGuard.Decision decision) {
             if (isFinishing() || isDestroyed()) return;
-            if (!decision.safe) {
+
+            if (decision.safe) {
+                new DownloadTask().execute(UpdateChannel.apkUrl(serverVersion.raw));
+                return;
+            }
+
+            if (!decision.overridable) {
+                // Hàng đợi còn mới: chờ vài phút là xong, không cần hỏi gì.
                 Toast.makeText(VersionUpdateActivity.this, decision.reason, Toast.LENGTH_LONG).show();
                 setUpdateButtonBusy(false);
                 return;
             }
-            new DownloadTask().execute(UpdateChannel.apkUrl(serverVersion.raw));
+
+            // Dữ liệu đang kẹt. Chờ thêm cũng không đi, mà bản mới thường là thứ chữa được
+            // nó — nên đưa quyết định cho người dùng thay vì khoá chết thiết bị ở bản cũ.
+            new android.app.AlertDialog.Builder(VersionUpdateActivity.this)
+                    .setTitle(R.string.app_name)
+                    .setMessage(decision.reason)
+                    .setCancelable(false)
+                    .setPositiveButton(R.string.update_version, (dialog, which) -> {
+                        Log.w(LOG_TAG, "Người dùng chọn cập nhật dù còn dữ liệu chưa gửi");
+                        new DownloadTask().execute(UpdateChannel.apkUrl(serverVersion.raw));
+                    })
+                    .setNegativeButton(R.string.cancel, (dialog, which) -> {
+                        dialog.dismiss();
+                        setUpdateButtonBusy(false);
+                    })
+                    .show();
         }
     }
 
