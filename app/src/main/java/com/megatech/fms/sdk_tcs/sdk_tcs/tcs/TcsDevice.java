@@ -62,6 +62,35 @@ public class TcsDevice implements IDevice {
     private double lastDeliveryGrossQty, lastDeliveryGrossTotal, lastDeliveryAvgTemp;
     private long lastDeliveryTicketNumber;
 
+    /**
+     * Tiến độ của MẺ, không phải của luồng đọc.
+     *
+     * <p>Trước đây ba biến này là biến cục bộ trong {@link #runTask()}. Mất kết nối làm vòng
+     * lặp thoát và luồng chết, mang theo cả tiến độ mẻ. Nối lại tạo luồng mới với
+     * {@code deliveryStarted = false}, nên nếu đồng hồ đã bơm xong và về IDLE trong lúc mất
+     * kết nối thì nhánh phát hiện kết thúc không bao giờ chạy — TÍN HIỆU KẾT THÚC MẤT HẲN,
+     * số chốt của mẻ nằm lại trên đồng hồ. Đo trên máy thật 18-08: đồng hồ 2155, app 1832.
+     *
+     * <p>Là trường của thiết bị nên luồng đọc mới tiếp tục đúng chỗ luồng cũ dừng lại.
+     */
+    private volatile boolean deliveryStarted = false;
+    private volatile boolean endingNotified = false;
+    private volatile int endingLoops = 0;
+
+    /**
+     * Chặn hai luồng đọc cùng chạy. Nút "Kết nối lại" gọi thẳng {@link #runTask()}, bấm vài
+     * lần là vài luồng cùng đọc một thiết bị và cùng bắn callback.
+     */
+    private final java.util.concurrent.atomic.AtomicBoolean taskRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /** Thời điểm nhận được gói dữ liệu gần nhất, để biết số còn chảy hay đã đứng. */
+    private volatile long lastDataAt = 0;
+
+    public long getLastDataAt() {
+        return lastDataAt;
+    }
+
     public TcsDevice(
             String ip,
             int port,
@@ -142,12 +171,14 @@ public class TcsDevice implements IDevice {
     }
 
     public void runTask() {
+        // Luồng đọc đã chạy thì không mở thêm luồng nữa.
+        if (!taskRunning.compareAndSet(false, true)) return;
+
         new Thread(() -> {
+            // ERROR là "chưa biết": vòng đầu sau khi nối lại sẽ so với trạng thái thật của
+            // đồng hồ, nên mẻ đang bơm dở vẫn được nhận ra.
             TCS_DELIVERY_STATE oldDeliveryState = TCS_DELIVERY_STATE.ERROR;
             boolean connectedFlag = false;
-            boolean deliveryStarted = false;
-            boolean endingNotified = false;
-            int endingLoops = 0;
 
             while (tcsFunc.isConnect()) {
                 tcsState = DeviceConnectState.CONNECTED;
@@ -194,6 +225,7 @@ public class TcsDevice implements IDevice {
                     }
                 }
 
+                lastDataAt = System.currentTimeMillis();
                 if (onReceivedData != null) {
                     onReceivedData.run();
                 }
@@ -207,6 +239,9 @@ public class TcsDevice implements IDevice {
             }
 
             tcsState = DeviceConnectState.DISCONNECTED;
+            taskRunning.set(false);
+            // deliveryStarted/endingNotified/endingLoops CỐ Ý giữ nguyên: mẻ chưa kết thúc
+            // thì mất kết nối không làm nó kết thúc.
             if (onDisconnected != null) {
                 onDisconnected.run();
             }

@@ -87,9 +87,18 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     private final String LOG_TAG = "RFW";
 
     private enum CONNECTION_STATUS {
+        /** Đang nhận số từ đồng hồ. */
         OK,
         ERROR,
-        CONNECTING
+        CONNECTING,
+        /**
+         * Đường truyền còn sống nhưng KHÔNG có số mới về.
+         *
+         * <p>Trước đây trạng thái này hiện dấu xanh y như đang chạy: đo trên máy thật 18-08,
+         * app đứng ở 1832 trong khi đồng hồ đã lên 2155, mà người vận hành nhìn dấu xanh nên
+         * tin là app đang bám đồng hồ. Dấu xanh nay chỉ có một nghĩa: ĐANG NHẬN SỐ.
+         */
+        STALE
     }
     IDevice tcsDevice;
     boolean checkTCS = true;
@@ -144,17 +153,91 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             ((TextView) findViewById(id)).setText(String.format(pattern, value));
     }
 
+    /**
+     * Nối lại đồng hồ theo yêu cầu người dùng: ĐÓNG HẲN kết nối cũ rồi mới mở kết nối mới.
+     *
+     * <p>Bản trước chỉ gọi thẳng connect() lên đối tượng cũ. Với TCS, socket cũ còn treo nên
+     * mỗi lần bấm lại sinh thêm một luồng đọc cùng bắn callback trên một thiết bị. Với LCR,
+     * SDK vẫn giữ phiên hỏng nên lệnh nối chỉ lặp lại đúng cái hỏng đó.
+     *
+     * <p>Chạy nền: đóng socket và chờ luồng đọc thoát là việc chặn, làm trên luồng giao diện
+     * sẽ treo màn hình đúng lúc người dùng đang cần nó nhất.
+     *
+     * <p>Hàm này KHÔNG ghi log trước đây — mà đúng nút này là thứ người dùng bấm khi đang
+     * mất số liệu, nên không ai lần ra được nó đã chạy hay chưa.
+     */
     private void reconnect() {
         setConnectionCheckmark(CONNECTION_STATUS.CONNECTING);
         TruckModel settingModel = currentApp.getSetting();
+        if (settingModel == null) {
+            Logger.appendLog(LOG_TAG, "Kết nối lại BỎ QUA: chưa có cấu hình xe");
+            setConnectionCheckmark(CONNECTION_STATUS.ERROR);
+            return;
+        }
 
-        if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
-            if (tcsDevice != null) {
-                tcsDevice.connect();
-                tcsDevice.runTask();
+        final TruckModel.DEVICE_TYPE deviceType = settingModel.getDeviceType();
+        Logger.appendLog(LOG_TAG, "Người dùng bấm kết nối lại - thiết bị " + deviceType);
+
+        new Thread(() -> {
+            try {
+                if (deviceType == TruckModel.DEVICE_TYPE.TCS) {
+                    if (tcsDevice == null) {
+                        // Màn hình mở mà thiết bị chưa dựng: nút này không cứu được, phải đi
+                        // lại đường khởi tạo. Im lặng ở đây là để người dùng bấm mãi không
+                        // hiểu vì sao không có gì xảy ra.
+                        Logger.appendLog(LOG_TAG, "Chưa có đối tượng TCS - khởi tạo lại đồng hồ");
+                        runOnUiThread(this::initReaderSafely);
+                        return;
+                    }
+                    Logger.appendLog(LOG_TAG, "Đóng kết nối TCS cũ");
+                    tcsDevice.disConnect();
+                    waitForDeviceToClose();
+                    Logger.appendLog(LOG_TAG, "Mở kết nối TCS mới");
+                    tcsDevice.connect();
+                    // runTask tự chặn luồng thứ hai; luồng cũ đã thoát khi socket đóng.
+                    tcsDevice.runTask();
+
+                } else if (deviceType == TruckModel.DEVICE_TYPE.LCR) {
+                    if (reader == null) {
+                        Logger.appendLog(LOG_TAG, "Chưa có đối tượng LCR - khởi tạo lại đồng hồ");
+                        runOnUiThread(this::initReaderSafely);
+                        return;
+                    }
+                    Logger.appendLog(LOG_TAG, "Đóng kết nối LCR cũ");
+                    reader.doDisconnectDevice();
+                    waitForDeviceToClose();
+                    Logger.appendLog(LOG_TAG, "Mở kết nối LCR mới");
+                    reader.doConnectDevice();
+                }
+            } catch (Exception ex) {
+                Logger.appendLog(LOG_TAG, "Kết nối lại lỗi: " + describeException(ex));
+                setConnectionCheckmark(CONNECTION_STATUS.ERROR);
             }
-        } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
-            reader.doConnectDevice();
+        }, "FMS-Meter-Reconnect").start();
+    }
+
+    /**
+     * Chờ thiết bị đóng hẳn trước khi mở lại.
+     *
+     * <p>Mở kết nối mới khi socket cũ chưa đóng thì thiết bị từ chối, và người dùng nhận
+     * đúng cái lỗi mà họ vừa bấm để chữa.
+     */
+    private static final long DEVICE_CLOSE_WAIT_MS = 1500L;
+
+    private void waitForDeviceToClose() {
+        try {
+            Thread.sleep(DEVICE_CLOSE_WAIT_MS);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void initReaderSafely() {
+        try {
+            initReader();
+        } catch (Exception ex) {
+            Logger.appendLog(LOG_TAG, "initReader lỗi: " + describeException(ex));
+            setConnectionCheckmark(CONNECTION_STATUS.ERROR);
         }
     }
 
@@ -261,6 +344,21 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     btnReconnect.setVisibility(View.VISIBLE);
                     btnRestart.setVisibility(View.VISIBLE);
                     btnReconnect.setEnabled(false);
+                    break;
+
+                case STALE:
+                    findViewById(R.id.progressBar).setVisibility(View.GONE);
+                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr))
+                            .setChecked(false);
+                    ((CheckedTextView) findViewById(R.id.refuel_detail_chk_connect_lcr))
+                            .setCheckMarkDrawable(R.drawable.ic_error);
+                    ((TextView) findViewById(R.id.lbl_connection_status))
+                            .setText(R.string.meter_data_stale);
+                    ((TextView) findViewById(R.id.lbl_connection_status)).setTextColor(Color.RED);
+                    btnReconnect.setVisibility(View.VISIBLE);
+                    btnReconnect.setEnabled(true);
+                    btnRestart.setVisibility(View.VISIBLE);
+                    btnRestart.setEnabled(true);
                     break;
 
                 case ERROR:
@@ -405,10 +503,17 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         if (tcsDevice.isConnect()){
             setConnectionCheckmark(CONNECTION_STATUS.OK);
         }
+        Logger.appendLog(LOG_TAG, "TCS đã kết nối");
+
+        resumeDataFlowIfBatchRunning();
     };
 
     Runnable OnDisconnected= () -> {
         Log.d("TCS", "OnDisconnected");
+        // Callback TCS trước đây chỉ Log.d nên không có gì trong log gửi về: mất kết nối
+        // giữa mẻ là sự kiện quan trọng nhất của màn hình này mà lại không để lại dấu vết.
+        Logger.appendLog(LOG_TAG, "TCS MẤT KẾT NỐI"
+                + (started ? " GIỮA MẺ - số trên màn hình sẽ đứng im tới khi nối lại" : ""));
         refuel_status = REFUEL_STATUS.NONE;
         setRefuelStatus(REFUEL_STATUS.NONE);
         statusStartTCS = REFUEL_STATUS.NONE;
@@ -458,6 +563,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     };
 
     Runnable OnRecivedData = () -> {
+        lastMeterDataAt = System.currentTimeMillis();
         if (statusStartTCS == REFUEL_STATUS.STARTED){
             tcsData = tcsDevice.getDeviceDataView();
             updateRefuelDataTCS();
@@ -554,6 +660,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             reader = LCRReader.create(this, storedIP, 10001, false);
             if (reader.isLCR600()) btnStart.setVisibility(View.VISIBLE);
             addListeners();
+            startDataFreshnessWatchdog();
             deviceIsReady = reader.getConnected();
 
             if (deviceIsReady) setConnectionCheckmark(CONNECTION_STATUS.OK);
@@ -572,6 +679,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             tcsDevice.runTask();
 
             addListenersTCS();
+            startDataFreshnessWatchdog();
             deviceIsReady = tcsDevice.isConnect();
 
             if (deviceIsReady) setConnectionCheckmark(CONNECTION_STATUS.OK);
@@ -579,6 +687,77 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         }
     }
 
+
+    /**
+     * Sau bao lâu không có số mới thì coi là số đã đứng.
+     *
+     * <p>Chu kỳ đọc của TCS là 500 ms, nên 6 giây là đã lỡ hơn mười vòng — đủ chắc chắn để
+     * không báo động vì một nhịp mạng chậm, mà vẫn đủ nhanh để người vận hành biết trước
+     * khi kết thúc mẻ.
+     */
+    private static final long METER_DATA_STALE_MS = 6000L;
+
+    private Timer tmrDataFreshness;
+
+    /**
+     * Canh xem số của đồng hồ có còn chảy không.
+     *
+     * <p>Nối được KHÔNG có nghĩa là đang nhận số: đo trên máy thật 18-08, app đứng ở 1832
+     * trong khi đồng hồ đã lên 2155, dấu kết nối vẫn xanh suốt. Người vận hành không có
+     * cách nào biết. Vòng canh này là thứ duy nhất phát hiện được.
+     */
+    private void startDataFreshnessWatchdog() {
+        if (tmrDataFreshness != null) tmrDataFreshness.cancel();
+        tmrDataFreshness = new Timer("FMS-Meter-Freshness");
+        tmrDataFreshness.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (!isActive) return;
+                // Mất kết nối đã có đường báo riêng; ở đây chỉ xét ca CÒN kết nối mà im số.
+                boolean connected = tcsDevice != null ? tcsDevice.isConnect()
+                        : (reader != null && reader.getConnected());
+                if (!connected) return;
+
+                long last = lastMeterDataAt;
+                if (last <= 0) return;                // chưa từng có số, chưa kết luận được
+
+                boolean stale = System.currentTimeMillis() - last > METER_DATA_STALE_MS;
+                if (stale != meterDataStale) {
+                    meterDataStale = stale;
+                    Logger.appendLog(LOG_TAG, stale
+                            ? "Đồng hồ ngừng gửi số dù vẫn còn kết nối"
+                            : "Đồng hồ gửi số trở lại");
+                    setConnectionCheckmark(stale ? CONNECTION_STATUS.STALE : CONNECTION_STATUS.OK);
+                }
+            }
+        }, METER_DATA_STALE_MS, 2000L);
+    }
+
+    private boolean meterDataStale = false;
+
+    /**
+     * Thời điểm màn hình nhận được số mới từ đồng hồ, dùng chung cho cả LCR và TCS.
+     *
+     * <p>Đặt ở đây chứ không ở lớp thiết bị vì hai SDK báo dữ liệu theo hai cách khác nhau,
+     * còn câu hỏi cần trả lời thì chỉ có một: màn hình có còn nhận được số không.
+     */
+    private volatile long lastMeterDataAt = 0;
+
+    /**
+     * Mở lại luồng dữ liệu cho mẻ đang dở sau khi nối lại đồng hồ.
+     *
+     * <p>{@code OnDisconnected} đặt {@code statusStartTCS} về NONE, mà {@code OnRecivedData}
+     * chỉ cập nhật khi nó đang là STARTED. Không khôi phục ở đây thì nối lại xong mọi gói
+     * dữ liệu đều bị vứt: số trên màn hình đứng im vĩnh viễn trong khi dấu kết nối vẫn xanh.
+     * Đo trên máy thật 18-08 — app 1832, đồng hồ 2155.
+     */
+    private void resumeDataFlowIfBatchRunning() {
+        if (!started || refuel_status == REFUEL_STATUS.ENDED) return;
+        statusStartTCS = REFUEL_STATUS.STARTED;
+        deviceIsError = false;
+        meterDataStale = false;
+        Logger.appendLog(LOG_TAG, "Mẻ đang dở — nhận lại số liệu từ đồng hồ");
+    }
 
     private void clearListeners() {
         if (reader != null) {
@@ -1465,6 +1644,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 Logger.appendLog(LOG_TAG, "connectionListener onConnected");
                 deviceIsReady = true;
                 deviceIsError = false;
+                meterDataStale = false;
+                lastMeterDataAt = 0;   // chờ gói thật đầu tiên rồi mới kết luận số có chảy
                 setConnectionCheckmark(CONNECTION_STATUS.OK);
                 setEnableButton(started || (deviceIsReady && conditionIsReady && inventoryIsReady));
                 //reader.requestSerial();
@@ -1525,6 +1706,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         reader.setFieldDataListener(new LCRReader.LCRDataListener() {
             @Override
             public void onDataChanged(LCRDataModel dataModel, LCRReader.FIELD_CHANGE field_change) {
+                lastMeterDataAt = System.currentTimeMillis();
 
                 switch (field_change) {
                     case SERIAL:
@@ -2521,6 +2703,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         clearListeners();
         if (tmrCheckData != null) {
             tmrCheckData.cancel();
+        }
+        if (tmrDataFreshness != null) {
+            tmrDataFreshness.cancel();
+            tmrDataFreshness = null;
         }
 
         // shutdown() chứ KHÔNG shutdownNow(): các lần ghi đã xếp hàng phải chạy cho xong.

@@ -104,6 +104,7 @@
     <string name="connection_check">Kiểm tra kết nối LCR</string>
     <string name="lcr_connection_error">Lỗi kết nối thiết bị LCR</string>
     <string name="lcr_connection_ok">Kết nối thiết bị thành công</string>
+    <string name="meter_data_stale">Đồng hồ không gửi số — số đang hiển thị là số cũ</string>
     <string name="setting">Cài đặt</string>
     <string name="refuel">Tra nạp</string>
     <string name="fuelUplift">Lượng nhiên liệu tra nạp</string>
