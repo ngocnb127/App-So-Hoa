@@ -57,12 +57,31 @@ public class ReceiptAPI extends  BaseAPI{
                 return gson.fromJson(body, BM2508Model.class);
 
             // Phân biệt lỗi xác thực với lỗi mạng: tầng trên còn biết có nên thử lại hay không.
+            //
+            // Ghi cả THÂN phản hồi. Trước đây chỉ ghi mã lỗi, và mã lỗi một mình không nói
+            // được gì: đo trên máy thật 18-08, gói này trả HTTP 400 lặp lại mỗi 30 giây suốt
+            // nhiều giờ mà không ai biết server chê chỗ nào — 400 nghĩa là xác thực ĐÃ QUA,
+            // server từ chối nội dung, nên chỉ thân phản hồi mới chỉ ra được trường nào sai.
             Logger.appendLog("BM2508-1", (response.code() == 401 ? "SAI XÁC THỰC" : "Lỗi")
-                    + " khi gửi ảnh BM2508: HTTP " + response.code());
+                    + " khi gửi ảnh BM2508: HTTP " + response.code()
+                    + " - " + shorten(body));
         } catch (Exception ex) {
             Logger.appendLog("BM2508-1", ex.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Cắt bớt thân phản hồi trước khi ghi log.
+     *
+     * <p>Server .NET trả kèm nguyên stack trace vài nghìn ký tự; ghi trọn vẹn thì một lỗi
+     * lặp lại mỗi 30 giây sẽ nuốt cả file log. Phần đầu chứa Message và ExceptionMessage —
+     * đúng phần cần để biết trường nào sai.
+     */
+    private static String shorten(String body) {
+        if (body == null || body.isEmpty()) return "(thân phản hồi rỗng)";
+        String text = body.replace('\n', ' ').replace('\r', ' ').trim();
+        return text.length() <= 500 ? text : text.substring(0, 500) + "...";
     }
 
     /** Chỉ đính tệp khi đường dẫn có thật và tệp còn tồn tại trên đĩa. */
