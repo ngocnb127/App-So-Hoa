@@ -101,6 +101,79 @@ public final class PrinterProvisioner {
         }
     }
 
+
+    /**
+     * Tình trạng máy in đọc được tại thời điểm in thử, để IN THẲNG LÊN PHIẾU THỬ.
+     *
+     * <p>Cố ý in ra giấy chứ không chỉ ghi log: người dựng máy in đứng cạnh máy, cầm tờ
+     * phiếu là biết ngay thiếu gì, không phải lấy log về rồi mở máy tính đọc.
+     */
+    public static final class Report {
+        /** Ngôn ngữ máy in đang chạy: ZPL / CPCL / LINE_PRINT, hoặc null nếu không đọc được. */
+        public PrinterLanguage language;
+        /** Font phiếu cần đã có trên máy in chưa. */
+        public boolean fontInstalled;
+        /** Font vừa được nạp trong chính lượt này. */
+        public boolean fontJustUploaded;
+        /** Máy in báo sẵn sàng in. */
+        public boolean readyToPrint;
+        /** Hết giấy / mở đầu in — hai lỗi vật lý hay gặp nhất. */
+        public boolean paperOut;
+        public boolean headOpen;
+        /** Lý do không đọc được tình trạng, null nếu đọc được hết. */
+        public String error;
+
+        public boolean isZpl() {
+            return language == PrinterLanguage.ZPL;
+        }
+    }
+
+    /**
+     * Đọc tình trạng máy in và nạp font nếu còn thiếu — dùng cho luồng In thử.
+     *
+     * <p>Khác {@link #prepare}: KHÔNG đọc cờ ghi nhớ và không ghi cờ. In thử là lúc người
+     * dùng muốn biết sự thật hiện tại của máy in, một cờ đã lưu từ tuần trước không trả lời
+     * được câu hỏi đó.
+     */
+    public static Report inspect(Context context, Connection connection) {
+        Report report = new Report();
+        if (context == null || connection == null) {
+            report.error = "Chưa có kết nối máy in";
+            return report;
+        }
+
+        try {
+            ZebraPrinter printer = ZebraPrinterFactory.getInstance(connection);
+            report.language = printer.getPrinterControlLanguage();
+
+            // Máy đang ở CPCL thì mọi lệnh ZPL bên dưới đều vô nghĩa; dừng ở đây và để
+            // hàm gọi quyết định có chuyển ngôn ngữ hay không.
+            if (report.language == PrinterLanguage.CPCL) return report;
+
+            try {
+                com.zebra.sdk.printer.PrinterStatus status = printer.getCurrentStatus();
+                report.readyToPrint = status.isReadyToPrint;
+                report.paperOut = status.isPaperOut;
+                report.headOpen = status.isHeadOpen;
+            } catch (Exception ex) {
+                // Không đọc được tình trạng không có nghĩa là không in được: vẫn đi tiếp
+                // để kiểm tra font, phần quan trọng hơn.
+                Logger.appendLog(LOG_TAG, "Không đọc được tình trạng máy in: " + ex.getMessage());
+            }
+
+            report.fontInstalled = hasFont(printer);
+            if (!report.fontInstalled) {
+                uploadFont(context, connection);
+                report.fontInstalled = true;
+                report.fontJustUploaded = true;
+            }
+        } catch (Exception ex) {
+            report.error = ex.getMessage() == null ? "Lỗi không xác định" : ex.getMessage();
+            Logger.appendLog(LOG_TAG, "Kiểm tra máy in thất bại: " + report.error);
+        }
+        return report;
+    }
+
     /** Máy in đã có sẵn font thì không nạp lại — nạp mất khoảng một phút qua Bluetooth. */
     private static boolean hasFont(ZebraPrinter printer) throws Exception {
         String[] files = printer.retrieveFileNames(new String[]{"TTF"});
@@ -143,6 +216,10 @@ public final class PrinterProvisioner {
      * reboot nên kết nối Bluetooth đứt — đó là lý do hàm gọi phải báo người dùng in lại,
      * chứ không cố in tiếp trên một kết nối đã chết.
      */
+    public static void switchToZplMode(Connection connection) throws Exception {
+        switchToZpl(connection);
+    }
+
     private static void switchToZpl(Connection connection) throws Exception {
         Logger.appendLog(LOG_TAG, "Máy in đang ở chế độ CPCL — gửi lệnh chuyển sang ZPL");
         connection.write(switchToZplCommands().getBytes(StandardCharsets.US_ASCII));

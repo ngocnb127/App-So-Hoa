@@ -468,7 +468,7 @@ public class ReceiptModel extends BaseModel {
      *
      * <p>Đường kẻ (^GB) vẫn được đắp — dày thêm 1 dot là đúng mong muốn.
      */
-    static String emboldenFields(String zpl) {
+    public static String emboldenFields(String zpl) {
         if (zpl == null || zpl.isEmpty()) return zpl;
 
         StringBuilder out = new StringBuilder(zpl.length() * 2);
@@ -522,7 +522,7 @@ public class ReceiptModel extends BaseModel {
      * <p>Chỉ chạm vào độ đậm, tốc độ và độ phân giải — không đụng toạ độ, nên bố cục phiếu
      * giữ nguyên từng dot.
      */
-    private static String printQualityHeader() {
+    public static String printQualityHeader() {
         return "^JMA\n"
                 + "^MD" + PRINT_DARKNESS_BOOST + "\n"
                 + "^PR" + PRINT_SPEED_IPS + "\n";

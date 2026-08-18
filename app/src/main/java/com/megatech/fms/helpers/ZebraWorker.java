@@ -442,62 +442,102 @@ public class ZebraWorker {
         }
 
     }
-    public String createTestString() {
+    /**
+     * Phiếu thử: in chính TÌNH TRẠNG MÁY IN vừa đọc được lên giấy.
+     *
+     * <p>Người dựng máy in đứng cạnh máy, cầm tờ phiếu là biết ngay thiếu gì — không phải
+     * lấy log về rồi mở máy tính đọc. Phiếu thử cũng dùng đúng bộ lệnh chất lượng in và
+     * đúng cách in đậm như phiếu thật, nên nhìn tờ này là biết phiếu thật sẽ ra thế nào.
+     */
+    public String createTestString(PrinterProvisioner.Report report) {
         TruckModel setting = FMSApplication.getApplication().getSetting();
 
         StringBuilder builder = new StringBuilder();
         int height = 80;
-        String LEFT_INDENT =setting.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520? "^LH130,0\n": "^LH000,0\n";
+        String LEFT_INDENT = setting.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520
+                ? "^LH130,0\n" : "^LH000,0\n";
+
         builder.append("^XA");
-        builder.append("^CWZ,E:OPENSANS-RE.TTF^FS  \n" +
-                LEFT_INDENT +
-                "^CI28");
-        builder.append("^CFZ,25\n" +
-                "^FO0," + height + "^FB600,2,0,C,0^FD" + "TESTING FORM^FS\n" +
-                "^CFZ,40\n" +
-                "^FO0," + (height + 50) + "^FB600,1,0,C,0^FDPRINTER TEST FORM^FS\n" +
-                "^FO0," + (height + 90) + "^FB600,1,0,C,0^FD(THỬ MÁY IN)^FS");
-        height += 140;
-        builder.append("^CFZ,20\n" +
-                "^FO0," + height + "^FB600,1,0,C,0^FDReceipt No. : " + "TEST0001" + "^FS\n" +
-                "^FO0," + (height + 20)+ "^FB600,1,0,C,0^FD" + DateUtils.formatDate(new Date(), "dd/MM/yyyy") + "^FS\n" +
-                "^FO0," + (height + 40) + "^GB700,1,3^FS");
-        builder.append("^CFZ,30");
-        height += 50;
-        builder.append("^FO0," + height + "^FB250,1,0,L,0^FDBuyer ^FS\n" +
-                "^FO240," + height + "^FB10,1,0,C,0^FD:^FS\n" +
-                "^FO250," + height + "^FB320," + ",0,L,0^FD TESTING ^FS");
+        builder.append(ReceiptModel.printQualityHeader());
+        builder.append("^CWZ,E:OPENSANS-RE.TTF^FS  \n" + LEFT_INDENT + "^CI28");
 
-
-        builder.append("^CFZ,40\n" +
-                "^FO0," + height + "^FB600,1,0,C,0^FDDETAIL^FS\n" +
-                "^FO0," + (height + 40) + "^GB700,1,3^FS");
-
-        height = height + 50;
-        builder.append("^CFZ,30");
-        int i = 1;
-
-
-
-        builder.append("^CFZ,40\n" +
-                "^FO0," + height + "^FB600,1,0,C,0^FDTOTAL^FS");
-        height += 40;
+        builder.append("^CFZ,40\n"
+                + "^FO0," + height + "^FB600,1,0,C,0^FDTHỬ MÁY IN^FS\n");
+        height += 45;
+        builder.append("^CFZ,22\n"
+                + "^FO0," + height + "^FB600,1,0,C,0^FDPRINTER TEST^FS\n");
+        height += 30;
+        builder.append("^FO0," + height + "^FB600,1,0,C,0^FD"
+                + DateUtils.formatDate(new Date(), "HH:mm dd/MM/yyyy") + "^FS\n");
+        height += 30;
         builder.append("^FO0," + height + "^GB700,1,3^FS");
-        builder.append("^CFZ,30\n");
+        height += 20;
+
+        builder.append("^CFZ,26\n");
+        height = appendTestRow(builder, height, "Chế độ", describeLanguage(report));
+        height = appendTestRow(builder, height, "Tình trạng", describeStatus(report));
+        height = appendTestRow(builder, height, "Font tiếng Việt", describeFont(report));
+        height = appendTestRow(builder, height, "Máy in", setting.getThermalPrinterType().toString());
+
         height += 10;
+        builder.append("^FO0," + height + "^GB700,1,3^FS");
+        height += 20;
+
+        // Dòng này là phép thử THẬT của font: thiếu glyph thì ra ô vuông ngay tại đây,
+        // không cần chờ tới lúc in phiếu có tên khách hàng dấu nặng.
+        builder.append("^CFZ,24\n"
+                + "^FO0," + height + "^FB600,1,0,L,0^FDKiểm tra dấu:^FS\n");
+        height += 30;
+        builder.append("^FO0," + height + "^FB600,2,0,L,0^FDĂÂĐÊÔƠƯ ăâđêôơư ựữệợỹặộ 25,5°C^FS\n");
+        height += 60;
 
         builder.append("^FO0," + height + "^GB700,1,3^FS");
-        height += 10;
-        builder.append("^FO0," + height + "^FB600,1,0,C,0^FDBuyer^FS");
-        //print signature
+        height += 20;
+        builder.append("^CFZ,22\n"
+                + "^FO0," + height + "^FB600,2,0,C,0^FDPhiếu này dùng đúng độ đậm và cách in "
+                + "đậm của phiếu thật^FS\n");
+        height += 60;
 
         builder.append("^PQ1");
-        builder.append("^LH0,0\n" );
+        builder.append("^LH0,0\n");
         builder.append("^XZ");
 
-        return builder.toString();
-
+        builder.insert(3 + ReceiptModel.printQualityHeader().length(), "^LL" + (height + 100));
+        return ReceiptModel.emboldenFields(builder.toString());
     }
+
+    /** Một dòng "nhãn : giá trị" của phiếu thử. */
+    private int appendTestRow(StringBuilder builder, int height, String label, String value) {
+        builder.append("^FO0," + height + "^FB300,1,0,L,0^FD" + label + "^FS\n"
+                + "^FO300," + height + "^FB20,1,0,C,0^FD:^FS\n"
+                + "^FO330," + height + "^FB270,1,0,L,0^FD" + value + "^FS\n");
+        return height + 32;
+    }
+
+    private String describeLanguage(PrinterProvisioner.Report report) {
+        if (report == null || report.language == null) return "Không đọc được";
+        return report.isZpl() ? "ZPL (đúng)" : report.language + " (SAI)";
+    }
+
+    private String describeStatus(PrinterProvisioner.Report report) {
+        if (report == null) return "Không đọc được";
+        if (report.error != null) return report.error;
+        if (report.headOpen) return "Đang mở đầu in";
+        if (report.paperOut) return "Hết giấy";
+        return report.readyToPrint ? "Sẵn sàng" : "Chưa sẵn sàng";
+    }
+
+    private String describeFont(PrinterProvisioner.Report report) {
+        if (report == null) return "Không đọc được";
+        if (report.fontJustUploaded) return "Vừa nạp xong";
+        return report.fontInstalled ? "Đã có" : "CHƯA NẠP ĐƯỢC";
+    }
+    /**
+     * In thử: đọc tình trạng máy in THẬT rồi in chính tình trạng đó lên phiếu.
+     *
+     * <p>Cố ý không dùng cờ ghi nhớ như đường in phiếu. Người bấm In thử đang muốn biết
+     * sự thật hiện tại của máy in; một cờ đã lưu từ tuần trước không trả lời được câu đó.
+     */
     public void prinTest() {
         if (!ensureConnection()) {
             onConnectionError();
@@ -505,9 +545,24 @@ public class ZebraWorker {
         }
         try {
             con.open();
-            if (!preparePrinter()) return;
 
-            print(createTestString());
+            PrinterProvisioner.Report report = PrinterProvisioner.inspect(context, con);
+
+            if (report.language == com.zebra.sdk.printer.PrinterLanguage.CPCL) {
+                // Máy đang ở CPCL: phiếu thử cũng là ZPL nên in ra sẽ là giấy trắng. Chuyển
+                // ngôn ngữ rồi dừng — máy in reboot, phải bấm In thử lại.
+                PrinterProvisioner.switchToZplMode(con);
+                Logger.appendLog("ZEBRA_SETUP",
+                        "In thử: máy in ở CPCL, đã chuyển sang ZPL — máy đang khởi động lại, bấm In thử lại");
+                try {
+                    con.close();
+                } catch (Exception ignored) {
+                }
+                onError();
+                return;
+            }
+
+            print(createTestString(report));
 
             con.close();
             onSuccess();
