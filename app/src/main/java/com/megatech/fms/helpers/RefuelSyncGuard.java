@@ -86,6 +86,21 @@ public final class RefuelSyncGuard {
      * Đây là điểm mấu chốt của phương án: điều động lại chuyến, đổi bãi đỗ hay huỷ chuyến
      * phải tới được thiết bị ngay, trong khi số liệu đồng hồ mà lái xe vừa nhập vẫn nguyên vẹn.
      */
+    /**
+     * Số do đồng hồ cấp cho mẻ: Sale Number của LCR, Ticket Number của TCS.
+     *
+     * <p>Chỉ thiết bị mới sinh ra được hai số này; server không có nguồn nào để biết chúng.
+     */
+    private static final java.util.Set<String> DEVICE_ISSUED_NUMBER_KEYS =
+            new java.util.HashSet<>(java.util.Arrays.asList("SaleNumber", "TicketNumber"));
+
+    /** Rỗng = "không có gì để nói", khác hẳn một giá trị thật. */
+    private static boolean isBlankValue(com.google.gson.JsonElement value) {
+        if (value == null || value.isJsonNull()) return true;
+        if (!value.isJsonPrimitive()) return false;
+        return value.getAsString().trim().isEmpty();
+    }
+
     /** Mốc giờ do thiết bị đo — server chỉ echo lại giờ của chính nó, không phải dữ liệu. */
     private static final java.util.Set<String> DEVICE_MEASURED_TIME_KEYS =
             new java.util.HashSet<>(java.util.Arrays.asList("StartTime", "EndTime"));
@@ -166,6 +181,20 @@ public final class RefuelSyncGuard {
         if (LINK_KEYS.contains(key)
                 && longOf(remote, key) == 0
                 && longOf(merged, key) != 0)
+            return;
+
+        // Giá trị RỖNG từ server không xoá được số do thiết bị đo.
+        //
+        // Đo trên máy thật 18-08: 12/15 mẻ đã chốt có SaleNumber = "" trong khi log ghi rõ
+        // đồng hồ đã trả số. Server không có hai trường này nên trả chuỗi rỗng, và nhánh
+        // nhận-tất-cả coi "" là một giá trị hợp lệ rồi ghi đè lên số thật. Số của đồng hồ
+        // mất đi trong im lặng, và phiếu in ra không còn số để đối chiếu.
+        //
+        // Chỉ chặn khi server gửi RỖNG mà máy đang có số. Server gửi số thật vẫn được nhận
+        // bình thường — đây không phải là khoá "thiết bị luôn thắng".
+        if (DEVICE_ISSUED_NUMBER_KEYS.contains(key)
+                && isBlankValue(remote.get(key))
+                && !isBlankValue(merged.get(key)))
             return;
 
         // Không ghi lại khoá KHÔNG đổi. Ghi đè vô điều kiện làm row bị viết lại ở mỗi lượt

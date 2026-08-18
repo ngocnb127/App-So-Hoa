@@ -539,16 +539,20 @@ public class ReceiptModel extends BaseModel {
     /**
      * In số của đồng hồ: chữ nhỏ, dưới ảnh chữ ký và cách 1cm.
      *
-     * <p>Mỗi loại thiết bị chỉ in đúng một số theo cách gọi của nó: LCR in <b>Sale No.</b>
-     * (số bán hàng), TCS in <b>Ticket No.</b>. Cả hai số vẫn được lưu trong mẻ để đối chiếu,
-     * nhưng phiếu chỉ in số mà nhân viên dùng.
+     * <p>Nhãn là TÊN LOẠI ĐỒNG HỒ ("LCR" / "TCS"), không phải tên kỹ thuật của trường.
+     * "Sale No." và "Ticket No." đứng cạnh "Receipt No." ở đầu phiếu làm nhiều người đọc
+     * nhầm thành một số phiếu thứ hai. Nhân viên chỉ cần biết đây là số trên đồng hồ nào
+     * để đối chiếu với màn hình thiết bị.
+     *
+     * <p>Mỗi loại thiết bị chỉ in đúng một số của nó. Cả hai số vẫn được lưu trong mẻ để
+     * đối chiếu, nhưng phiếu chỉ in số mà nhân viên dùng.
      *
      * @return chiều cao sau khi in
      */
     private int appendDeviceNumbers(StringBuilder builder, int height) {
         boolean isTcs = setting != null && setting.getDeviceType() == TruckModel.DEVICE_TYPE.TCS;
 
-        String label = isTcs ? "Ticket No." : "Sale No.";
+        String label = isTcs ? "TCS" : "LCR";
         String value = isTcs ? deviceTicketNumber : deviceSaleNumber;
 
         // TCS chỉ có một số, hai trường bằng nhau nên lấy trường còn lại nếu thiếu.

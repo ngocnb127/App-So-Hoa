@@ -467,4 +467,46 @@ public class RefuelServerFieldRebaseTest {
         assertEquals("2026-08-17T23:10:27", after.get("StartTime").getAsString());
         assertEquals("thay đổi thật của server vẫn phải tới", 3, after.get("FlightStatus").getAsInt());
     }
+
+
+    /**
+     * Đo trên máy thật 18-08: 12/15 mẻ đã chốt có SaleNumber = "" dù log ghi rõ đồng hồ đã
+     * trả số. Server không có hai trường này nên trả chuỗi rỗng, và nhánh nhận-tất-cả coi
+     * "" là giá trị hợp lệ rồi ghi đè lên số thật — phiếu in ra mất số đối chiếu.
+     */
+    @Test
+    public void blankServerValueDoesNotEraseTheMeterIssuedNumbers() {
+        String local = "{\"SaleNumber\":\"100758\",\"TicketNumber\":\"100758\"}";
+        String remote = "{\"SaleNumber\":\"\",\"TicketNumber\":\"\"}";
+
+        com.google.gson.JsonObject after = com.google.gson.JsonParser
+                .parseString(RefuelSyncGuard.mergeByOwnership(local, remote, true))
+                .getAsJsonObject();
+
+        assertEquals("100758", after.get("SaleNumber").getAsString());
+        assertEquals("100758", after.get("TicketNumber").getAsString());
+    }
+
+    /** Không phải "thiết bị luôn thắng": server gửi số THẬT thì vẫn phải nhận. */
+    @Test
+    public void realServerValueStillReplacesTheMeterNumber() {
+        String local = "{\"SaleNumber\":\"100758\"}";
+        String remote = "{\"SaleNumber\":\"100999\"}";
+
+        com.google.gson.JsonObject after = com.google.gson.JsonParser
+                .parseString(RefuelSyncGuard.mergeByOwnership(local, remote, true))
+                .getAsJsonObject();
+
+        assertEquals("100999", after.get("SaleNumber").getAsString());
+    }
+
+    /** Máy chưa có số thì server gửi rỗng cũng không sao — không được ném lỗi. */
+    @Test
+    public void blankOnBothSidesIsHarmless() {
+        String after = RefuelSyncGuard.mergeByOwnership(
+                "{\"SaleNumber\":\"\"}", "{\"SaleNumber\":\"\"}", true);
+
+        assertEquals("", com.google.gson.JsonParser.parseString(after)
+                .getAsJsonObject().get("SaleNumber").getAsString());
+    }
 }
