@@ -18,6 +18,7 @@ import com.zebra.sdk.comm.BluetoothConnection;
 import com.zebra.sdk.comm.Connection;
 import com.zebra.sdk.printer.ZebraPrinter;
 import com.zebra.sdk.printer.ZebraPrinterFactory;
+import com.megatech.fms.helpers.print.PrinterProvisioner;
 import com.zebra.sdk.printer.discovery.BluetoothDiscoverer;
 import com.zebra.sdk.printer.discovery.DiscoveredPrinter;
 import com.zebra.sdk.printer.discovery.DiscoveredPrinterBluetooth;
@@ -234,6 +235,7 @@ public class ZebraWorker {
         }
         try {
             con.open();
+            if (!preparePrinter()) return;
 
             ZebraPrinter zebraPrinter = ZebraPrinterFactory.getInstance(con);
             storeSignature(zebraPrinter, BM7501Printer.GRF_CUSTOMER_SECTION_A,
@@ -249,6 +251,9 @@ public class ZebraWorker {
             onSuccess();
         } catch (Exception ex) {
             Logger.appendLog("ZEBRA ERROR", "print7501: " + ex.getMessage());
+            // In lỗi thì mọi kết luận đã ghi nhớ về máy in này hết đáng tin: có thể máy
+            // đã bị reset về mặc định, hoặc địa chỉ đã lưu giờ trỏ sang máy khác.
+            PrinterProvisioner.forget(context, getAddress());
             clearAddress();
             onError();
         }
@@ -317,11 +322,41 @@ public class ZebraWorker {
             print(bM2503Model);
         }
     }
+
+    /**
+     * Kiểm tra máy in trước khi gửi phiếu: đúng ngôn ngữ ZPL và đã có font tiếng Việt.
+     *
+     * <p>Xem {@link PrinterProvisioner} — hai điều kiện này nằm trong máy in chứ không
+     * trong ứng dụng, nên máy mới hoặc máy vừa reset sẽ in ra giấy trắng hoặc chữ mất dấu
+     * mà không có dấu hiệu nào báo trước.
+     *
+     * @return false khi KHÔNG được in tiếp ở lượt này.
+     */
+    private boolean preparePrinter() {
+        PrinterProvisioner.Result result =
+                PrinterProvisioner.prepare(context, con, getAddress());
+
+        if (result == PrinterProvisioner.Result.SWITCHED_TO_ZPL_NEEDS_RETRY) {
+            // Máy in đang khởi động lại sau lệnh chuyển ngôn ngữ: kết nối hiện tại đã chết,
+            // gửi phiếu vào đó là mất phiếu mà người dùng tưởng đã in.
+            Logger.appendLog("ZEBRA_SETUP",
+                    "Đã chuyển máy in sang ZPL, máy in đang khởi động lại — cần in lại");
+            try {
+                con.close();
+            } catch (Exception ignored) {
+            }
+            onError();
+            return false;
+        }
+        return true;
+    }
+
     private  void print(BM2503Model bM2503Model)
     {
         try {
 
             con.open();
+            if (!preparePrinter()) return;
             String zpl =  bM2503Model.createThermalBM2503Text();
 
             if (bM2503Model.getSignPictureUrl() != null) {
@@ -341,6 +376,9 @@ public class ZebraWorker {
         }
         catch (Exception ex)
         {
+            // In lỗi thì mọi kết luận đã ghi nhớ về máy in này hết đáng tin: có thể máy
+            // đã bị reset về mặc định, hoặc địa chỉ đã lưu giờ trỏ sang máy khác.
+            PrinterProvisioner.forget(context, getAddress());
             clearAddress();
             onError();
         }
@@ -351,6 +389,7 @@ public class ZebraWorker {
         try {
 
             con.open();
+            if (!preparePrinter()) return;
             String zpl = receiptModel.isReturn()? receiptModel.createReturnThermalText(): receiptModel.createThermalText();
 
             if (receiptModel.getSignaturePath() != null) {
@@ -378,6 +417,9 @@ public class ZebraWorker {
         }
         catch (Exception ex)
         {
+            // In lỗi thì mọi kết luận đã ghi nhớ về máy in này hết đáng tin: có thể máy
+            // đã bị reset về mặc định, hoặc địa chỉ đã lưu giờ trỏ sang máy khác.
+            PrinterProvisioner.forget(context, getAddress());
             clearAddress();
             onError();
         }
@@ -457,8 +499,22 @@ public class ZebraWorker {
 
     }
     public void prinTest() {
+        if (!ensureConnection()) {
+            onConnectionError();
+            return;
+        }
+        try {
+            con.open();
+            if (!preparePrinter()) return;
 
-        print(createTestString());
+            print(createTestString());
+
+            con.close();
+            onSuccess();
+        } catch (Exception ex) {
+            Logger.appendLog("ZEBRA ERROR", "prinTest: " + ex.getMessage());
+            onError();
+        }
     }
 
     public interface ZebraStateListener{
