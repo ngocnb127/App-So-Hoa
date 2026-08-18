@@ -53,6 +53,23 @@ public class Logger {
         }).start();
     }
 
+    /**
+     * Mô tả một lỗi để ghi log: loại lỗi + thông điệp + vị trí ném.
+     *
+     * <p>getMessage() của phần lớn lỗi Bluetooth và lỗi SDK máy in là null, nên log chỉ
+     * ghi getMessage() sẽ để lại đúng chữ "null" — không lần ra được gì.
+     */
+    public static String describe(Throwable ex) {
+        if (ex == null) return "không có lỗi";
+        StringBuilder text = new StringBuilder(ex.getClass().getSimpleName());
+        if (ex.getMessage() != null) text.append(": ").append(ex.getMessage());
+        StackTraceElement[] stack = ex.getStackTrace();
+        if (stack != null && stack.length > 0) text.append(" @ ").append(stack[0]);
+        if (ex.getCause() != null && ex.getCause() != ex)
+            text.append(" <- ").append(describe(ex.getCause()));
+        return text.toString();
+    }
+
     public static void appendLog(String logText) {
         appendLog(null, logText);
     }

@@ -450,11 +450,16 @@ public class ZebraWorker {
      * đúng cách in đậm như phiếu thật, nên nhìn tờ này là biết phiếu thật sẽ ra thế nào.
      */
     public String createTestString(PrinterProvisioner.Report report) {
+        // Phiếu thử phải in được cả khi cấu hình xe chưa nạp xong — đây chính là lúc kỹ
+        // thuật viên dựng máy, thiết bị có thể còn trống. Thiếu cấu hình thì lùi về lề mặc
+        // định chứ không ném lỗi, vì lỗi ở đây che mất toàn bộ thông tin chẩn đoán.
         TruckModel setting = FMSApplication.getApplication().getSetting();
+        TruckModel.THERMAL_PRINTER_TYPE printerType =
+                setting == null ? null : setting.getThermalPrinterType();
 
         StringBuilder builder = new StringBuilder();
         int height = 80;
-        String LEFT_INDENT = setting.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520
+        String LEFT_INDENT = printerType == TruckModel.THERMAL_PRINTER_TYPE.ZQ520
                 ? "^LH130,0\n" : "^LH000,0\n";
 
         builder.append("^XA");
@@ -477,7 +482,8 @@ public class ZebraWorker {
         height = appendTestRow(builder, height, "Chế độ", describeLanguage(report));
         height = appendTestRow(builder, height, "Tình trạng", describeStatus(report));
         height = appendTestRow(builder, height, "Font tiếng Việt", describeFont(report));
-        height = appendTestRow(builder, height, "Máy in", setting.getThermalPrinterType().toString());
+        height = appendTestRow(builder, height, "Máy in",
+                printerType == null ? "chưa có cấu hình" : printerType.toString());
 
         height += 10;
         builder.append("^FO0," + height + "^GB700,1,3^FS");
@@ -539,12 +545,22 @@ public class ZebraWorker {
      * sự thật hiện tại của máy in; một cờ đã lưu từ tuần trước không trả lời được câu đó.
      */
     public void prinTest() {
-        if (!ensureConnection()) {
-            onConnectionError();
-            return;
-        }
+        // Chạy nền, KHÔNG trên luồng giao diện. In thử giờ hỏi máy in và có thể nạp font
+        // (khoảng một phút qua Bluetooth); làm việc đó trong onOptionsItemSelected sẽ treo
+        // giao diện tới mức Android giết ứng dụng.
+        new Thread(this::runPrintTest, "FMS-Printer-Test").start();
+    }
+
+    private void runPrintTest() {
         try {
-            con.open();
+            if (!ensureConnection()) {
+                onConnectionError();
+                return;
+            }
+
+            // ensureConnection có thể trả về một kết nối ĐANG MỞ. Gọi open() lần nữa trên
+            // kết nối đã mở là lỗi, và đó là lỗi làm nút In thử hỏng ngay từ lần bấm đầu.
+            if (!con.isConnected()) con.open();
 
             PrinterProvisioner.Report report = PrinterProvisioner.inspect(context, con);
 
@@ -554,21 +570,28 @@ public class ZebraWorker {
                 PrinterProvisioner.switchToZplMode(con);
                 Logger.appendLog("ZEBRA_SETUP",
                         "In thử: máy in ở CPCL, đã chuyển sang ZPL — máy đang khởi động lại, bấm In thử lại");
-                try {
-                    con.close();
-                } catch (Exception ignored) {
-                }
+                closeQuietly();
                 onError();
                 return;
             }
 
             print(createTestString(report));
 
-            con.close();
+            closeQuietly();
             onSuccess();
-        } catch (Exception ex) {
-            Logger.appendLog("ZEBRA ERROR", "prinTest: " + ex.getMessage());
+        } catch (Throwable ex) {
+            // Ghi cả stack trace: getMessage() của phần lớn lỗi Bluetooth và lỗi SDK là
+            // null, nên log cũ chỉ để lại đúng chữ "prinTest: null".
+            Logger.appendLog("ZEBRA ERROR", "prinTest: " + Logger.describe(ex));
+            closeQuietly();
             onError();
+        }
+    }
+
+    private void closeQuietly() {
+        try {
+            if (con != null && con.isConnected()) con.close();
+        } catch (Exception ignored) {
         }
     }
 
