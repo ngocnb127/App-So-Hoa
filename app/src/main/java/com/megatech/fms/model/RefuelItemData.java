@@ -1227,6 +1227,26 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         return ActualCapacity;
     }
 
+    /**
+     * Hãng đã báo tải dầu THỰC TẾ chưa.
+     *
+     * <p>0 nghĩa là CHƯA CÓ, không phải "tải dầu bằng không" — cả hai trường đều là số
+     * nguyên thuỷ nên không phân biệt được bằng null. Coi 0 là số thật sẽ thay số dự kiến
+     * đang đúng bằng một con số 0 vô nghĩa ngay trên màn hình tra nạp.
+     */
+    public boolean hasActualCapacity() {
+        return ActualCapacity > 0;
+    }
+
+    /**
+     * Số tải dầu ĐƯỢC HIỂN THỊ: thực tế khi đã có, còn không thì dự kiến.
+     *
+     * <p>Hai số không bao giờ cùng có nghĩa một lúc; dự kiến chỉ là con số chờ.
+     */
+    public double getCapacityToShow() {
+        return hasActualCapacity() ? ActualCapacity : ProjectedCapacity;
+    }
+
     public void setActualCapacity(double ActualCapacity) {
         this.ActualCapacity = ActualCapacity;
     }

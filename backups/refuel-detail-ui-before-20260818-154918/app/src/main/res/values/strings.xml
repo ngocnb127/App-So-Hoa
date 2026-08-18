@@ -1,0 +1,686 @@
+<resources>
+    <!--    <string name="app_name">FMS Delivery</string>-->
+    <string name="action_settings">Cài đặt</string>
+    <string name="sign_in">Đăng nhập</string>
+    <string name="user_name">Tên đăng nhập</string>
+    <string name="password">Mật khẩu</string>
+    <string name="title_activity_refuel">Tra nạp</string>
+    <string name="save">Lưu</string>
+    <string name="save_setting">Lưu lài đặt</string>
+    <string name="cancel">Bỏ qua</string>
+    <string name="back">Trở lại</string>
+
+
+    <string name="large_text">
+        "Material is the metaphor.\n\n"
+
+        "A material metaphor is the unifying theory of a rationalized space and a system of motion."
+        "The material is grounded in tactile reality, inspired by the study of paper and ink, yet "
+        "technologically advanced and open to imagination and magic.\n"
+        "Surfaces and edges of the material provide visual cues that are grounded in reality. The "
+        "use of familiar tactile attributes helps users quickly understand affordances. Yet the "
+        "flexibility of the material creates new affordances that supercede those in the physical "
+        "world, without breaking the rules of physics.\n"
+        "The fundamentals of light, surface, and movement are key to conveying how objects move, "
+        "interact, and exist in space and in relation to each other. Realistic lighting shows "
+        "seams, divides space, and indicates moving parts.\n\n"
+
+        "Bold, graphic, intentional.\n\n"
+
+        "The foundational elements of print based design typography, grids, space, scale, color, "
+        "and use of imagery guide visual treatments. These elements do far more than please the "
+        "eye. They create hierarchy, meaning, and focus. Deliberate color choices, edge to edge "
+        "imagery, large scale typography, and intentional white space create a bold and graphic "
+        "interface that immerse the user in the experience.\n"
+        "An emphasis on user actions makes core functionality immediately apparent and provides "
+        "waypoints for the user.\n\n"
+
+        "Motion provides meaning.\n\n"
+
+        "Motion respects and reinforces the user as the prime mover. Primary user actions are "
+        "inflection points that initiate motion, transforming the whole design.\n"
+        "All action takes place in a single environment. Objects are presented to the user without "
+        "breaking the continuity of experience even as they transform and reorganize.\n"
+        "Motion is meaningful and appropriate, serving to focus attention and maintain continuity. "
+        "Feedback is subtle yet clear. Transitions are efﬁcient yet coherent.\n\n"
+
+        "3D world.\n\n"
+
+        "The material environment is a 3D space, which means all objects have x, y, and z "
+        "dimensions. The z-axis is perpendicularly aligned to the plane of the display, with the "
+        "positive z-axis extending towards the viewer. Every sheet of material occupies a single "
+        "position along the z-axis and has a standard 1dp thickness.\n"
+        "On the web, the z-axis is used for layering and not for perspective. The 3D world is "
+        "emulated by manipulating the y-axis.\n\n"
+
+        "Light and shadow.\n\n"
+
+        "Within the material environment, virtual lights illuminate the scene. Key lights create "
+        "directional shadows, while ambient light creates soft shadows from all angles.\n"
+        "Shadows in the material environment are cast by these two light sources. In Android "
+        "development, shadows occur when light sources are blocked by sheets of material at "
+        "various positions along the z-axis. On the web, shadows are depicted by manipulating the "
+        "y-axis only. The following example shows the card with a height of 6dp.\n\n"
+
+        "Resting elevation.\n\n"
+
+        "All material objects, regardless of size, have a resting elevation, or default elevation "
+        "that does not change. If an object changes elevation, it should return to its resting "
+        "elevation as soon as possible.\n\n"
+
+        "Component elevations.\n\n"
+
+        "The resting elevation for a component type is consistent across apps (e.g., FAB elevation "
+        "does not vary from 6dp in one app to 16dp in another app).\n"
+        "Components may have different resting elevations across platforms, depending on the depth "
+        "of the environment (e.g., TV has a greater depth than mobile or desktop).\n\n"
+
+        "Responsive elevation and dynamic elevation offsets.\n\n"
+
+        "Some component types have responsive elevation, meaning they change elevation in response "
+        "to user input (e.g., normal, focused, and pressed) or system events. These elevation "
+        "changes are consistently implemented using dynamic elevation offsets.\n"
+        "Dynamic elevation offsets are the goal elevation that a component moves towards, relative "
+        "to the component’s resting state. They ensure that elevation changes are consistent "
+        "across actions and component types. For example, all components that lift on press have "
+        "the same elevation change relative to their resting elevation.\n"
+        "Once the input event is completed or cancelled, the component will return to its resting "
+        "elevation.\n\n"
+
+        "Avoiding elevation interference.\n\n"
+
+        "Components with responsive elevations may encounter other components as they move between "
+        "their resting elevations and dynamic elevation offsets. Because material cannot pass "
+        "through other material, components avoid interfering with one another any number of ways, "
+        "whether on a per component basis or using the entire app layout.\n"
+        "On a component level, components can move or be removed before they cause interference. "
+        "For example, a floating action button (FAB) can disappear or move off screen before a "
+        "user picks up a card, or it can move if a snackbar appears.\n"
+        "On the layout level, design your app layout to minimize opportunities for interference. "
+        "For example, position the FAB to one side of stream of a cards so the FAB won’t interfere "
+        "when a user tries to pick up one of cards.\n\n"
+    </string>
+    <string name="lcr_ip_address">Địa chỉ IP Đồng hồ</string>
+    <string name="connection_check">Kiểm tra kết nối LCR</string>
+    <string name="lcr_connection_error">Lỗi kết nối thiết bị LCR</string>
+    <string name="lcr_connection_ok">Kết nối thiết bị thành công</string>
+    <string name="meter_data_stale">Đồng hồ không gửi số — số đang hiển thị là số cũ</string>
+    <string name="setting">Cài đặt</string>
+    <string name="refuel">Tra nạp</string>
+    <string name="fuelUplift">Lượng nhiên liệu tra nạp</string>
+    <string name="fuelUpliftUSG">Lượng nhiên liệu tra nạp USG</string>
+    <string name="refuel_check">Kiểm tra</string>
+    <string name="start">Bắt đầu</string>
+    <string name="pause">Tạm dừng</string>
+    <string name="stop">Kết thúc</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="title_activity_main3">Main3Activity</string>
+    <string name="logout">Thoát</string>
+    <string name="exit">Thoát</string>
+    <string name="logout_message">Bạn có muốn thoát khỏi ứng dụng?</string>
+
+    <string name="invoice">Hóa đơn</string>
+    <string name="add_inventory">25.02</string>
+    <string name="title_refuelitem_list">Items</string>
+    <string name="title_refuelitem_detail">RefuelItem Detail</string>
+    <string name="extract">Hút nhiên liệu</string>
+    <string name="refuel_list">Danh sách tra nạp</string>
+    <string name="print_order">In mẻ hiện tại</string>
+    <string name="detail_info">Thông tin chi tiết</string>
+    <string name="current_amount">Lượng nhiên liệu hiện tại</string>
+    <string name="refuel_item_already_fueled">Mẻ tra nạp đã thực hiện xong</string>
+    <string name="login_error_message">Lỗi đăng nhập! Sai tên đăng nhập hoặc mật khẩu</string>
+    <string name="refuel_mannual_temperature">Nhiệt độ thực tế</string>
+    <string name="start_meter">Số đồng hồ bắt đầu</string>
+    <string name="flightCode">Mã chuyến bay</string>
+    <string name="flightNo">Số hiệu chuyến bay</string>
+    <string name="aircraftCode">Số hiệu tàu bay</string>
+    <string name="parkingLot">Bãi đỗ</string>
+    <string name="density">Tỷ trọng</string>
+    <string name="amount">Lượng nhiên liệu</string>
+    <string name="update_aircraftCode">Sửa số hiệu tàu bay</string>
+    <string name="update_density">Cập nhật tỷ trọng</string>
+    <string name="update_temparature">Cập nhật nhiệt độ</string>
+    <string name="startTime">Giờ bắt đầu tra nạp</string>
+    <string name="endTime">Giờ kết thúc tra nạp</string>
+    <string name="end">Kết thúc</string>
+    <string name="close">Trở về</string>
+    <string name="dialog_update_refuel">Cập nhật thông tin tra nạp</string>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="printer_address">Địa chỉ IP máy in</string>
+    <string name="lcr_device_connect">Kết nối thiết bị LCR</string>
+    <string name="edit_refuel">Sửa thông tin</string>
+    <string name="menu">Chức năng</string>
+    <string name="detail">Chi tiết</string>
+    <string name="lcr_connection_connecting">Đang kết nối thiết bị LCR</string>
+    <string name="others">Khác</string>
+
+    <string name="imei_list">353700094068846,353700094064027</string>
+    <string name="not_granted_device">Thiết bị không tương thích. Ứng dụng không thể hoạt động với thiết bị này.</string>
+    <string name="not_get_device_list">Không kết nối được máy chủ để xác nhận thiết bị, vui lòng thử lại sau</string>
+
+    <string name="not_granted_device_title">Thiết bị</string>
+    <string name="no_internet_error">Không kết nối được máy chủ, vui lòng kiểm tra lại</string>
+    <string name="no_truck_list">Chưa lấy được danh sách xe, vui lòng kiểm tra kết nối và thử lại</string>
+    <string name="qc_no">Số phiếu hóa nghiệm</string>
+    <string name="print_all">In tất cả </string>
+    <string name="print_invoice">In hóa đơn </string>
+    <string name="estimateAmount">Sản lượng dự kiến</string>
+    <string name="departureTime">Giờ cất cánh</string>
+    <string name="arrivalTime">Giờ hạ cánh</string>
+    <string name="refuelTime">Giờ tra nạp</string>
+    <string name="update_list">Cập nhật K.hoạch</string>
+    <string name="sending_start">Đang bắt đầu &#8230; </string>
+    <string name="sending_stop">Đang kết thúc &#8230;</string>
+    <string name="update_real_amount">Cập nhật sản lượng thực tế (GALLON)</string>
+    <string name="update_real_amount_kg">Cập nhật sản lượng thực tế (KG)</string>
+    <string name="new_item">T.nạp thêm</string>
+    <string name="error_not_found">Không tìm thấy thông tin mẻ tra nạp</string>
+    <string name="truck_list">Danh sách tra nạp</string>
+    <string name="vat_rate">VAT (%)</string>
+
+    <string name="parking_lot">Bãi đỗ</string>
+    <string name="arrival_time">Giờ hạ cánh</string>
+    <string name="estimate_amount">Sản lượng dự kiến</string>
+    <string name="real_amount">Sản lượng thực tế</string>
+    <string name="temperature">Nhiệt độ</string>
+    <string name="refuel_start">Giờ bắt đầu tra nạp</string>
+    <string name="refuel_end">Giờ kết thúc tra nạp</string>
+    <string name="end_meter">Số đồng hồ kết thúc</string>
+    <string name="truck_check">Kiểm tra xe</string>
+    <string name="inventory_check">Kiểm tra hàng</string>
+    <string name="volume">Thể tích</string>
+    <string name="aircraft_code">Số hiệu tàu bay</string>
+    <string name="airline">Hãng bay</string>
+    <string name="update_qc_no">Cập nhật số phiếu hóa nghiệm</string>
+    <string name="update_parking_lot">Cập nhật bãi đỗ</string>
+    <string name="touch_to_edit"><i>Chạm để sửa</i></string>
+    <string name="notNote"><i>Chưa có ghi chú</i></string>
+    <string name="refueled">Đã tra nạp</string>
+    <string name="truck_no">Số xe</string>
+    <string name="info">Thông tin</string>
+    <string name="update_version">Cập nhật phiên bản mới</string>
+    <string name="version_check">Kiểm tra</string>
+    <string name="version_update">Cập nhật</string>
+    <string name="new_version_available">Có phiên bản mới, vui lòng cập nhật</string>
+    <string name="newest_version_using">Bạn đang dùng phiên bản mới nhất</string>
+    <string name="version_updating">Đang cập nhật ...</string>
+    <string name="update_checking">Đang kiểm tra phiên bản mới ...</string>
+    <string name="using_version">Phiên bản đang sử dụng</string>
+    <string name="update_badge">Có bản mới</string>
+    <string name="update_download_progress">Đang tải %1$d%% · %2$s / %3$s · %4$s</string>
+    <string name="update_download_progress_unknown_size">Đang tải %1$s · %2$s</string>
+    <string name="update_download_preparing">Đang kết nối máy chủ cập nhật ...</string>
+    <string name="update_installing">Đang cài đặt, vui lòng không tắt ứng dụng ...</string>
+    <string name="version_release_notes_title">Nội dung cập nhật</string>
+    <string name="version_release_note_bm2508_fix">• Sửa lỗi biểu mẫu 25.08.</string>
+    <string name="version_release_note_bm2502">• Khắc phục một số lỗi của BM 25.02.</string>
+    <string name="version_release_note_sync">• Tối ưu luồng đồng bộ dữ liệu online/offline.</string>
+    <string name="version_release_note_offline">• Tối ưu dữ liệu đã nhập khi mất mạng và tự đồng bộ lại khi có kết nối.</string>
+    <string name="version_release_note_truck_invoice">• Bổ sung màn hình tra cứu hóa đơn theo xe.</string>
+    <string name="version_release_note_invoice_pdf">• Cho phép xem trực tiếp PDF hóa đơn trên ứng dụng.</string>
+
+    <!-- ===== Nội dung cập nhật =====
+         Mới nhất LÊN ĐẦU: người dùng mở màn hình này để xem bản vừa cài có gì, không phải
+         để đọc lại lịch sử. Mỗi dòng viết theo việc thấy được trên xe, không theo tên hàm. -->
+    <string name="version_release_notes_group_11_6">Bản 11.6 — mới nhất</string>
+    <string name="version_release_note_update_gate">• Dữ liệu chưa gửi không còn chặn việc cập nhật: ứng dụng báo rõ còn bao nhiêu bản ghi rồi vẫn cho cập nhật. Dữ liệu được giữ nguyên và gửi tiếp sau khi cài — nhiều khi cập nhật chính là cách đẩy nó đi.</string>
+    <string name="version_release_note_print_quality">• Bản in nhiệt đậm và nét hơn: in đậm toàn phiếu, tăng độ đậm và độ phân giải đầu in.</string>
+    <string name="version_release_note_printer_setup">• Máy in tự nạp font tiếng Việt và tự chuyển về chế độ ZPL khi cần; phiếu In thử hiện rõ tình trạng máy in, chế độ và font.</string>
+    <string name="version_release_note_device_number">• Phiếu in số đồng hồ theo tên thiết bị: “LCR: số” hoặc “TCS: số”, không còn dễ nhầm với số phiếu.</string>
+    <string name="version_release_note_keep_device_number">• Giữ số Sale/Ticket của đồng hồ, không còn bị xoá mất khi đồng bộ với máy chủ.</string>
+    <string name="version_release_note_meter_reconnect">• Nối lại đồng hồ: đóng hẳn kết nối cũ rồi mới nối mới, và giữ được tín hiệu kết thúc mẻ khi mất kết nối giữa chừng.</string>
+    <string name="version_release_note_meter_stale">• Dấu kết nối chỉ xanh khi thực sự đang nhận số; đồng hồ ngừng gửi số thì báo đỏ ngay thay vì để số cũ đứng im.</string>
+    <string name="version_release_note_bm2508_upload">• Ảnh biểu mẫu 25.08 gửi lên máy chủ kèm xác thực (trước đây bị từ chối nên không lên được).</string>
+    <string name="version_release_note_update_ux">• Cập nhật ứng dụng: biểu tượng nhấp nháy ở màn hình chính thay cho hộp thoại cắt ngang; khi tải có thanh tiến trình và tốc độ.</string>
+    <string name="version_release_note_no_data_loss">• Không còn mất số liệu mẻ tra nạp khi máy chủ sửa chuyến trong lúc đang nhập.</string>
+    <string name="version_release_note_web_changes">• Đổi chuyến, đổi bãi đỗ, hủy chuyến từ máy chủ xuống thiết bị ngay.</string>
+    <string name="version_release_note_receipt_push">• Chứng từ và phiếu được đẩy lên máy chủ ngay khi kết thúc mẻ.</string>
+    <string name="version_release_note_sync_lock">• Sửa lỗi đồng bộ ngừng chạy sau khi mở màn hình xem trước chứng từ.</string>
+    <string name="version_release_note_leave_button">• Sửa nút “Rời đi” nhìn như treo dù đã lưu xong.</string>
+    <string name="version_release_note_meter">• Đọc số đồng hồ LCR ổn định; màn hình in chờ đủ số Gross và Total rồi mới ngắt kết nối.</string>
+    <string name="version_release_note_cleanup">• Dọn dữ liệu quá hạn không còn xóa nhầm phiếu và ảnh chưa gửi lên máy chủ.</string>
+
+    <string name="version_release_notes_group_older">Các bản trước</string>
+
+    <string name="new_refuel">Chuyến mới</string>
+    <string name="aircraft_type">Loại tàu bay</string>
+    <string name="route_name">Đường bay</string>
+    <string name="airport">Sân bay</string>
+    <string name="day">Ngày</string>
+    <string name="stop_confirm">Kết thúc mẻ ?</string>
+    <string name="start_confirm">Bắt đầu mẻ ?</string>
+    <string name="print">In</string>
+    <string name="extract_list">Hút Jet A-1</string>
+    <string name="new_extract">Tạo chuyến hút mới</string>
+    <string name="error_saving_data">Có lỗi trong khi ghi dữ liệu, vui lòng kiểm tra lại</string>
+    <string name="shift">Ca làm việc</string>
+    <string name="restart_alert">Ứng dụng sẽ khởi động lại sau khi cập nhật thông số</string>
+    <string name="error_empty_field">Dữ liệu không được để trống</string>
+    <string name="internet_connection_error">Không thể kết nối máy chủ, vui lòng kiểm tra lại</string>
+    <string name="internet_connection_error_title">Lỗi kết nối</string>
+    <string name="new_customer">Thêm hãng bay mới</string>
+    <string name="address">Địa chỉ</string>
+    <string name="taxcode">Mã số thuế</string>
+    <string name="price">Đơn giá</string>
+    <string name="printer_error">Lỗi: không in được dữ liệu! Vui lòng kiểm tra lại</string>
+    <string name="printer_nhiet">Chỉ áp dụng với máy in nhiệt</string>
+    <string name="print_completed">In thành công</string>
+    <string name="force_stop_confirm"><![CDATA[Lỗi kết nối thiết bị LCR, bạn có muốn kết thúc mẻ tra nạp không?  Phải chắc chắn thiết bị LCR đã kết thúc tra nạp. ]]></string>
+    <string name="reconnect">Kết nối lại</string>
+    <string name="print_bill">In phiếu xuất kho</string>
+    <string name="operator">Nhân viên tra nạp</string>
+    <string name="driver">Nhân viên lái xe</string>
+    <string name="select_operator">Chọn nhân viên tra nạp</string>
+    <string name="select_driver">Chọn lái xe</string>
+    <string name="driver2307">Lái xe</string>
+    <string name="textNV2307">Nhân viên tra nạp (Thợ bơm)</string>
+    <string name="textUser2307">Phụ trách đơn vị</string>
+    <string name="nvtranap2307">NV tra nap</string>
+    <string name="user2307">Cán bộ</string>
+    <string name="return_amount">Hoàn trả </string>
+    <string name="weight_note">Techlog</string>
+    <string name="select">Chọn</string>
+    <string name="update_return_amount">Cập nhật khối lượng hoàn trả</string>
+    <string name="update_weight_note">Cập nhật Techlog (KG)</string>
+    <string name="edit_not_allow">Không cho phép sửa thông tin tra nạp</string>
+    <string name="edit_locked_after_print">Phiếu đã in và xuất chứng từ nên không sửa được trên máy tính bảng.\n\nVui lòng chỉnh sửa trên hệ thống web.</string>
+    <string name="print_current">In mẻ hiện tại</string>
+    <string name="print_bill2">Phiếu đường trường</string>
+    <string name="total_amount">Tổng tiền thanh toán</string>
+    <string name="in_words">Số tiền bằng chữ</string>
+    <string name="invoice_number">Số hóa đơn</string>
+    <string name="invalid_data">Dữ liệu không đúng cú pháp, vui lòng kiểm tra lại</string>
+    <string name="validate">Kiểm tra dữ liệu</string>
+    <string name="invalid_density_temperature">Nhiệt độ và tỷ trọng phải lớn hơn 0, vui lòng kiểm tra lại</string>
+    <string name="meter">Số đồng hồ</string>
+    <string name="check">Chọn</string>
+    <string name="file_update_error">Có lỗi truy cập server, không thể cập nhật version mới.</string>
+    <string name="select_user">Chọn nhân viên</string>
+    <string name="error_same_user">Không thể chọn cùng 1 nhân viên cho 2 vị trí</string>
+    <string name="invalid_truck_info">Thông tin xe tra nạp không đúng, vui lòng cập nhật.</string>
+    <string name="error_data">Lỗi dữ liệu</string>
+    <string name="retry">Thử lại</string>
+    <string name="warn_refuel_background_save_failed">Số liệu chưa được lưu vào máy. Không đóng ứng dụng. Khi kết thúc, hệ thống sẽ thử lưu lại và chỉ cho phép đi tiếp khi lưu thành công.</string>
+    <string name="error_refuel_end_save_failed">Chưa ghi được số liệu mẻ vào máy. KHÔNG rời màn hình này — bấm Thử lại. Nếu vẫn không được, ghi lại số đồng hồ đầu/cuối rồi báo kỹ thuật.</string>
+    <string name="error_refuel_save_conflict">Phiếu này đã được chốt bằng số liệu khác nên không ghi đè được. Dữ liệu bạn nhập vẫn còn nguyên trên màn hình. Vui lòng đối chiếu lại số đồng hồ trước khi lưu, hoặc chụp màn hình và báo kỹ thuật.</string>
+    <string name="error_refuel_save_failed">Chưa lưu được số liệu. Dữ liệu bạn nhập vẫn còn nguyên trên màn hình — vui lòng bấm Xác nhận lại. Nếu vẫn không được, chụp màn hình và báo kỹ thuật.</string>
+    <string name="accept">Đồng ý</string>
+    <string name="refuelling_status">Đồng hồ đang ở trạng thái tra nạp. Bạn muốn tiếp tục hay bắt đầu lại?</string>
+    <string name="refuel_continue">Tiếp tục tra nạp</string>
+    <string name="added_amount">Lượng nhập thêm</string>
+    <string name="invalid_amount">Số lượng nhập thêm phải lớn hơn 0, vui lòng kiểm tra lại</string>
+    <string name="invalid_data_input">Số liệu nhập không hợp lệ, vui lòng kiểm tra lại</string>
+    <string name="inventory_alert">Lượng hàng tồn ít hơn sản lượng dự kiến, tiếp tục tra nạp?</string>
+    <string name="btn_continue">Tiếp tục tra nạp</string>
+    <string name="btn_stop">Trở lại</string>
+    <string name="restart_app">Khởi động lại ứng dụng</string>
+    <string name="restart_confirm">Bạn muốn khởi động lại ứng dụng?</string>
+    <string name="restart">Bắt đầu lại</string>
+    <string name="test">Test</string>
+    <string name="flight_code">Mã chuyến bay</string>
+    <string name="search">Tìm</string>
+    <string name="airline_search_hint">Tìm theo mã và tên</string>
+    <string name="wrong_truck_connect">Kết nối không đúng xe đã đăng ký.</string>
+    <string name="update_aircraftType">Sửa loại tàu bay</string>
+    <string name="invalid_airline_model">Thông tin hãng bay không đúng, vui lòng kiểm tra lại</string>
+    <string name="refuel_not_start">Chưa tra nạp</string>
+    <string name="refuel_ended">Đã kết thúc tra nạp</string>
+    <string name="refuel_ending">Đang kết thúc tra nạp</string>
+    <string name="refuel_processing">Đang tra nạp</string>
+    <string name="current_shift">Ca hiện tại</string>
+    <string name="next_shift">Ca sau</string>
+    <string name="prev_shift">Ca trước</string>
+    <string name="confirm">Xác nhận</string>
+    <string name="shift_select">Chọn ca</string>
+    <string name="force_stop">Kết thúc thủ công</string>
+    <string name="new_version">Mẫu mới</string>
+    <string name="old_version">Mẫu cũ</string>
+    <string name="invalid_density">Nhập sai giới hạn tỉ trọng cho nhiên liệu Jet A-1 (0.72 - 0.86)</string>
+    <string name="invalid_end_time">Giờ kết thúc NHẬP HÀNG phải lớn hơn giờ bắt đầu NHẬP HÀNG</string>
+    <string name="invalid_test_end_time">Giờ kết thúc KIỂM TRA phải lớn hơn giờ bắt đầu KIỂM TRA  tối thiểu 10 phút</string>
+    <string name="invalid_test_start_time_end_time">Giờ bắt đầu KIỂM TRA phải lớn hơn giờ kết thúc NHẬP HÀNG</string>
+    <string name="invalid_number_format">Định dạng số không đúng</string>
+    <string name="assigned_to_another_truck">Mẻ này được phân công cho xe khác, bạn muốn thực hiện tra nạp?</string>
+    <string name="internet_status">Trạng thái 3G</string>
+    <string name="flight_type">Bay quốc tế</string>
+    <string name="international">Quốc tế</string>
+    <string name="route_type">Loại chặng bay</string>
+    <string name="oversea">Quốc tế</string>
+    <string name="domestic">Nội địa</string>
+    <string name="update_route_name">Cập nhật đường bay</string>
+    <string name="update_price">Cập nhật giá</string>
+    <string name="charter_name">Tên in hóa đơn</string>
+    <string name="update_charter_name">Cập nhật tên in hóa đơn</string>
+    <string name="invalid_aircraft_code">Số hiệu tàu bay không được để trống</string>
+    <string name="send_log">Gửi file log</string>
+    <string name="send_log_completed">Đã gửi thành công</string>
+    <string name="cancelled_alert">Chuyến bay đã hủy, không thể tra nạp</string>
+    <string name="invalid_user">Thông tin Nhân viên không được để trống, vui lòng kiểm tra lại</string>
+    <string name="invalid_qc_no">Số phiếu hóa nghiệm không được để trống, vui lòng kiểm tra lại</string>
+    <string name="bill">Phiếu xuất kho</string>
+    <string name="form_no">Mẫu số</string>
+    <string name="sign">Ký hiệu</string>
+    <string name="preview_empty_list">Chưa chọn mẻ in</string>
+    <string name="new_return_amount_value">Giá trị hoàn trả là:</string>
+    <string name="return_amount_greater_warning">Giá trị hoàn trả lớn hơn sản lượng thực tế</string>
+    <string name="density_must_input">Vui lòng nhập tỷ trọng trước</string>
+    <string name="print_selected">In mẻ được chọn</string>
+    <string name="print_extract">In P.hoàn trả</string>
+    <string name="print_bm7501_specimen">In thử BM 75.01</string>
+    <string name="bm7501_sign_save_failed">Không lưu được chữ ký, vui lòng ký lại</string>
+    <string name="bm7501_sign_finish">Ký &amp; hoàn tất</string>
+    <string name="bm7501_signed_ok">Đã ký. Phiếu được khoá, không sửa được nữa.</string>
+    <string name="bm7501_sign_blocked">Chưa ký được — còn thiếu thông tin bắt buộc</string>
+    <string name="bm7501_no_number">Chưa có số phiếu: mẻ hút này chưa xuất phiếu nên chưa có số. Xuất phiếu cho mẻ hút trước, rồi mở lại.</string>
+    <string name="bm7501_confirm_sign">Sau khi ký, phiếu sẽ bị khoá và không sửa được nữa. Xác nhận ký?</string>
+    <string name="bm7501_title">BM 75.01 - Phiếu yêu cầu hút nhiên liệu</string>
+    <string name="bm7501_open">Phiếu yêu cầu hút (75.01)</string>
+    <string name="print_bm7501">In phiếu</string>
+    <string name="bm7501_status_line">Số phiếu: %1$s — Trạng thái: %2$s</string>
+    <string name="bm7501_missing_refuel">Không xác định được mẻ hút để lập phiếu</string>
+    <string name="bm7501_multiple_active">Dữ liệu bất thường: mẻ hút này có nhiều hơn một phiếu đang hiệu lực. Đã khoá ký và in, vui lòng báo quản trị.</string>
+    <string name="bm7501_conflict">Phiếu đã được sửa ở nơi khác, đang tải lại bản mới nhất</string>
+    <string name="bm7501_locked">Phiếu đã ký hoặc đã huỷ, không sửa được nữa</string>
+    <string name="bm7501_saved_complete">Đã lưu. Phiếu đã đủ thông tin bắt buộc.</string>
+    <string name="bm7501_saved_incomplete">Đã lưu nháp — còn thiếu</string>
+    <string name="print_bm7501_specimen_confirm">In thử bố cục phiếu BM 75.01 (yêu cầu hút nhiên liệu) trên máy in nhiệt.\n\nBản in này đóng dấu MẪU/SPECIMEN và KHÔNG có giá trị pháp lý — dùng để kiểm tra bố cục, chữ tiếng Việt và độ dài giấy.\n\nCác mục khách hàng khai và kết quả kiểm tra chất lượng sẽ để trống cho tới khi có màn hình nhập liệu.</string>
+    <string name="print_bm7501_no_printer">Không kết nối được máy in nhiệt, vui lòng kiểm tra lại</string>
+    <string name="update_tax_rate">Cập nhật VAT(%)</string>
+    <string name="update_product">Cập nhật loại nhiên liệu </string>
+    <string name="duplicate_invoice_number">Nhập trùng số hóa đơn. Vui lòng kiểm tra lại</string>
+    <string name="empty_required_field">Dữ liệu không được dể trống, vui lòng kiểm tra lại</string>
+    <string name="print_error">Có lỗi khi in, bạn muốn tiếp tục nhập số hóa đơn?</string>
+    <string name="invalid_device">Sai thiết bị LCR</string>
+    <string name="invalid_device_message">Kết nối không đúng đồng hồ LCR, vui lòng kiểm tra lại</string>
+    <string name="refresh">C.nhật</string>
+    <string name="update_start_meter">Cập nhật số đồng hồ bắt đầu</string>
+    <string name="update_end_meter">Cập nhật số đồng hồ kết thúc</string>
+    <string name="invalid_temperature">Nhiệt độ phải lớn hơn 0.</string>
+    <string name="invalid_real_amount"><![CDATA[Sản lượng thực tế phải > 0]]></string>
+    <string name="invalid_start_end_meter">Số đồng hồ bắt đầu/kết thúc không hợp lý.</string>
+    <string name="invalid_start_end_time">Thời gian bắt đầu/kết thúc không hợp lý</string>
+    <string name="comfirm_refuel_data">Xác nhận dữ liệu tra nạp</string>
+    <string name="cancel_refuel">Hủy tra nạp</string>
+    <string name="cancel_refuel_message">Bạn thực sự muốn hủy mẻ tra nạp này?</string>
+    <string name="return_invoice_number">Số phiếu hút</string>
+    <string name="update_return_invoice_number">Cập nhật số phiếu hút</string>
+    <string name="invalid_device_confirm">Kết nối sai thiết bị LCR, bạn muốn tiếp tục tra nạp?</string>
+    <string name="check_form">Phiếu kiểm tra</string>
+    <string name="check_form_create">Tạo PK.tra</string>
+    <string name="ok">Xác nhận</string>
+    <string name="check_form_view">Xem PK.tra</string>
+    <string name="bonding_cable">Dây truyền tĩnh điện đã được đưa về vị trí quy định trên xe tra nạp</string>
+    <string name="fueling_cap">Nắp cửa nạp nhiên liệu của tàu bay đã được đóng</string>
+    <string name="ladder">Thang tra nạp/giàn nâng đã được đưa về vị trí quy định trên xe tra nạp</string>
+    <string name="fueling_hose">Ống tra nạp đã được ngắt kết nối với tàu bay và đưa về vị trí quy định</string>
+    <string name="delete">Xóa</string>
+    <string name="check_form_delete">Bạn muốn xóa phiếu kiểm tra này?</string>
+    <string name="incomplete_continue">Có mẻ tra nạp chưa hoàn thành, bạn có muốn mở lại?</string>
+    <string name="real_amount_kg">Sản lượng thực tế (KG)</string>
+    <string name="real_amount_gal">Sản lượng thực tế (GALLON)</string>
+    <string name="add_new">Thêm mới</string>
+    <string name="time">Thời gian</string>
+    <string name="maintenance_staff">Nhân viên bảo quản</string>
+    <string name="ticket_no">Số phiếu</string>
+    <string name="tank_no">Số bể</string>
+    <string name="hour_km">Giờ/Km</string>
+    <string name="hour">Giờ</string>
+    <string name="fuel_amount">Lượng nhiên liệu nhập</string>
+    <string name="fuel_accumulatedRefuelAmount">Lượng NL đã xuất</string>
+    <string name="date">Ngày</string>
+    <string name="update_tank_no">Nhập Số bể</string>
+    <string name="update_ticket_no">Nhập số phiếu</string>
+    <string name="update_fuel_amount">Nhập lượng nhiên liệu</string>
+    <string name="update_fuel_accumulatedRefuelAmount">Nhập Lượng nhiên liệu đã xuất cho tàu bay</string>
+    <string name="update_maintenance_staff">Nhập nhân viên bảo quản</string>
+    <string name="delete_confirm">Bạn chắc chắn muốn xóa các dòng được chọn?</string>
+    <string name="amount_must_less_than_capacity">Lượng nhiên liệu nhập không được nhiều hơn dung tích xe</string>
+    <string name="capacity">Dung tích</string>
+    <string name="bm_2505">25.05</string>
+    <string name="bm_2508">25.08</string>
+    <string name="bm_2307">23.07A</string>
+    <string name="receiptlist">Đã xuất</string>
+    <string name="bm2502_checker">Người kiểm tra</string>
+    <string name="create_user">Người tạo</string>
+    <string name="bm2505_checker">Nhân viên kiểm tra</string>
+    <string name="rtc_no">Số CNKTCL</string>
+    <string name="Cert_no">Số CNXH</string>
+    <string name="density_15">Tỷ trọng 15°C</string>
+    <string name="difference">Chênh lệch</string>
+    <string name="evaluation">Đánh giá</string>
+    <string name="appearance_check">Kiểm tra ngoại quan</string>
+    <string name="water_check">Viên thử nước</string>
+    <string name="pressure_diff">Chênh lệch áp suất bầu lọc</string>
+    <string name="hose_pressure">Áp suất đầu vòi tra nạp</string>
+    <string name="update_density15">Cập nhật tỷ trọng 15</string>
+    <string name="update_rtc_no">Cập nhật số CNKTCL</string>
+    <string name="other">Khác</string>
+    <string name="update_appearance_check">Cập  nhật Kiểm tra ngoại quan</string>
+    <string name="update_pressure_diff">Cập nhật chênh lệch bầu áp</string>
+    <string name="update_hose_presure">Cập nhật áp suất đầu vòi tra nạp</string>
+    <string name="product_name">Tên hàng hóa</string>
+    <string name="capture">Chụp hình</string>
+    <string name="view_image">Xem hình</string>
+    <string name="litter">Lít</string>
+    <string name="gallon">Gallon</string>
+    <string name="weight">Kg</string>
+    <string name="split_invoice">Tách hóa đơn</string>
+    <string name="split_amount">Số lượng tách</string>
+    <string name="defueling_no">Số phiếu hút</string>
+    <string name="refuel_detail">Chi tiết tra nạp</string>
+    <string name="refueller">Xe tra nạp</string>
+    <string name="buyer">Đơn vị mua hàng</string>
+    <string name="receipt_number">Số phiếu</string>
+    <string name="update_split_amount">Nhập số lượng tách hóa đơn (KG)</string>
+    <string name="error_split_amount_too_large">Số lượng tách hóa đơn quá lớn. Vui lòng kiểm tra lại!</string>
+    s
+    <string name="image_Airline_not_saved">Hình ảnh chữ ký khách hàng chưa được lưu. Bạn có muốn thoát?</string>
+    <string name="update_defueling_no">Nhập số phiếu hút</string>
+    <string name="print_receipt">In Hóa Đơn Điện Tử</string>
+    <string name="not_capture_confirm">Chưa chụp hình phiếu. Bạn muốn chụp hình và xuất hóa đơn?</string>
+    <string name="not_capture_sign">Chưa đủ chữ ký người mua hoặc người bán hoặc chưa chụp hình phiếu giao nhận?</string>
+    <string name="save_receipt_completed">Đã lưu phiếu thành công</string>
+    <string name="no_return_amount">Không có số hoàn trả, vui lòng kiểm tra lại.</string>
+    <string name="real_amount_too_big">Sản lượng thực tế quá lớn. Vui lòng kiểm tra lại.</string>
+    <string name="refueling_method">Phương thức tra nạp</string>
+    <string name="fhs">Tra nạp ngầm</string>
+    <string name="refueler">Xe tra nạp</string>
+    <string name="refuel_company">Đơn vị tra nạp</string>
+    <string name="signature">Chữ ký</string>
+    <string name="clear">Xóa</string>
+    <string name="buyer_signature">Chữ ký người mua</string>
+    <string name="seller_signature">Chữ ký người bán</string>
+    <string name="cancel_receipt_info">"Lý do hủy phiếu "</string>
+    <string name="cancel_receipt_message">Mẻ tra nạp đã được xuất hóa đơn, bạn muốn hủy hóa đơn đã xuất? Nhập lý do hủy:</string>
+    <string name="cancel_reason_required">Lý do hủy không được để trống</string>
+    <string name="split_refuel">Tách mẻ</string>
+    <string name="input_split_amount">Nhập số lượng cần tách (KG)</string>
+    <string name="split_amount_too_big">Số lượng tách phải nhỏ hơn khối lượng thực tế</string>
+    <string name="split_confirm">"Bạn chắc chắn muốn tách mẻ tra nạp? "</string>
+    <string name="error_loading_item">Có lỗi khi tải dữ liệu, vui lòng thử lại.</string>
+    <string name="fhs_input_values">Nhập sản lượng</string>
+    <string name="printer_connection_error">Lỗi: không kết nối được máy in</string>
+    <string name="invoice_issue">Xuất hóa đơn</string>
+    <string name="test_print">In thử</string>
+    <string name="invoice_number_input">Nhập số hóa đơn</string>
+    <string name="confirm_invoice_exit">Hóa đơn đã được in, bạn muốn thoát mà không nhập số hóa đơn?</string>
+    <string name="print_completed_message">Đã in thành công, vui lòng nhập số hóa đơn</string>
+    <string name="confirm_receip_cancel">Bạn chắc chắn muốn hủy phiếu đã in và tạo phiếu mới?</string>
+    <string name="refuel_confirm_term">Vui lòng kiểm tra số đồng hồ  và sản lượng trước khi xác nhận.</string>
+    <string name="customer_type">Loại khách hàng</string>
+    <string name="change_route_type_confirm">Bạn thực sự muốn thay đổi kiểu chặng bay?</string>
+    <string name="e_invoice_confirm">Bạn chắc chắn muốn xuất hóa đơn?</string>
+    <string name="sync_error_title">Lỗi đồng bộ </string>
+    <string name="sync_error">Lỗi đồng bộ dữ liệu với hệ thống số hóa</string>
+    <string name="sync_error_message">Dữ liệu tra nạp đã được lưu trên máy tính bảng. Nhưng chưa được đồng bộ với hệ thống số hóa. Vui lòng đồng bộ lại tại giao diện kế hoạch bằng nút   </string>
+    <string name="sync">Đồng bộ dữ liệu</string>
+    <string name="sync_completed_message">Đồng bộ dữ liệu thành công</string>
+    <string name="input_techlog">Nhập techlog</string>
+    <string name="tech_log">TechLog</string>
+    <string name="recapture">Chụp lại</string>
+    <string name="invalid_driver_operator">Phải chọn nhân viên tra nạp và lái xe</string>
+    <string name="use_old_receipt">Sử dụng phiếu đã in</string>
+    <string name="create_new_receipt">Tạo số phiếu mới</string>
+    <string name="input_receipt_number">Nhập số phiếu</string>
+    <string name="receipt_not_created">Chưa xuất</string>
+    <string name="invoice_issuing">Đã xuất. Chờ số HĐ</string>
+    <string name="invoice_doubleReceipt">Bị trùng số phiếu</string>
+    <string name="wifi_not_connected">Không có kết nối WIFI, vui lòng kiểm tra lại</string>
+    <string name="receipt_list">Danh sách receipts</string>
+    <string name="customer_code">Mã khách hàng</string>
+    <string name="receipt_date">Ngày tạo phiếu</string>
+    <string name="sync_status">Trạng thái</string>
+    <string name="receipts">Receipts</string>
+    <string name="note">Ghi chú</string>
+    <string name="notedetail">Nhận xét và yêu cầu </string>
+    <string name="update_note">Cập nhật ghi chú</string>
+    <string name="update_density_diff">Cập nhật chênh lệch tỷ trọng</string>
+    <string name="capture_error">Có lỗi xảy ra, vui lòng thử lại</string>
+    <string name="review_instruction">Quý khách vui lòng chọn mức độ hài lòng về chất lượng dịch vụ cho chuyến bay</string>
+    <string name="review_instruction_en">Please select the satisfaction level of service quality for this flight</string>
+    <string name="verymad">Rất không hài lòng</string>
+    <string name="mad">Không hài lòng</string>
+    <string name="neutral">Trung bình</string>
+    <string name="good">Hài lòng</string>
+    <string name="best">Rất hài lòng</string>
+    <string name="verymad_en">Very unsatisfied</string>
+    <string name="mad_en">Unsatisfied</string>
+    <string name="neutral_en">Normal</string>
+    <string name="good_en">Satisfied</string>
+    <string name="best_en">Very satisfied</string>
+    <string name="unsafe_refuelling">Tra nạp thiếu an toàn</string>
+    <string name="inaccurately_perform">Nhân viên thao tác sai</string>
+    <string name="not_on_time">Tra nạp chậm muộn</string>
+    <string name="inaccurate_amount">Khối lượng nhiên liệu không chuẩn xác</string>
+    <string name="inappropriate_attitude">Thái độ nhân viên không tốt</string>
+    <string name="other_reason">Lý do khác</string>
+    <string name="unsafe_refuelling_en">Unsafe refuelling</string>
+    <string name="not_on_time_en">Refuelling not on time</string>
+    <string name="inaccurate_amount_en">Inaccurate amount of fuel</string>
+    <string name="inaccurately_perform_en">Staff performs inaccurately</string>
+    <string name="inappropriate_attitude_en">Staff has inappropriate attitude</string>
+    <string name="other_reason_en">Other reason</string>
+
+    <string name="review_view">Xem K.sát</string>
+    <string name="review_create">Khảo sát</string>
+    <string name="create_review_confirm">Bạn muốn lưu lại khảo sát này?</string>
+    <string name="input_other_reason">Nhập lý do khác</string>
+    <string name="review_select_reason">Vui lòng chọn lý do không hài lòng / Please select unsatisfied reason</string>
+    <string name="review_input_other_reason">Vui lòng nhập lý do khác/Please input other unsatisfied reason.</string>
+    <string name="review_recreate">Khảo sát lại</string>
+    <string name="thankyou">Xin cảm ơn quý khách!</string>
+    <string name="thankyou_e">Thank you!</string>
+    <string name="receipt_not_found">Không tìm được dữ liệu. Vui lòng kiểm tra lại.</string>
+    <string name="title_data_error">Lỗi dữ liệu</string>
+    <string name="view_receipt">Xem phiếu cũ</string>s
+    <string name="receipt_not_saved">Phiếu chưa được xuất hóa đơn. Bạn có muốn thoát?\n Lưu ý: Việc thoát ra sẽ mất chữ ký trước đó và cần phải ký và in lại trước khi xuất hóa đơn</string>
+
+    <string name="flight">Chuyến bay</string>
+    <string name="bm2505_report_type">Loại phiếu</string>
+    <string name="save_print_info_failed">Không lưu được thông tin in vào phiếu. Vui lòng kiểm tra lại phiếu trước khi rời đi.</string>
+    <string name="save_leave_time_failed">Không lưu được giờ rời đi. Vui lòng thử lại.</string>
+    <string name="bm2505_airport_undetermined">Chưa xác định được sân bay</string>
+    <string name="bm2505_airport_required">Chưa xác định được sân bay của xe tra nạp. Vui lòng kiểm tra lại cấu hình xe/tài khoản trước khi lưu phiếu BM2505.</string>
+    <string name="bm2505_truck_airport_not_allowed">Sân bay của xe tra nạp không thuộc phạm vi phân quyền của tài khoản. Vui lòng liên hệ quản trị để cập nhật lại.</string>
+    <string name="bm2505_flight_required">Vui lòng chọn chuyến bay</string>
+    <string name="bm2505_container_required">Vui lòng chọn loại bồn/kho chứa</string>
+    <string name="bm2505_operator_required">Vui lòng chọn nhân viên kiểm tra</string>
+    <string name="bm2505_invalid_density15">Tỷ trọng ở 15°C không hợp lệ</string>
+    <string name="bm2505_invalid_temperature">Nhiệt độ không hợp lệ</string>
+    <string name="bm2505_invalid_max_flowrate">Lưu lượng tối đa không hợp lệ</string>
+    <string name="bm2505_save_failed">Không lưu được phiếu BM2505 xuống máy. Vui lòng thử lại.</string>
+    <string name="bm2505_saved_pending_sync">Đã lưu phiếu BM2505 trên máy, đang chờ đồng bộ lên hệ thống.</string>
+    <string name="update_depot">Nhập kho chứa</string>
+    <string name="bm2505_container_type">Loại</string>
+    <string name="product_type">Loại NL</string>
+    <string name="bm2505_depot">Kho chứa</string>
+    <string name="start_time">Giờ bắt đầu</string>
+    <string name="end_time">Giờ kết thúc</string>
+    <string name="test_after_loading">Kiểm tra chất lượng sau nhập hàng</string>
+    <string name="test_result">Kết quả</string>
+    <string name="change_airline_confirm">Bạn thực sự muốn đổi hãng bay?</string>
+    <string name="change_charter_confirm">Bạn thực sự muốn thay đổi tên in hóa đơn?</string>
+    <string name="re_print">Chỉ In lại phiếu</string>
+    <string name="thermal_printer_type">Loại máy in nhiệt</string>
+    <string name="device_type">Loại đồng hồ</string>
+    <string name="max_flowrate">Lưu lượng tối đa</string>
+    <string name="projected_capacity">Tải dầu dự kiến</string>
+    <string name="actual_capacity">Tải dầu thực tế</string>
+    <string name="update_max_flowrate">Cập nhật lưu lượng tối đa</string>
+    <string name="printer_test">Thử máy in</string>
+    <string name="print_test_ok">In thành công</string>
+    <string name="error">Lỗi</string>
+    <string name="Result7">1.Kiểm tra bề ngoài xe</string>
+    <string name="Result8">2.Kiểm tra tình trạng lốp</string>
+    <string name="Result1">3.Kiểm tra kẹp, dây, cuộn dây tiếp mát trước xe</string>
+    <string name="Result2">4.Kiểm tra niêm phong override</string>
+    <string name="Result32">5.Kiểm tra ít nhất một vị trí interlock trên xe</string>
+    <string name="Result44">6.Kiểm tra ghế ngồi trên giàn nâng (nếu có)</string>
+    <string name="Result28">7.Kiểm tra hoạt động của giản nâng (công tắc chống va chạm, khóa ngắt khẩn cấp)</string>
+    <string name="Result17">8.Kiểm tra hoạt động, rò chảy của khớp quay, ống mềm trên giàn nâng và đầu coupler</string>
+    <string name="Result4">9.Kiểm tra ống mềm hông xe, vòng đai bảo vệ ống, đầu coupler, khớp quay coupler, khớp nối, nắp chắn bụi</string>
+    <string name="Result3">10.Kiểm tra kẹp, dây, cuộn quấn dây tiếp mát bên hông</string>
+    <string name="Result45">11.Kiểm tra KIT ứng phó sự cố tràn dầu</string>
+    <string name="Result37">12.Kiểm tra dung dịch xử lý khí thải DEF (nếu có)</string>
+    <string name="Result23">13.Kiểm tra dụng cụ hóa nghiệm, thang gấp</string>
+    <string name="Result21">14.Vệ sinh bình lấy mẫu</string>
+    <string name="Result50">15.Kiểm tra bình dầu thu hồi</string>
+    <string name="Result12">16.Kiểm tra mức dầu động cơ</string>
+    <string name="Result13">17.Xả nước lọc nhiên liệu động cơ</string>
+    <string name="Result14">18.Kiểm tra nước làm mát</string>
+    <string name="Result15">19.Kiểm tra mức dầu hộp số</string>
+    <string name="Result16">20.Kiểm tra mức dầu hệ thống lái</string>
+    <string name="Result19">21.Kiểm tra trạng thái và mức dầu thủy lực</string>
+    <string name="Result18">22.Kiểm tra tình trạng bình acquy, đầu cực acquy</string>
+    <string name="Result5">23.Thực hiện xả đáy xi téc</string>
+    <string name="Result6">24.Thực hiện xả đáy lọc</string>
+    <string name="Result20">25.Xả nước ở bình tích khí</string>
+    <string name="Result9">26.Kiểm tra cò tra nạp trên cánh</string>
+    <string name="Result10">27. Kiểm tra họng nhập đáy</string>
+    <string name="Result41">28.Kiểm tra xích (dây) tiếp địa của xe</string>
+    <string name="Result11">29.Kiểm tra bình cứu hỏa</string>
+    <string name="Result40">30.Chèn</string>
+    <string name="Result46">31.Cảm biến nhiệt độ</string>
+    <string name="Result47">32.Máy tính bảng</string>
+    <string name="Result48">33.Máy in hóa đơn</string>
+    <string name="Result49">34.Thiết bị thu phát sóng trên xe</string>
+    <string name="gc">GC</string>
+    <string name="gcdetail">JIG,GC</string>
+    <string name="titleA2307Result">Thực hiện nổ máy và bơm quẩn</string>
+    <string name="notedetail1">Chú thích: KQ: Kết quả kiểm tra;  Đ: Đạt ;  YC: Yêu cầu sửa chữa;  B: Bổ sung;</string>
+    <string name="notedetail2">NA:Không áp dụng;  GC: Khi giao ca chỉ thực hiện các mục GC Khi hoàn thành sửa chữa cần khoanh tròn chữ YC</string>
+    <string name="notedetail3">Khi "có hỏng hóc" phải báo ngay cho cán bộ quản lý xe để thực hiện sửa chữa kịp thời.</string>
+    <string name="Result25">1.Kiểm tra hoạt động của động cơ</string>
+    <string name="Result26">2.Kiểm tra tình trạng dây deadman, hoạt động của deadman</string>
+    <string name="Result27">3.Kiểm tra hoạt động của hệ thống lái</string>
+    <string name="Result29">4.Kiểm tra tầm nhìn của gương, còi xe, gạt mưa</string>
+    <string name="Result30">5.Kiểm tra đèn tín hiệu, chiếu sáng, phanh và đèn xoay</string>
+    <string name="Result31">6.Kiểm tra hoạt động của hệ thống phanh</string>
+    <string name="Result33">7.Kiểm tra hoạt động của các đồng hồ áp suất trên bảng điều khiển bên hông xe</string>
+    <string name="Result34">8.Kiểm tra chênh áp bầu lọc và ghi lại thông tin</string>
+    <string name="Result35">9.Kiểm tra đồng hồ lưu lượng</string>
+    <string name="Result36">10.Kiểm tra hoạt động của bơm, dừng bơm khẩn cấp</string>
+    <string name="Result42">11.Kiểm tra bên ngoài, vệ sinh bên ngoài camera</string>
+    <string name="no_product_found">lỗi chọn loại nhiên liệu</string>
+
+    <string-array name="vat_array">
+        <item>0%</item>
+        <item>10%</item>
+
+    </string-array>
+    <string-array name="unit_array">
+
+        <item>LIT</item>
+        <item>GAL</item>
+    </string-array>
+
+    <string-array name="cancel_reason_array">
+
+        <item>Sai thông tin khách hàng</item>
+        <item>Sai số lượng hàng hóa</item>
+        <item>Sai hành trình</item>
+        <item>Lý do khác</item>
+    </string-array>
+</resources>
