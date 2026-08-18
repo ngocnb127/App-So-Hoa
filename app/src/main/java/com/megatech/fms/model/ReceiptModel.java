@@ -437,6 +437,40 @@ public class ReceiptModel extends BaseModel {
     private static final int ONE_CM_DOTS = 80;
 
     /**
+     * Độ đậm cộng thêm cho đầu in nhiệt, thang ^MD của ZPL (-30..30).
+     *
+     * <p>Phiếu trước đây không gửi một lệnh chất lượng in nào, nên hoàn toàn phụ thuộc vào
+     * cấu hình còn lưu trong từng máy in. Máy mới, máy vừa reset hay máy đổi loại giấy sẽ in
+     * nhạt mà không ai chỉnh được từ app. Cộng thêm ở mức vừa: đậm quá thì mực loang, nét
+     * dính vào nhau và đầu in nhanh hỏng.
+     */
+    private static final int PRINT_DARKNESS_BOOST = 8;
+
+    /**
+     * Tốc độ in, đơn vị inch/giây (lệnh ^PR).
+     *
+     * <p>In chậm thì mỗi chấm được nung lâu hơn nên nét đen và sắc hơn. Phiếu chỉ dài vài
+     * chục cm, chậm hơn một nhịp không ai thấy, nhưng khác biệt trên giấy thì thấy rõ.
+     */
+    private static final int PRINT_SPEED_IPS = 2;
+
+    /**
+     * Các lệnh chất lượng in, đặt ngay sau ^XA của mọi phiếu.
+     *
+     * <p>^JMA buộc máy in ở ĐỦ độ phân giải chấm. Máy đang ở ^JMB in nửa độ phân giải —
+     * chữ nhoè hẳn — và không có gì trong app phát hiện được điều đó; gửi ^JMA mỗi lần in
+     * là cách duy nhất chắc chắn. Máy đã ở chế độ đủ thì lệnh này không đổi gì.
+     *
+     * <p>Chỉ chạm vào độ đậm, tốc độ và độ phân giải — không đụng toạ độ, nên bố cục phiếu
+     * giữ nguyên từng dot.
+     */
+    private static String printQualityHeader() {
+        return "^JMA\n"
+                + "^MD" + PRINT_DARKNESS_BOOST + "\n"
+                + "^PR" + PRINT_SPEED_IPS + "\n";
+    }
+
+    /**
      * LCR gọi số này là Sale Number, TCS gọi là Ticket Number — in đúng tên của từng loại
      * để nhân viên đối chiếu được với màn hình thiết bị.
      */
@@ -465,11 +499,13 @@ public class ReceiptModel extends BaseModel {
         if (isBlank(value)) return height;
 
         height += SIGNATURE_HEIGHT + ONE_CM_DOTS;
-        builder.append("^CFZ,18\n")
+        // 18 dot ở 203 dpi chỉ còn ~2,2 mm: nét chữ mảnh hơn một chấm nên đứt quãng khi
+        // nung, đọc ra mờ. 22 dot là mức nhỏ nhất còn ăn chắc mặt giấy.
+        builder.append("^CFZ,22\n")
                 .append("^FO0,").append(height)
                 .append("^FB600,1,0,C,0^FD").append(label).append(": ")
                 .append(value.trim()).append("^FS\n");
-        return height + 25;
+        return height + 30;
     }
 
     public String createThermalText() {
@@ -477,6 +513,7 @@ public class ReceiptModel extends BaseModel {
         int height = 80;
         String LEFT_INDENT =setting.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520? "^LH130,0\n": "^LH000,0\n";
         builder.append("^XA");
+        builder.append(printQualityHeader());
         builder.append("^CWZ,E:OPENSANS-RE.TTF^FS  \n" +
                 LEFT_INDENT +
                 "^CI28");
@@ -639,7 +676,9 @@ public class ReceiptModel extends BaseModel {
 
 
 
-        builder.insert(3,"^LL"+(height+200));
+        // ^LL phải nằm SAU ^JMA: ^JM đổi mật độ chấm, nên chiều dài nhãn khai trước nó có
+        // thể bị tính lại theo mật độ cũ.
+        builder.insert(3 + printQualityHeader().length(), "^LL" + (height + 200));
         return builder.toString();
 
     }
@@ -649,6 +688,7 @@ public class ReceiptModel extends BaseModel {
         int height = 80;
         String LEFT_INDENT =setting.getThermalPrinterType() == TruckModel.THERMAL_PRINTER_TYPE.ZQ520? "^LH130,0\n": "^LH000,0\n";
         builder.append("^XA");
+        builder.append(printQualityHeader());
         builder.append("^CWZ,E:OPENSANS-RE.TTF^FS  \n" +
                LEFT_INDENT +
                 "^CI28");
@@ -809,7 +849,9 @@ public class ReceiptModel extends BaseModel {
         builder.append("^PQ1");
         builder.append("^LH0,0\n" );
         builder.append("^XZ");
-        builder.insert(3,"^LL"+(height+200));
+        // ^LL phải nằm SAU ^JMA: ^JM đổi mật độ chấm, nên chiều dài nhãn khai trước nó có
+        // thể bị tính lại theo mật độ cũ.
+        builder.insert(3 + printQualityHeader().length(), "^LL" + (height + 200));
         return builder.toString();
 
     }
