@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -155,7 +156,26 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
      * Tải APK vào file .part rồi mới đổi tên. Nếu ghi thẳng vào file đích, một lần mất mạng
      * giữa chừng sẽ để lại APK cụt và lần cài sau đọc đúng file hỏng đó.
      */
-    private final class DownloadTask extends AsyncTask<String, Void, File> {
+    private final class DownloadTask extends AsyncTask<String, long[], File> {
+
+        /**
+         * Chỉ báo tiến trình 4 lần/giây. Gọi publishProgress ở mỗi khối 8 KB sẽ đẩy hàng
+         * nghìn thông điệp lên luồng giao diện và làm chính màn hình này giật.
+         */
+        private static final long PROGRESS_INTERVAL_MS = 250;
+
+        @Override
+        protected void onPreExecute() {
+            showDownloadProgress();
+        }
+
+        @Override
+        protected void onProgressUpdate(long[]... values) {
+            if (isFinishing() || isDestroyed() || values.length == 0) return;
+            long[] v = values[values.length - 1];
+            renderDownloadProgress(v[0], v[1], v[2]);
+        }
+
         @Override
         protected File doInBackground(String... urls) {
             HttpURLConnection conn = null;
@@ -185,17 +205,34 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
                     return null;
                 }
 
+                // -1 khi máy chủ trả chunked: khi đó chỉ báo được số byte đã tải, không
+                // báo được phần trăm. Vẫn hơn hẳn một màn hình đứng im.
+                long contentLength = conn.getContentLength();
+
                 long total = 0;
                 try (InputStream input = conn.getInputStream();
                      FileOutputStream output = new FileOutputStream(part)) {
                     byte[] buffer = new byte[8192];
                     int len;
+                    long startedAt = System.currentTimeMillis();
+                    long lastPublishAt = startedAt;
                     while ((len = input.read(buffer)) > 0) {
                         output.write(buffer, 0, len);
                         total += len;
+
+                        long now = System.currentTimeMillis();
+                        if (now - lastPublishAt >= PROGRESS_INTERVAL_MS) {
+                            lastPublishAt = now;
+                            publishProgress(new long[]{total, contentLength,
+                                    bytesPerSecond(total, now - startedAt)});
+                        }
                     }
                     output.flush();
                     output.getFD().sync();
+
+                    // Nhịp cuối: bảo đảm thanh tiến trình chạm 100% thay vì dừng ở 97%.
+                    publishProgress(new long[]{total, contentLength,
+                            bytesPerSecond(total, System.currentTimeMillis() - startedAt)});
                 } // stream đóng hẳn trước khi đổi tên
 
                 if (total <= 0) {
@@ -232,11 +269,13 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         protected void onPostExecute(File apk) {
             if (isFinishing() || isDestroyed()) return;
             if (apk == null) {
+                hideDownloadProgress();
                 Toast.makeText(VersionUpdateActivity.this,
                         "Không thể tải tệp cập nhật", Toast.LENGTH_LONG).show();
                 setUpdateButtonBusy(false);
                 return;
             }
+            showInstalling();
             validateThenInstall(apk);
         }
     }
@@ -255,6 +294,7 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
             if (apk.exists() && !apk.delete()) {
                 Log.w(LOG_TAG, "Không xóa được APK không hợp lệ " + apk);
             }
+            hideDownloadProgress();
             setUpdateButtonBusy(false);
             return;
         }
@@ -327,6 +367,75 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
                 }
             }
         }
+    }
+
+
+    /** Tốc độ trung bình từ lúc bắt đầu, byte/giây. 0 khi chưa đủ thời gian để đo. */
+    private static long bytesPerSecond(long bytes, long elapsedMs) {
+        return elapsedMs <= 0 ? 0 : bytes * 1000L / elapsedMs;
+    }
+
+    private void showDownloadProgress() {
+        View row = findViewById(R.id.download_progress_row);
+        ProgressBar bar = findViewById(R.id.download_progress);
+        TextView text = findViewById(R.id.download_progress_text);
+        if (row != null) row.setVisibility(View.VISIBLE);
+        if (bar != null) {
+            bar.setIndeterminate(true);
+            bar.setProgress(0);
+        }
+        if (text != null) text.setText(R.string.update_download_preparing);
+    }
+
+    private void hideDownloadProgress() {
+        View row = findViewById(R.id.download_progress_row);
+        if (row != null) row.setVisibility(View.GONE);
+    }
+
+    private void showInstalling() {
+        ProgressBar bar = findViewById(R.id.download_progress);
+        TextView text = findViewById(R.id.download_progress_text);
+        // Cài đặt không báo được tiến trình, nhưng vẫn phải nói là đang làm gì: bước này
+        // mất vài giây và trước đây màn hình đứng im không một chữ.
+        if (bar != null) bar.setIndeterminate(true);
+        if (text != null) text.setText(R.string.update_installing);
+    }
+
+    /**
+     * Vẽ tiến trình tải: phần trăm, dung lượng và tốc độ.
+     *
+     * <p>Máy chủ trả chunked thì không có tổng dung lượng — khi đó bỏ phần trăm và chỉ báo
+     * đã tải bao nhiêu, thanh chạy ở chế độ vô định. Đoán tổng để lấp chỗ trống sẽ cho một
+     * thanh nhảy lung tung, tệ hơn là không có.
+     */
+    private void renderDownloadProgress(long downloaded, long totalBytes, long bytesPerSec) {
+        ProgressBar bar = findViewById(R.id.download_progress);
+        TextView text = findViewById(R.id.download_progress_text);
+        String speed = formatSize(bytesPerSec) + "/s";
+
+        if (totalBytes > 0) {
+            int percent = (int) Math.min(100, downloaded * 100L / totalBytes);
+            if (bar != null) {
+                bar.setIndeterminate(false);
+                bar.setProgress(percent);
+            }
+            if (text != null)
+                text.setText(getString(R.string.update_download_progress, percent,
+                        formatSize(downloaded), formatSize(totalBytes), speed));
+        } else {
+            if (bar != null) bar.setIndeterminate(true);
+            if (text != null)
+                text.setText(getString(R.string.update_download_progress_unknown_size,
+                        formatSize(downloaded), speed));
+        }
+    }
+
+    /** Dung lượng cho người đọc: B / KB / MB. */
+    static String formatSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024)
+            return String.format(java.util.Locale.US, "%.0f KB", bytes / 1024.0);
+        return String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
     }
 
     private boolean ensureCanInstallUnknownSources() {

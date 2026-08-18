@@ -3,7 +3,6 @@ package com.megatech.fms;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
@@ -41,7 +40,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import com.megatech.fms.helpers.VersionCheckManager;
-import com.megatech.fms.helpers.update.UpdateStatus;
 import com.megatech.fms.helpers.TruckInvoiceSync;
 
 public class FMSApplication extends Application implements LifecycleObserver {
@@ -69,7 +67,6 @@ public class FMSApplication extends Application implements LifecycleObserver {
             public void onActivityResumed(Activity activity) {
                 currentActivity = activity;
                 VersionCheckManager.checkIfNeeded();
-                maybeShowUpdateReminder(activity, VersionCheckManager.getStatus());
             }
 
             @Override public void onActivityStarted(Activity a) {}
@@ -82,72 +79,11 @@ public class FMSApplication extends Application implements LifecycleObserver {
             @Override public void onActivityCreated(Activity a, Bundle b) {}
         });
 
-        // Kết quả kiểm tra về sau khi Activity đã resume xong: trước đây trạng thái chỉ
-        // được đọc ngay tại onActivityResumed nên bản cập nhật vừa phát hiện phải đợi tới
-        // lần resume kế tiếp mới hiện ra.
-        VersionCheckManager.addListener(status -> maybeShowUpdateReminder(currentActivity, status));
     }
 
-    /** Activity đang ở trên cùng, để hiển thị nhắc nhở khi kết quả kiểm tra về muộn. */
+    /** Activity đang ở trên cùng. */
     private Activity currentActivity;
-    /** Hộp thoại nhắc đang mở — bảo đảm mỗi lúc chỉ có một. */
-    private android.app.AlertDialog updateDialog;
 
-    private static final String PREF_UPDATE = "fms_update";
-    private static final String PREF_POSTPONED_VERSION = "postponed_version_code";
-    private static final String PREF_POSTPONED_AT = "postponed_at";
-    private static final long POSTPONE_DURATION_MS = 8 * 60 * 60 * 1000L; // 8 giờ
-
-    private void maybeShowUpdateReminder(Activity activity, UpdateStatus status) {
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-        if (status == null || !status.hasUpdate()) return;
-
-        // Người dùng đang ở màn hình cập nhật rồi thì không cần nhắc.
-        if (activity instanceof VersionUpdateActivity) return;
-
-        // Không cắt ngang nghiệp vụ đang dở: lập chứng từ, tra nạp, ký nhận, in hóa đơn.
-        if (activity instanceof UpdateSensitiveScreen) return;
-
-        // Một hộp thoại tại một thời điểm. Nếu không chặn, mỗi lần chuyển Activity hoặc
-        // quay lại từ Settings/installer sẽ chồng thêm một hộp thoại nữa.
-        if (updateDialog != null && updateDialog.isShowing()) return;
-
-        long serverVersion = status.metadata.versionCode;
-        if (isPostponed(serverVersion)) return;
-
-        updateDialog = new android.app.AlertDialog.Builder(activity)
-                .setTitle("Có phiên bản mới")
-                .setMessage("Đã có phiên bản " + status.metadata.raw
-                        + ". Bạn có muốn cập nhật ngay không?")
-                .setCancelable(true)
-                .setPositiveButton("Cập nhật", (dialog, which) ->
-                        activity.startActivity(new Intent(activity, VersionUpdateActivity.class)))
-                .setNegativeButton("Để sau", (dialog, which) -> {
-                    postpone(serverVersion);
-                    dialog.dismiss();
-                })
-                .setOnDismissListener(d -> updateDialog = null)
-                .show();
-    }
-
-    /**
-     * "Để sau" chỉ im lặng 8 giờ và chỉ với đúng phiên bản đã hoãn — một bản phát hành mới
-     * hơn sẽ nhắc lại ngay. Cố ý không giới hạn số lần nhắc: giới hạn như vậy cho phép
-     * thiết bị trốn cập nhật vĩnh viễn.
-     */
-    private boolean isPostponed(long versionCode) {
-        SharedPreferences prefs = getSharedPreferences(PREF_UPDATE, Context.MODE_PRIVATE);
-        if (prefs.getLong(PREF_POSTPONED_VERSION, -1) != versionCode) return false;
-        long postponedAt = prefs.getLong(PREF_POSTPONED_AT, 0);
-        return System.currentTimeMillis() - postponedAt < POSTPONE_DURATION_MS;
-    }
-
-    private void postpone(long versionCode) {
-        getSharedPreferences(PREF_UPDATE, Context.MODE_PRIVATE).edit()
-                .putLong(PREF_POSTPONED_VERSION, versionCode)
-                .putLong(PREF_POSTPONED_AT, System.currentTimeMillis())
-                .apply();
-    }
     @Override
     public void onLowMemory() {
         trimCache(this);

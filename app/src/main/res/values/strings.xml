@@ -207,6 +207,11 @@
     <string name="version_updating">Đang cập nhật ...</string>
     <string name="update_checking">Đang kiểm tra phiên bản mới ...</string>
     <string name="using_version">Phiên bản đang sử dụng</string>
+    <string name="update_badge">Có bản mới</string>
+    <string name="update_download_progress">Đang tải %1$d%% · %2$s / %3$s · %4$s</string>
+    <string name="update_download_progress_unknown_size">Đang tải %1$s · %2$s</string>
+    <string name="update_download_preparing">Đang kết nối máy chủ cập nhật ...</string>
+    <string name="update_installing">Đang cài đặt, vui lòng không tắt ứng dụng ...</string>
     <string name="version_release_notes_title">Nội dung cập nhật</string>
     <string name="version_release_note_bm2508_fix">• Sửa lỗi biểu mẫu 25.08.</string>
     <string name="version_release_note_bm2502">• Khắc phục một số lỗi của BM 25.02.</string>
@@ -214,6 +219,20 @@
     <string name="version_release_note_offline">• Tối ưu dữ liệu đã nhập khi mất mạng và tự đồng bộ lại khi có kết nối.</string>
     <string name="version_release_note_truck_invoice">• Bổ sung màn hình tra cứu hóa đơn theo xe.</string>
     <string name="version_release_note_invoice_pdf">• Cho phép xem trực tiếp PDF hóa đơn trên ứng dụng.</string>
+
+    <!-- Nội dung cập nhật từ bản 103 tới 112. Viết theo việc người dùng thấy được trên
+         xe, không theo tên lớp hay tên hàm. -->
+    <string name="version_release_notes_group_11_6">Bản 11.6 (từ bản 103)</string>
+    <string name="version_release_note_no_data_loss">• Không còn mất số liệu mẻ tra nạp khi web sửa chuyến trong lúc đang nhập: số đồng hồ, nhiệt độ, tỉ trọng do xe nhập luôn được giữ.</string>
+    <string name="version_release_note_web_changes">• Đổi chuyến, đổi bãi đỗ, hủy chuyến từ web xuống thiết bị ngay, không phải chờ hay khởi động lại app.</string>
+    <string name="version_release_note_receipt_push">• Chứng từ và phiếu được đẩy lên server ngay khi kết thúc mẻ, không đợi lượt đồng bộ định kỳ.</string>
+    <string name="version_release_note_sync_lock">• Sửa lỗi đồng bộ ngừng chạy sau khi mở màn hình xem trước chứng từ — trước đây phải khởi động lại app mới đẩy được dữ liệu.</string>
+    <string name="version_release_note_leave_button">• Sửa nút “Rời đi” nhìn như treo dù đã lưu xong.</string>
+    <string name="version_release_note_meter">• Đọc số đồng hồ LCR ổn định; màn hình in chờ đủ số Gross và Total rồi mới ngắt kết nối, báo rõ khi thiếu số.</string>
+    <string name="version_release_note_bm2508_upload">• Ảnh biểu mẫu 25.08 gửi lên server được (trước đây bị lỗi xác thực nên không lên).</string>
+    <string name="version_release_note_cleanup">• Dọn dữ liệu quá hạn không còn xóa nhầm phiếu và ảnh chưa gửi lên server.</string>
+    <string name="version_release_note_print_quality">• Bản in nhiệt đậm và nét hơn: toàn phiếu in đậm, tăng độ đậm và độ phân giải đầu in.</string>
+    <string name="version_release_note_update_ux">• Màn hình cập nhật có thanh tiến trình và tốc độ tải; bỏ hộp thoại nhắc cập nhật cắt ngang, thay bằng biểu tượng nhấp nháy ở màn hình chính.</string>
     <string name="new_refuel">Chuyến mới</string>
     <string name="aircraft_type">Loại tàu bay</string>
     <string name="route_name">Đường bay</string>

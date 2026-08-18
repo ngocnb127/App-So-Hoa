@@ -24,6 +24,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.SearchView;
 import android.widget.TextView;
@@ -64,7 +65,9 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
     DialogShiftBinding shiftBinding;
     private PageAdapter pageAdapter;
     private static final String LOG_TAG = "FMS_UPDATE_CHECK";
-    private TextView txtUpdateAvailable;
+    /** Huy hiệu "có bản mới" trên thanh công cụ: biểu tượng app nhấp nháy + nhãn. */
+    private View txtUpdateAvailable;
+    private ImageView imgUpdateAvailable;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -104,7 +107,11 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         setContentView(R.layout.activity_main);
 
         txtUpdateAvailable = findViewById(R.id.txtUpdateAvailable);
-        txtUpdateAvailable.setVisibility(View.GONE); // mac dinh an, cho ket qua check
+        imgUpdateAvailable = findViewById(R.id.imgUpdateAvailable);
+        // Huy hieu chi co trong layout ngang. Man hinh doc khong co view nay nen moi
+        // lan dung deu phai kiem tra null, khong duoc goi thang.
+        if (txtUpdateAvailable != null)
+            txtUpdateAvailable.setVisibility(View.GONE); // mac dinh an, cho ket qua check
 
         // Badge chi phan anh trang thai cua VersionCheckManager. Truoc day MainActivity
         // tu goi server voi endpoint khac (version.txt) so voi hop thoai nhac
@@ -112,9 +119,9 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         VersionCheckManager.addListener(updateStatusListener);
 
         // Click vao label -> mo man hinh VersionUpdateActivity
-        txtUpdateAvailable.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, VersionUpdateActivity.class));
-        });
+        if (txtUpdateAvailable != null)
+            txtUpdateAvailable.setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, VersionUpdateActivity.class)));
 
         updateCurrentAmount();
         setToolbar();
@@ -573,6 +580,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
             syncReceiverRegistered = false;
         }
         VersionCheckManager.removeListener(updateStatusListener);
+        stopUpdateBlink();
         super.onDestroy();
 
     }
@@ -638,6 +646,40 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         if (txtUpdateAvailable == null) return;
         // Chi hien badge khi that su co ban moi. CHECK_FAILED khong bao gio duoc
         // hieu la "khong co ban moi", nhung cung khong hien badge vi chua biet chac.
-        txtUpdateAvailable.setVisibility(status.hasUpdate() ? View.VISIBLE : View.GONE);
+        boolean hasUpdate = status.hasUpdate();
+        txtUpdateAvailable.setVisibility(hasUpdate ? View.VISIBLE : View.GONE);
+        if (hasUpdate) startUpdateBlink(); else stopUpdateBlink();
     };
+
+    /** Nhip nhay cua bieu tuong app khi co ban moi. */
+    private android.view.animation.Animation updateBlink;
+
+    /**
+     * Bao co ban moi bang bieu tuong app nhap nhay, thay cho hop thoai cat ngang cong viec.
+     *
+     * <p>Nhip cham va chi mo di chu khong tat han: du de mat nguoi dung bat duoc khi luot
+     * qua man hinh chinh, nhung khong nhay giat lam phien nguoi dang nhap lieu.
+     */
+    private void startUpdateBlink() {
+        if (imgUpdateAvailable == null) return;
+        if (updateBlink == null) {
+            android.view.animation.AlphaAnimation blink =
+                    new android.view.animation.AlphaAnimation(1f, 0.25f);
+            blink.setDuration(700);
+            blink.setRepeatMode(android.view.animation.Animation.REVERSE);
+            blink.setRepeatCount(android.view.animation.Animation.INFINITE);
+            updateBlink = blink;
+        }
+        // Dang chay roi thi khong khoi dong lai: moi lan kiem tra phien ban se lam nhip
+        // nhay giat lai tu dau.
+        if (imgUpdateAvailable.getAnimation() != updateBlink) {
+            imgUpdateAvailable.startAnimation(updateBlink);
+        }
+    }
+
+    private void stopUpdateBlink() {
+        if (imgUpdateAvailable == null) return;
+        imgUpdateAvailable.clearAnimation();
+        imgUpdateAvailable.setAlpha(1f);
+    }
 }

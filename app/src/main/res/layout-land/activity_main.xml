@@ -30,17 +30,37 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:text="@string/new_refuel" />
-        <TextView
+        <LinearLayout
             android:id="@+id/txtUpdateAvailable"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginStart="4dp"
-            android:text="Cập nhật app"
-            android:textColor="#FF0000"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:visibility="gone" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgUpdateAvailable"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@string/new_version_available"
+                android:src="@mipmap/ic_launcher" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/update_badge"
+                android:textColor="#FF0000"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/main_tablayout"

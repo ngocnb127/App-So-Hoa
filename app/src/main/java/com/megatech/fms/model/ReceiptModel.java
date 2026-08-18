@@ -444,7 +444,7 @@ public class ReceiptModel extends BaseModel {
      * nhạt mà không ai chỉnh được từ app. Cộng thêm ở mức vừa: đậm quá thì mực loang, nét
      * dính vào nhau và đầu in nhanh hỏng.
      */
-    private static final int PRINT_DARKNESS_BOOST = 8;
+    private static final int PRINT_DARKNESS_BOOST = 14;
 
     /**
      * Tốc độ in, đơn vị inch/giây (lệnh ^PR).
@@ -452,7 +452,65 @@ public class ReceiptModel extends BaseModel {
      * <p>In chậm thì mỗi chấm được nung lâu hơn nên nét đen và sắc hơn. Phiếu chỉ dài vài
      * chục cm, chậm hơn một nhịp không ai thấy, nhưng khác biệt trên giấy thì thấy rõ.
      */
-    private static final int PRINT_SPEED_IPS = 2;
+    private static final int PRINT_SPEED_IPS = 1;
+
+    /**
+     * In đậm toàn phiếu bằng cách đắp mỗi trường thêm một lần, lệch 1 dot.
+     *
+     * <p>ZPL không có thuộc tính đậm cho font TrueType, và máy in chỉ nạp sẵn OPENSANS-RE
+     * (nét thường) — không có file nét đậm để trỏ tới. Cách duy nhất còn lại là in chồng:
+     * cùng một trường in hai lần, lần sau lệch ngang 1 dot, nên nét dày thêm đúng một chấm.
+     * Đây là kỹ thuật tiêu chuẩn cho máy in nhiệt, khác hẳn việc phóng to cỡ chữ vì toạ độ
+     * và chiều rộng ô chữ giữ nguyên — bố cục không xê dịch.
+     *
+     * <p>Trường ảnh (^XG: chữ ký) bị loại trừ: in chồng lệch 1 dot lên ảnh bitmap chỉ làm
+     * nét chữ ký nhoè ra chứ không đậm thêm.
+     *
+     * <p>Đường kẻ (^GB) vẫn được đắp — dày thêm 1 dot là đúng mong muốn.
+     */
+    static String emboldenFields(String zpl) {
+        if (zpl == null || zpl.isEmpty()) return zpl;
+
+        StringBuilder out = new StringBuilder(zpl.length() * 2);
+        int cursor = 0;
+        while (true) {
+            int start = zpl.indexOf("^FO", cursor);
+            if (start < 0) break;
+            int close = zpl.indexOf("^FS", start);
+            if (close < 0) break;
+            int end = close + 3;
+
+            String field = zpl.substring(start, end);
+            out.append(zpl, cursor, end);
+
+            String shifted = shiftFieldOrigin(field);
+            if (shifted != null) out.append(shifted);
+
+            cursor = end;
+        }
+        out.append(zpl, cursor, zpl.length());
+        return out.toString();
+    }
+
+    /**
+     * Chép một trường sang toạ độ x + 1.
+     *
+     * @return bản đã dịch, hoặc {@code null} nếu không nên in chồng trường này.
+     */
+    private static String shiftFieldOrigin(String field) {
+        if (field.contains("^XG")) return null;      // ảnh: xem emboldenFields
+
+        int comma = field.indexOf(',', 3);
+        if (comma < 0) return null;
+        int x;
+        try {
+            x = Integer.parseInt(field.substring(3, comma).trim());
+        } catch (NumberFormatException ex) {
+            // Toạ độ không đọc được thì bỏ qua trường này, không đoán.
+            return null;
+        }
+        return "^FO" + (x + 1) + field.substring(comma);
+    }
 
     /**
      * Các lệnh chất lượng in, đặt ngay sau ^XA của mọi phiếu.
@@ -679,7 +737,7 @@ public class ReceiptModel extends BaseModel {
         // ^LL phải nằm SAU ^JMA: ^JM đổi mật độ chấm, nên chiều dài nhãn khai trước nó có
         // thể bị tính lại theo mật độ cũ.
         builder.insert(3 + printQualityHeader().length(), "^LL" + (height + 200));
-        return builder.toString();
+        return emboldenFields(builder.toString());
 
     }
 
@@ -852,7 +910,7 @@ public class ReceiptModel extends BaseModel {
         // ^LL phải nằm SAU ^JMA: ^JM đổi mật độ chấm, nên chiều dài nhãn khai trước nó có
         // thể bị tính lại theo mật độ cũ.
         builder.insert(3 + printQualityHeader().length(), "^LL" + (height + 200));
-        return builder.toString();
+        return emboldenFields(builder.toString());
 
     }
 
