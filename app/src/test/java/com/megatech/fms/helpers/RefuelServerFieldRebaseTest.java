@@ -446,4 +446,25 @@ public class RefuelServerFieldRebaseTest {
         assertEquals(1200.0, merged.get("RealAmount").getAsDouble(), 0d);
         assertEquals(3, merged.get("FlightStatus").getAsInt());
     }
+
+    /**
+     * Đo trên xe thật 17-08 23:13: server trả EndTime/StartTime bằng ĐÚNG thời điểm của
+     * lượt pull, giống hệt nhau cho hàng chục phiếu chưa tra nạp. Nhận vào là ghi lại cả
+     * danh sách ở mỗi lượt và làm hỏng nền của màn hình đang mở.
+     */
+    @Test
+    public void pullDoesNotTakeServerClockAsDeviceMeasuredTimes() {
+        String local = "{\"EndTime\":\"2026-08-17T23:10:27\","
+                + "\"StartTime\":\"2026-08-17T23:10:27\",\"FlightStatus\":1}";
+        String remote = "{\"EndTime\":\"2026-08-17T23:13:42.5072233\","
+                + "\"StartTime\":\"2026-08-17T23:13:42.5072233\",\"FlightStatus\":3}";
+
+        com.google.gson.JsonObject after = com.google.gson.JsonParser
+                .parseString(RefuelSyncGuard.mergeByOwnership(local, remote, true))
+                .getAsJsonObject();
+
+        assertEquals("2026-08-17T23:10:27", after.get("EndTime").getAsString());
+        assertEquals("2026-08-17T23:10:27", after.get("StartTime").getAsString());
+        assertEquals("thay đổi thật của server vẫn phải tới", 3, after.get("FlightStatus").getAsInt());
+    }
 }

@@ -86,6 +86,10 @@ public final class RefuelSyncGuard {
      * Đây là điểm mấu chốt của phương án: điều động lại chuyến, đổi bãi đỗ hay huỷ chuyến
      * phải tới được thiết bị ngay, trong khi số liệu đồng hồ mà lái xe vừa nhập vẫn nguyên vẹn.
      */
+    /** Mốc giờ do thiết bị đo — server chỉ echo lại giờ của chính nó, không phải dữ liệu. */
+    private static final java.util.Set<String> DEVICE_MEASURED_TIME_KEYS =
+            new java.util.HashSet<>(java.util.Arrays.asList("StartTime", "EndTime"));
+
     private static final String[] SERVER_OWNED_KEYS = {
             "FlightId", "FlightUniqueId", "FlightCode", "FlightStatus",
             "ParkingLot", "RouteName", "ArrivalTime", "DepartureTime", "RefuelTime",
@@ -117,9 +121,20 @@ public final class RefuelSyncGuard {
         com.google.gson.JsonObject remote = remoteParsed.getAsJsonObject();
 
         if (adoptClientOwned) {
-            // Không còn thay đổi local nào để bảo vệ: mọi khoá server gửi đều được nhận.
-            for (String key : remote.keySet())
+            // Không còn thay đổi local nào để bảo vệ: nhận mọi khoá server gửi, TRỪ hai mốc
+            // giờ do thiết bị đo.
+            //
+            // Đo trên xe thật 17-08 23:13: server trả EndTime/StartTime = ĐÚNG THỜI ĐIỂM
+            // CỦA LƯỢT PULL ("2026-08-17T23:13:42.5072233"), giống hệt nhau cho hàng chục
+            // phiếu chưa hề tra nạp. Nhận vào là ghi lại toàn bộ danh sách ở mỗi lượt, vân
+            // tay đổi liên tục, và nền của màn hình đang mở thành cũ.
+            //
+            // Hai mốc này chỉ có nghĩa khi thiết bị thật sự bơm; giờ của server không phải
+            // là dữ liệu, chỉ là dấu vết của lần sinh phản hồi.
+            for (String key : remote.keySet()) {
+                if (DEVICE_MEASURED_TIME_KEYS.contains(key)) continue;
                 overlay(merged, remote, key);
+            }
         } else {
             for (String key : SERVER_OWNED_KEYS)
                 overlay(merged, remote, key);

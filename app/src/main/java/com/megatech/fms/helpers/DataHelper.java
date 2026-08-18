@@ -677,6 +677,7 @@ public class DataHelper {
                     Date d = requireRepository().getLastModifiedRefuel();
                     List<RefuelItemData> remoteList = requireHttpClient().getModifiedRefuels(0, d);
                     if (remoteList != null) {
+                        beginPullLogBatch();
                         int[] ids = new int[remoteList.size()];
                         int i = 0;
                         for (RefuelItemData model : remoteList) {
@@ -709,6 +710,7 @@ public class DataHelper {
                                 ids[i++] = model.getId();
                         }
                         requireRepository().removeDeletedRefuels(ids);
+                        endPullLogBatch("REMOTE_PULL");
                     }
 
 
@@ -1264,6 +1266,25 @@ public class DataHelper {
      *
      * <p>Phải gọi khi đang giữ {@link #REFUEL_WRITE_LOCK}.
      */
+    /**
+     * Số phiếu bị ghi lại jsonData trong lượt pull đang chạy. Chỉ đọc/ghi trong luồng sync
+     * core, dưới {@link #REFUEL_WRITE_LOCK}.
+     */
+    private static int rewrittenRowsInBatch = 0;
+
+    /** Mở một lượt pull mới: đặt lại bộ đếm. */
+    private static void beginPullLogBatch() {
+        rewrittenRowsInBatch = 0;
+    }
+
+    /** Đóng lượt pull: một dòng tổng thay cho hàng trăm dòng từng phiếu. */
+    private static void endPullLogBatch(String source) {
+        if (rewrittenRowsInBatch > 0)
+            Logger.appendLog("SYNC", String.format(java.util.Locale.US,
+                    "%s JSON_REWRITTEN %d phiếu", source, rewrittenRowsInBatch));
+        rewrittenRowsInBatch = 0;
+    }
+
     private static void applyRemoteToLocal(String source, RefuelItem localItem, RefuelItemData remote) {
         if (localItem == null || remote == null) return;
 
@@ -1323,12 +1344,20 @@ public class DataHelper {
                 jsonBeforeMerge, localItem.getJsonData(), true);
         String rewroteClientKeys = RefuelSyncGuard.describeJsonDiff(
                 jsonBeforeMerge, localItem.getJsonData(), false);
-        if (rewroteServerKeys != null || rewroteClientKeys != null)
-            Logger.appendLog("SYNC", String.format(java.util.Locale.US,
-                    "%s JSON_REWRITTEN uid=%s adoptClientOwned=%s server=[%s] client=[%s]",
-                    source, localItem.getUniqueId(), adoptClientOwned,
-                    rewroteServerKeys == null ? "" : rewroteServerKeys,
-                    rewroteClientKeys == null ? "" : rewroteClientKeys));
+        if (rewroteServerKeys != null || rewroteClientKeys != null) {
+            // Một lượt pull chạm cả trăm phiếu; in một dòng cho mỗi phiếu làm log không đọc
+            // được nữa và đẩy phần đáng chú ý ra khỏi tầm nhìn (đo trên máy thật 18-08).
+            // Row sạch nhận bản server là đường đi BÌNH THƯỜNG — chỉ đếm. Chỉ in chi tiết
+            // khi lượt nhận này KHÔNG nhận nhóm client sở hữu, tức là có thay đổi local
+            // đang bị giữ lại: đó mới là ca cần lần ra khi mất dữ liệu.
+            rewrittenRowsInBatch++;
+            if (!adoptClientOwned)
+                Logger.appendLog("SYNC", String.format(java.util.Locale.US,
+                        "%s JSON_REWRITTEN uid=%s adoptClientOwned=false server=[%s] client=[%s]",
+                        source, localItem.getUniqueId(),
+                        rewroteServerKeys == null ? "" : rewroteServerKeys,
+                        rewroteClientKeys == null ? "" : rewroteClientKeys));
+        }
 
         // Mọi lần KHÔNG nhận nhóm trường client sở hữu đều phải để lại dấu vết. Chính vì
         // nhánh bỏ qua trước đây im lặng mà lỗi mất cập nhật sống được rất lâu.
