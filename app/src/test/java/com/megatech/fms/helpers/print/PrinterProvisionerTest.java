@@ -2,6 +2,7 @@ package com.megatech.fms.helpers.print;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -39,34 +40,68 @@ public class PrinterProvisionerTest {
     }
 
     /**
-     * Máy in trả tên file theo nhiều dạng. Nhận nhầm thành "chưa có" thì lần in nào cũng
-     * nạp lại font, mỗi lần mất khoảng một phút qua Bluetooth.
+     * Danh sách file máy in trả về khác kiểu chữ hoa thường và kèm ổ đĩa. Nhận nhầm thành
+     * "chưa có" thì lần in nào cũng nạp lại font mất cả phút.
      */
     @Test
-    public void fontIsRecognisedRegardlessOfDriveAndCase() {
-        assertTrue(PrinterProvisioner.matchesFont("E:OPENSANS-RE.TTF"));
-        assertTrue(PrinterProvisioner.matchesFont("OPENSANS-RE.TTF"));
-        assertTrue(PrinterProvisioner.matchesFont("OpenSans-Re.ttf"));
-        assertTrue(PrinterProvisioner.matchesFont("  E:OpenSans-Re.ttf  "));
+    public void fontIsFoundInAListingRegardlessOfCase() {
+        assertTrue(PrinterProvisioner.listingContainsFont(
+                "E:OPENSANS-RE.TTF\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertTrue(PrinterProvisioner.listingContainsFont(
+                "e:opensans-re.ttf".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertTrue(PrinterProvisioner.listingContainsFont(
+                "E:ARIAL.TTF\r\nE:OPENSANS-RE.TTF\r\n"
+                        .getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+    }
+
+    /** Danh sách rỗng hoặc không có font thì phải báo là chưa có, không đoán. */
+    @Test
+    public void missingFontIsReportedAsMissing() {
+        assertFalse(PrinterProvisioner.listingContainsFont(
+                "E:ARIAL.TTF\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertFalse(PrinterProvisioner.listingContainsFont(new byte[0]));
+        assertFalse(PrinterProvisioner.listingContainsFont(null));
     }
 
     /**
-     * Chỉ khớp ĐÚNG tên font phiếu tham chiếu. Nhận nhầm một font khác nghĩa là bỏ qua
-     * bước nạp, rồi mọi chữ có dấu in ra ô vuông.
+     * Phản hồi SGD nằm trong dấu nháy kép kèm xuống dòng. Không bóc sạch thì so sánh ngôn
+     * ngữ luôn sai và máy ZPL bị coi là máy lạ.
      */
     @Test
-    public void otherFontsAreNotMistakenForIt() {
-        assertFalse(PrinterProvisioner.matchesFont("E:OPENSANS-BO.TTF"));
-        assertFalse(PrinterProvisioner.matchesFont("E:ARIAL.TTF"));
-        assertFalse(PrinterProvisioner.matchesFont("E:OPENSANS-RE.TTF.BAK"));
-        assertFalse(PrinterProvisioner.matchesFont(""));
-        assertFalse(PrinterProvisioner.matchesFont(null));
+    public void sgdResponseIsUnquoted() {
+        assertEquals("zpl", PrinterProvisioner.cleanResponse(
+                "\"zpl\"\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertEquals("ok", PrinterProvisioner.cleanResponse(
+                "  ok  ".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+    }
+
+    /**
+     * Máy in trả "?" khi không có biến đó. Coi "?" là giá trị hợp lệ nghĩa là in lên phiếu
+     * thử một tình trạng không có thật.
+     */
+    @Test
+    public void unknownVariableIsNotAValue() {
+        assertNull(PrinterProvisioner.cleanResponse(
+                "\"?\"".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertNull(PrinterProvisioner.cleanResponse(new byte[0]));
+        assertNull(PrinterProvisioner.cleanResponse(null));
+    }
+
+    /**
+     * line_print cũng không hiểu ZPL, phải xử lý y như CPCL — bỏ sót thì phiếu ra giấy
+     * trắng mà app báo thành công.
+     */
+    @Test
+    public void nonZplLanguagesAreAllTreatedAsNeedingTheSwitch() {
+        assertTrue(PrinterProvisioner.isCpcl("cpcl"));
+        assertTrue(PrinterProvisioner.isCpcl("line_print"));
+        assertFalse(PrinterProvisioner.isCpcl("zpl"));
+        assertFalse(PrinterProvisioner.isCpcl(null));
     }
 
     /** Tên trên máy in phải khớp đúng đường dẫn mà ZPL của phiếu nạp bằng ^CWZ. */
     @Test
     public void printerPathMatchesWhatTheReceiptZplReferences() {
-        assertTrue(PrinterProvisioner.FONT_PRINTER_PATH.endsWith(PrinterProvisioner.FONT_FILE_NAME));
-        assertTrue(PrinterProvisioner.matchesFont(PrinterProvisioner.FONT_PRINTER_PATH));
+        assertTrue(PrinterProvisioner.FONT_PRINTER_PATH.endsWith(PrinterProvisioner.FONT_NAME + ".TTF"));
     }
 }

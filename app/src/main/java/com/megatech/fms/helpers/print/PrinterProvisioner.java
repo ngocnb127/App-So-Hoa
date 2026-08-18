@@ -5,11 +5,8 @@ import android.content.SharedPreferences;
 
 import com.megatech.fms.helpers.Logger;
 import com.zebra.sdk.comm.Connection;
-import com.zebra.sdk.printer.PrinterLanguage;
-import com.zebra.sdk.printer.ZebraPrinter;
-import com.zebra.sdk.printer.ZebraPrinterFactory;
-import com.zebra.sdk.printer.ZebraPrinterLinkOs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -30,7 +27,19 @@ import java.nio.charset.StandardCharsets;
  * vừa reset về mặc định hay máy đổi giữa các xe đều có thể sai mà không ai biết cho tới
  * lúc cầm tờ phiếu hỏng trên tay.
  *
- * <p>Kiểm tra tốn một lượt hỏi đáp qua Bluetooth nên KHÔNG chạy mỗi lần in: kết quả được
+ * <h3>Vì sao không dùng ZebraPrinterFactory</h3>
+ *
+ * <p>Đo trên máy thật 18-08 12:08: {@code ZebraPrinterFactory.getInstance(con)} ném
+ * {@code NoClassDefFoundError: com/fasterxml/jackson/databind/ObjectMapper} từ
+ * {@code com.zebra.sdk.settings.internal.JsonHelper}. Nhánh dò cấu hình của SDK cần
+ * thư viện Jackson, thứ không có trong ứng dụng — và kéo Jackson vào chỉ để hỏi máy in
+ * đang ở ngôn ngữ nào là đổi lấy hơn một megabyte cho cả hai bản phát hành.
+ *
+ * <p>Nên lớp này nói chuyện THẲNG với máy in bằng lệnh SGD và ZPL trên {@link Connection}.
+ * Không phụ thuộc phần SDK nào có thể thiếu lớp, và mỗi lệnh đều tra được trong tài liệu
+ * ZPL của Zebra.
+ *
+ * <p>Kiểm tra tốn vài lượt hỏi đáp qua Bluetooth nên KHÔNG chạy mỗi lần in: kết quả được
  * nhớ theo địa chỉ MAC của từng máy in, lần sau chỉ đọc SharedPreferences.
  */
 public final class PrinterProvisioner {
@@ -40,20 +49,23 @@ public final class PrinterProvisioner {
     /** Font nguồn nằm trong assets của ứng dụng. */
     static final String FONT_ASSET = "fonts/OpenSans-Re.ttf";
 
-    /** Đường dẫn trên máy in, phải khớp đúng tên mà ZPL của phiếu tham chiếu. */
+    /** Tên file trên máy in, KHÔNG kèm phần mở rộng — dạng lệnh ~DY yêu cầu. */
+    static final String FONT_NAME = "OPENSANS-RE";
+
+    /** Đường dẫn đầy đủ, phải khớp đúng cái mà ZPL của phiếu nạp bằng ^CWZ. */
     static final String FONT_PRINTER_PATH = "E:OPENSANS-RE.TTF";
 
-    /** Tên trần dùng để dò trong danh sách file của máy in. */
-    static final String FONT_FILE_NAME = "OPENSANS-RE.TTF";
-
     private static final String PREF_FILE = "FMS_PRINTER_SETUP";
+
+    /** Máy in chỉ trả lời sau khi xử lý xong lệnh; qua Bluetooth cần rộng tay. */
+    private static final int READ_TIMEOUT_MS = 5000;
+    private static final int MORE_DATA_WAIT_MS = 500;
 
     private PrinterProvisioner() {
     }
 
     /** Kết quả chuẩn bị máy in. */
     public enum Result {
-        /** Máy in sẵn sàng nhận phiếu. */
         READY,
         /**
          * Đã gửi lệnh chuyển CPCL → ZPL. Máy in đang khởi động lại nên KHÔNG in được ngay;
@@ -65,42 +77,34 @@ public final class PrinterProvisioner {
     }
 
     /**
-     * Kiểm tra và nạp những gì còn thiếu. Gọi sau khi {@code connection.open()}.
+     * Kiểm tra và nạp những gì còn thiếu. Gọi sau khi kết nối đã mở.
      *
-     * @param macAddress địa chỉ máy in, dùng làm khoá ghi nhớ. Null thì không nhớ, lần in
-     *                   nào cũng kiểm tra lại.
+     * @param macAddress địa chỉ máy in, dùng làm khoá ghi nhớ. Null thì không nhớ.
      */
     public static Result prepare(Context context, Connection connection, String macAddress) {
         if (context == null || connection == null) return Result.FAILED;
         if (isRemembered(context, macAddress)) return Result.READY;
 
         try {
-            ZebraPrinter printer = ZebraPrinterFactory.getInstance(connection);
-
-            if (printer.getPrinterControlLanguage() == PrinterLanguage.CPCL) {
-                switchToZpl(connection);
+            if (isCpcl(readLanguage(connection))) {
+                switchToZplMode(connection);
                 // Cố ý KHÔNG ghi nhớ: máy in vừa nhận lệnh khởi động lại, chưa có gì được
                 // xác nhận. Lượt in sau sẽ kiểm tra lại từ đầu.
                 return Result.SWITCHED_TO_ZPL_NEEDS_RETRY;
             }
 
-            if (hasFont(printer)) {
-                remember(context, macAddress);
-                return Result.READY;
-            }
+            if (!hasFont(connection)) uploadFont(context, connection);
 
-            uploadFont(context, connection);
             remember(context, macAddress);
             return Result.READY;
 
         } catch (Exception ex) {
             // Không chặn việc in: máy in có thể đã đủ điều kiện từ trước, và một tờ phiếu
             // không in được vì bước chuẩn bị thất bại thì tệ hơn là cứ thử in.
-            Logger.appendLog(LOG_TAG, "Chuẩn bị máy in thất bại: " + ex.getMessage());
+            Logger.appendLog(LOG_TAG, "Chuẩn bị máy in thất bại: " + Logger.describe(ex));
             return Result.FAILED;
         }
     }
-
 
     /**
      * Tình trạng máy in đọc được tại thời điểm in thử, để IN THẲNG LÊN PHIẾU THỬ.
@@ -109,22 +113,22 @@ public final class PrinterProvisioner {
      * phiếu là biết ngay thiếu gì, không phải lấy log về rồi mở máy tính đọc.
      */
     public static final class Report {
-        /** Ngôn ngữ máy in đang chạy: ZPL / CPCL / LINE_PRINT, hoặc null nếu không đọc được. */
-        public PrinterLanguage language;
-        /** Font phiếu cần đã có trên máy in chưa. */
+        /** Giá trị thô máy in trả về cho {@code device.languages}, null nếu không trả lời. */
+        public String language;
         public boolean fontInstalled;
-        /** Font vừa được nạp trong chính lượt này. */
         public boolean fontJustUploaded;
-        /** Máy in báo sẵn sàng in. */
-        public boolean readyToPrint;
-        /** Hết giấy / mở đầu in — hai lỗi vật lý hay gặp nhất. */
-        public boolean paperOut;
-        public boolean headOpen;
-        /** Lý do không đọc được tình trạng, null nếu đọc được hết. */
+        /** Giá trị thô của {@code media.status} và {@code head.latch}. */
+        public String mediaStatus;
+        public String headLatch;
+        /** Lý do không đọc được, null nếu đọc được hết. */
         public String error;
 
         public boolean isZpl() {
-            return language == PrinterLanguage.ZPL;
+            return language != null && language.toLowerCase(java.util.Locale.US).contains("zpl");
+        }
+
+        public boolean isCpclMode() {
+            return isCpcl(language);
         }
     }
 
@@ -132,8 +136,8 @@ public final class PrinterProvisioner {
      * Đọc tình trạng máy in và nạp font nếu còn thiếu — dùng cho luồng In thử.
      *
      * <p>Khác {@link #prepare}: KHÔNG đọc cờ ghi nhớ và không ghi cờ. In thử là lúc người
-     * dùng muốn biết sự thật hiện tại của máy in, một cờ đã lưu từ tuần trước không trả lời
-     * được câu hỏi đó.
+     * dùng muốn biết sự thật hiện tại của máy in, một cờ đã lưu từ tuần trước không trả
+     * lời được câu hỏi đó.
      */
     public static Report inspect(Context context, Connection connection) {
         Report report = new Report();
@@ -143,84 +147,82 @@ public final class PrinterProvisioner {
         }
 
         try {
-            ZebraPrinter printer = ZebraPrinterFactory.getInstance(connection);
-            report.language = printer.getPrinterControlLanguage();
+            report.language = readLanguage(connection);
 
             // Máy đang ở CPCL thì mọi lệnh ZPL bên dưới đều vô nghĩa; dừng ở đây và để
             // hàm gọi quyết định có chuyển ngôn ngữ hay không.
-            if (report.language == PrinterLanguage.CPCL) return report;
+            if (report.isCpclMode()) return report;
 
-            try {
-                com.zebra.sdk.printer.PrinterStatus status = printer.getCurrentStatus();
-                report.readyToPrint = status.isReadyToPrint;
-                report.paperOut = status.isPaperOut;
-                report.headOpen = status.isHeadOpen;
-            } catch (Exception ex) {
-                // Không đọc được tình trạng không có nghĩa là không in được: vẫn đi tiếp
-                // để kiểm tra font, phần quan trọng hơn.
-                Logger.appendLog(LOG_TAG, "Không đọc được tình trạng máy in: " + ex.getMessage());
-            }
+            report.mediaStatus = getVar(connection, "media.status");
+            report.headLatch = getVar(connection, "head.latch");
 
-            report.fontInstalled = hasFont(printer);
+            report.fontInstalled = hasFont(connection);
             if (!report.fontInstalled) {
                 uploadFont(context, connection);
                 report.fontInstalled = true;
                 report.fontJustUploaded = true;
             }
         } catch (Exception ex) {
-            report.error = ex.getMessage() == null ? "Lỗi không xác định" : ex.getMessage();
+            report.error = Logger.describe(ex);
             Logger.appendLog(LOG_TAG, "Kiểm tra máy in thất bại: " + report.error);
         }
         return report;
     }
 
-    /** Máy in đã có sẵn font thì không nạp lại — nạp mất khoảng một phút qua Bluetooth. */
-    private static boolean hasFont(ZebraPrinter printer) throws Exception {
-        String[] files = printer.retrieveFileNames(new String[]{"TTF"});
-        if (files == null) return false;
-        for (String file : files) {
-            if (matchesFont(file)) {
-                Logger.appendLog(LOG_TAG, "Máy in đã có font: " + file);
-                return true;
-            }
-        }
-        return false;
+    // ---------------------------------------------------------------- ngôn ngữ
+
+    /**
+     * Ngôn ngữ máy in đang chạy, đọc bằng lệnh SGD.
+     *
+     * <p>SGD chạy được ở CẢ hai chế độ ZPL và CPCL — đó là lý do dùng nó thay vì một lệnh
+     * ZPL: một máy đang ở CPCL sẽ không trả lời lệnh ZPL, và ta lại không phân biệt được
+     * "máy ở CPCL" với "máy hỏng".
+     */
+    static String readLanguage(Connection connection) throws Exception {
+        return getVar(connection, "device.languages");
+    }
+
+    static boolean isCpcl(String language) {
+        if (language == null) return false;
+        String value = language.toLowerCase(java.util.Locale.US);
+        // "line_print" cũng không hiểu ZPL, xử lý y như CPCL.
+        return value.contains("cpcl") || value.contains("line_print");
+    }
+
+    /** Đọc một biến SGD. Trả null khi máy in không trả lời hoặc không có biến đó. */
+    private static String getVar(Connection connection, String name) throws Exception {
+        byte[] raw = connection.sendAndWaitForResponse(
+                ("! U1 getvar \"" + name + "\"\r\n").getBytes(StandardCharsets.US_ASCII),
+                READ_TIMEOUT_MS, MORE_DATA_WAIT_MS, null);
+        return cleanResponse(raw);
     }
 
     /**
-     * Tên file máy in trả về có thể kèm ổ đĩa và khác kiểu chữ hoa thường
-     * ({@code E:OPENSANS-RE.TTF}, {@code OpenSans-Re.ttf}), nên so khớp phải bỏ qua cả hai.
+     * Bóc giá trị khỏi phản hồi SGD.
+     *
+     * <p>Máy in trả về giá trị trong dấu nháy kép kèm xuống dòng, ví dụ {@code "zpl"\r\n}.
+     * Biến không tồn tại thì trả {@code "?"} — coi như không đọc được, chứ không phải một
+     * giá trị hợp lệ.
      */
-    static boolean matchesFont(String printerFileName) {
-        if (printerFileName == null) return false;
-        String name = printerFileName.trim().toUpperCase(java.util.Locale.US);
-        int drive = name.indexOf(':');
-        if (drive >= 0) name = name.substring(drive + 1);
-        return name.equals(FONT_FILE_NAME);
-    }
-
-    private static void uploadFont(Context context, Connection connection) throws Exception {
-        ZebraPrinterLinkOs linkOs = ZebraPrinterFactory.getLinkOsPrinter(connection);
-        try (InputStream font = context.getAssets().open(FONT_ASSET)) {
-            Logger.appendLog(LOG_TAG, "Nạp font " + FONT_PRINTER_PATH + " vào máy in");
-            linkOs.downloadTtfFont(font, FONT_PRINTER_PATH);
-        }
-        Logger.appendLog(LOG_TAG, "Nạp font xong");
+    static String cleanResponse(byte[] raw) {
+        if (raw == null || raw.length == 0) return null;
+        String value = new String(raw, StandardCharsets.UTF_8).trim();
+        if (value.startsWith("\"")) value = value.substring(1);
+        if (value.endsWith("\"")) value = value.substring(0, value.length() - 1);
+        value = value.trim();
+        if (value.isEmpty() || "?".equals(value)) return null;
+        return value;
     }
 
     /**
      * Chuyển máy in từ CPCL sang ZPL.
      *
-     * <p>Ba lệnh CPCL, mỗi lệnh một dòng kết bằng CR: đặt ngôn ngữ, đặt ngôn ngữ báo cho
+     * <p>Ba lệnh CPCL, mỗi lệnh KẾT BẰNG CR: đặt ngôn ngữ, đặt ngôn ngữ báo cho
      * plug-and-play, rồi khởi động lại để thiết lập có hiệu lực. Sau lệnh cuối máy in tự
-     * reboot nên kết nối Bluetooth đứt — đó là lý do hàm gọi phải báo người dùng in lại,
-     * chứ không cố in tiếp trên một kết nối đã chết.
+     * reboot nên kết nối Bluetooth đứt — hàm gọi phải báo người dùng in lại, chứ không cố
+     * in tiếp trên một kết nối đã chết.
      */
     public static void switchToZplMode(Connection connection) throws Exception {
-        switchToZpl(connection);
-    }
-
-    private static void switchToZpl(Connection connection) throws Exception {
         Logger.appendLog(LOG_TAG, "Máy in đang ở chế độ CPCL — gửi lệnh chuyển sang ZPL");
         connection.write(switchToZplCommands().getBytes(StandardCharsets.US_ASCII));
     }
@@ -236,6 +238,71 @@ public final class PrinterProvisioner {
                 + "! U1 setvar \"device.pnp_option\" \"zpl\"\r"
                 + "! U1 do \"device.reset\" \"\"\r";
     }
+
+    // ------------------------------------------------------------------- font
+
+    /**
+     * Máy in đã có sẵn font chưa. Nạp lại mất khoảng một phút qua Bluetooth nên phải hỏi
+     * trước.
+     *
+     * <p>{@code ^HW} liệt kê file trên một ổ; phản hồi là danh sách tên file dạng chữ.
+     */
+    static boolean hasFont(Connection connection) throws Exception {
+        byte[] raw = connection.sendAndWaitForResponse(
+                "^XA^HWE:*.TTF^XZ".getBytes(StandardCharsets.US_ASCII),
+                READ_TIMEOUT_MS, MORE_DATA_WAIT_MS, null);
+        boolean found = listingContainsFont(raw);
+        Logger.appendLog(LOG_TAG, found
+                ? "Máy in đã có font " + FONT_PRINTER_PATH
+                : "Máy in chưa có font " + FONT_PRINTER_PATH);
+        return found;
+    }
+
+    /**
+     * Dò tên font trong danh sách file máy in trả về.
+     *
+     * <p>Tên có thể kèm ổ đĩa và khác kiểu chữ hoa thường, nên so khớp bỏ qua cả hai. Nhận
+     * nhầm thành "chưa có" thì lần in nào cũng nạp lại font mất cả phút; nhận nhầm thành
+     * "đã có" thì mọi chữ có dấu in ra ô vuông.
+     */
+    static boolean listingContainsFont(byte[] raw) {
+        if (raw == null || raw.length == 0) return false;
+        String listing = new String(raw, StandardCharsets.UTF_8).toUpperCase(java.util.Locale.US);
+        return listing.contains(FONT_NAME + ".TTF");
+    }
+
+    /**
+     * Nạp font lên ổ E: bằng lệnh ~DY.
+     *
+     * <p>{@code ~DYd:f,b,x,t,w,data} — ổ đĩa, tên KHÔNG phần mở rộng, B là dữ liệu nhị
+     * phân, TTF là loại file, t là tổng số byte. Tham số w chỉ dùng cho ảnh .GRF nên để
+     * trống.
+     *
+     * <p>Số byte trong tiêu đề phải khớp CHÍNH XÁC số byte gửi sau đó: khai thiếu thì máy
+     * in cắt cụt font, khai thừa thì nó chờ mãi phần còn lại và treo cả phiên.
+     */
+    static void uploadFont(Context context, Connection connection) throws Exception {
+        byte[] font = readAsset(context, FONT_ASSET);
+        String header = "~DYE:" + FONT_NAME + ",B,TTF," + font.length + ",,";
+
+        Logger.appendLog(LOG_TAG, "Nạp font " + FONT_PRINTER_PATH
+                + " (" + font.length + " byte) vào máy in");
+        connection.write(header.getBytes(StandardCharsets.US_ASCII));
+        connection.write(font);
+        Logger.appendLog(LOG_TAG, "Gửi xong font");
+    }
+
+    private static byte[] readAsset(Context context, String path) throws Exception {
+        try (InputStream in = context.getAssets().open(path)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(160 * 1024);
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = in.read(buffer)) > 0) out.write(buffer, 0, len);
+            return out.toByteArray();
+        }
+    }
+
+    // --------------------------------------------------------------- ghi nhớ
 
     private static boolean isRemembered(Context context, String macAddress) {
         if (macAddress == null) return false;

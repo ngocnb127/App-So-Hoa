@@ -525,12 +525,16 @@ public class ZebraWorker {
         return report.isZpl() ? "ZPL (đúng)" : report.language + " (SAI)";
     }
 
+    /**
+     * In GIÁ TRỊ THÔ máy in trả về, không dịch sang chữ của mình. Máy in mỗi đời trả một
+     * tập giá trị khác nhau; tự đặt tên cho chúng là tự bịa ra thông tin chẩn đoán.
+     */
     private String describeStatus(PrinterProvisioner.Report report) {
         if (report == null) return "Không đọc được";
         if (report.error != null) return report.error;
-        if (report.headOpen) return "Đang mở đầu in";
-        if (report.paperOut) return "Hết giấy";
-        return report.readyToPrint ? "Sẵn sàng" : "Chưa sẵn sàng";
+        if (report.mediaStatus == null && report.headLatch == null) return "Không đọc được";
+        return "giấy " + (report.mediaStatus == null ? "?" : report.mediaStatus)
+                + ", đầu in " + (report.headLatch == null ? "?" : report.headLatch);
     }
 
     private String describeFont(PrinterProvisioner.Report report) {
@@ -564,7 +568,7 @@ public class ZebraWorker {
 
             PrinterProvisioner.Report report = PrinterProvisioner.inspect(context, con);
 
-            if (report.language == com.zebra.sdk.printer.PrinterLanguage.CPCL) {
+            if (report.isCpclMode()) {
                 // Máy đang ở CPCL: phiếu thử cũng là ZPL nên in ra sẽ là giấy trắng. Chuyển
                 // ngôn ngữ rồi dừng — máy in reboot, phải bấm In thử lại.
                 PrinterProvisioner.switchToZplMode(con);
