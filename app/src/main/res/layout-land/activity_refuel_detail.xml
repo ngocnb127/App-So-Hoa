@@ -541,11 +541,17 @@
                             android:padding="5dp"
                             android:text="@string/actual_capacity" />
 
+                        <!--
+                            Chiều cao phải là wrap_content như mọi ô khác trong bảng.
+                            Đặt cứng 23dp thì sau khi trừ padding 5dp trên và dưới chỉ còn
+                            13dp cho một dòng chữ cỡ Medium cao khoảng 27dp: chữ tràn ra
+                            ngoài khung của chính nó và đè lên hàng bên cạnh.
+                        -->
                         <TextView
                             android:id="@+id/refuelitem_actual_capacity"
                             style="?android:attr/textAppearanceMedium"
                             android:layout_width="0dp"
-                            android:layout_height="23dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="0.25"
                             android:focusable="false"
                             android:padding="5dp"
