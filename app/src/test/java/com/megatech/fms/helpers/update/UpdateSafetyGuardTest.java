@@ -26,67 +26,66 @@ public class UpdateSafetyGuardTest {
     }
 
     /**
-     * Hàng đợi vừa mới có bản ghi và chưa có lỗi: nhiều khả năng đang gửi. Chặn thật, không
-     * cho vượt — chờ vài phút là xong, cho vượt ở đây chỉ làm chậm đồng bộ không cần thiết.
+     * Từ bản 110: dữ liệu chưa gửi KHÔNG còn chặn được cập nhật, kể cả khi hàng đợi vừa
+     * mới có bản ghi và chưa có lỗi nào. Trên xe, cập nhật chính là cách đẩy nó đi.
      */
     @Test
-    public void freshQueueBlocksWithoutAnEscapeHatch() {
+    public void aFreshQueueStillLetsTheUserUpdate() {
         UpdateSafetyGuard.Decision d = UpdateSafetyGuard.decide(3, 0, NOW - 60_000, NOW);
 
-        assertFalse(d.safe);
-        assertFalse("hàng đợi mới thì không mở lối vượt", d.overridable);
+        assertFalse("vẫn phải báo cho người dùng biết", d.safe);
+        assertTrue("nhưng không được chặn", d.overridable);
     }
 
-    /**
-     * Có bản ghi đã gửi và bị từ chối: biết chắc nó không tự đi được. Đây đúng là ca mà bản
-     * mới thường là thứ chữa được, nên phải cho người dùng cập nhật.
-     */
+    /** Có bản ghi gửi lỗi: nói rõ ra, vì đây đúng là ca bản mới thường chữa được. */
     @Test
-    public void failedRecordsOpenTheEscapeHatchImmediately() {
+    public void failedRecordsAreNamedInTheWarning() {
         UpdateSafetyGuard.Decision d = UpdateSafetyGuard.decide(3, 1, NOW - 60_000, NOW);
 
-        assertFalse(d.safe);
-        assertTrue("dữ liệu kẹt vì lỗi phải cho phép cập nhật", d.overridable);
+        assertTrue(d.overridable);
+        assertTrue(d.reason.contains("gửi lỗi"));
         assertTrue("phải nói rõ dữ liệu không mất", d.reason.contains("KHÔNG mất"));
     }
 
-    /**
-     * Không có bản ghi báo lỗi nhưng hàng đợi không hề vơi sau nửa giờ: cũng là kẹt, chỉ là
-     * kẹt kiểu khác (mất mạng kéo dài, server từ chối im lặng).
-     */
+    /** Chờ quá lâu mà hàng đợi không vơi cũng phải được nói ra. */
     @Test
-    public void waitingTooLongAlsoOpensTheEscapeHatch() {
+    public void waitingTooLongIsNamedInTheWarning() {
         long since = NOW - UpdateSafetyGuard.STUCK_AFTER_MS - 1000;
         UpdateSafetyGuard.Decision d = UpdateSafetyGuard.decide(2, 0, since, NOW);
 
-        assertFalse(d.safe);
         assertTrue(d.overridable);
+        assertTrue(d.reason.contains("30 phút"));
     }
 
-    /** Ngay sát ngưỡng vẫn coi là đang gửi — ngưỡng phải là "quá", không phải "bằng". */
+    /** Chưa quá ngưỡng thì chỉ nói là đang gửi, không doạ người dùng bằng chữ "quá hạn". */
     @Test
-    public void justUnderTheThresholdIsStillTreatedAsSyncing() {
+    public void justUnderTheThresholdReadsAsStillSyncing() {
         long since = NOW - UpdateSafetyGuard.STUCK_AFTER_MS;
         UpdateSafetyGuard.Decision d = UpdateSafetyGuard.decide(2, 0, since, NOW);
 
-        assertFalse(d.safe);
-        assertFalse(d.overridable);
+        assertTrue(d.overridable);
+        assertTrue(d.reason.contains("đang gửi"));
     }
 
-    /**
-     * Không biết hàng đợi có từ bao giờ (mốc chưa ghi được) thì không được suy ra là đã kẹt
-     * — nhưng cờ lỗi vẫn phải quyết định được.
-     */
+    /** Không một tổ hợp nào được chặn cứng — đó chính là bế tắc mà bản 110 đi sửa. */
     @Test
-    public void unknownQueueAgeFallsBackToTheErrorFlag() {
-        assertFalse(UpdateSafetyGuard.decide(2, 0, 0, NOW).overridable);
-        assertTrue(UpdateSafetyGuard.decide(2, 1, 0, NOW).overridable);
+    public void noCombinationOfPendingDataEverBlocksTheUpdate() {
+        int[] counts = {1, 5, 500};
+        int[] failures = {0, 1, 500};
+        long[] ages = {0, NOW - 1000, NOW - UpdateSafetyGuard.STUCK_AFTER_MS * 10};
+
+        for (int pending : counts)
+            for (int failed : failures)
+                for (long since : ages)
+                    assertTrue("pending=" + pending + " failed=" + failed + " since=" + since,
+                            UpdateSafetyGuard.decide(pending, failed, since, NOW).overridable);
     }
 
     /** Lý do luôn phải nói được số bản ghi — người dùng cần biết mình đang bỏ lại cái gì. */
     @Test
     public void reasonAlwaysNamesTheCount() {
         assertTrue(UpdateSafetyGuard.decide(7, 0, NOW, NOW).reason.contains("7"));
+        assertNull(UpdateSafetyGuard.decide(0, 0, 0, NOW).reason);
         assertTrue(UpdateSafetyGuard.decide(7, 2, 0, NOW).reason.contains("7"));
         assertTrue(UpdateSafetyGuard.decide(7, 2, 0, NOW).reason.contains("2"));
     }

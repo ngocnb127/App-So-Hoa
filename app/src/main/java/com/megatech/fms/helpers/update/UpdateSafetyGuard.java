@@ -17,22 +17,19 @@ import java.util.List;
  * dữ liệu nghiệp vụ chưa gửi lên server, dữ liệu đó nằm lại trong Room và chỉ được đồng bộ
  * ở lần mở app sau — trong khoảng đó FMS không nhìn thấy sản lượng đã tra nạp.
  *
- * <h3>Chặn tạm thời, KHÔNG chặn vĩnh viễn</h3>
+ * <h3>Báo, KHÔNG chặn</h3>
  *
- * <p>Bản trước chặn không điều kiện khi còn bản ghi chưa gửi, và tạo ra một bế tắc thật:
- * dữ liệu kẹt vì LỖI thì chờ bao lâu cũng không đi, trong khi bản sửa đúng lỗi đó lại nằm
- * sau đúng cánh cửa đang khoá. Càng kẹt lâu càng không cập nhật được, càng không cập nhật
- * được thì càng kẹt.
+ * <p>Từ bản 110, dữ liệu chưa gửi KHÔNG còn chặn được việc cập nhật. Lý do là thực tế vận
+ * hành: dữ liệu kẹt thường kẹt vì LỖI, mà bản sửa đúng lỗi đó lại nằm sau đúng cánh cửa
+ * đang khoá — càng kẹt lâu càng không cập nhật được, càng không cập nhật được thì càng kẹt.
+ * Trên xe, cập nhật chính là cách đẩy được đống dữ liệu đó đi.
  *
- * <p>Tiền đề của việc chặn cũng cần nói đúng: cài đè KHÔNG xoá dữ liệu — Room còn nguyên.
- * Cái mất là thời gian, không phải số liệu. Vì vậy:
+ * <p>Tiền đề của việc chặn vốn cũng đã sai: cài đè KHÔNG xoá dữ liệu — Room còn nguyên,
+ * hàng đợi được gửi tiếp ngay khi app mở lại. Cái mất là vài phút đồng bộ, không phải số
+ * liệu; cái giá của việc khoá thiết bị ở bản cũ lớn hơn hẳn.
  *
- * <ul>
- *   <li>Dữ liệu vừa mới xếp hàng và chưa có lỗi: chặn thật, bảo người dùng chờ đồng bộ —
- *       chờ vài phút là xong.</li>
- *   <li>Dữ liệu ĐANG KẸT (có bản ghi báo lỗi gửi, hoặc chờ quá lâu): vẫn cảnh báo nhưng
- *       CHO PHÉP người dùng cập nhật, vì bản mới thường chính là thứ chữa được nó.</li>
- * </ul>
+ * <p>Việc còn lại của lớp này là NÓI ĐÚNG tình trạng: còn bao nhiêu bản ghi, có bản nào
+ * gửi lỗi không, đã chờ bao lâu. Người dùng xác nhận rồi cập nhật.
  *
  * <p>Chỉ chi phối bước CÀI. Việc kiểm tra phiên bản và tải file vẫn diễn ra bình thường.
  */
@@ -131,21 +128,16 @@ public final class UpdateSafetyGuard {
     static Decision decide(int pending, int failed, long pendingSince, long now) {
         if (pending <= 0) return new Decision(true, false, null);
 
+        // KHÔNG có nhánh chặn cứng nào ở đây. Mọi trường hợp còn dữ liệu chưa gửi đều cho
+        // phép cập nhật sau khi người dùng xác nhận — xem phần đầu lớp về lý do.
         boolean waitedTooLong = pendingSince > 0 && now - pendingSince > STUCK_AFTER_MS;
-        boolean stuck = failed > 0 || waitedTooLong;
 
-        if (!stuck) {
-            // Hàng đợi còn mới và chưa có lỗi: nhiều khả năng đang gửi, chờ là xong. Đây là
-            // trường hợp duy nhất chặn thật.
-            return new Decision(false, false, "Còn " + pending
-                    + " bản ghi chưa gửi lên máy chủ. Vui lòng đồng bộ xong rồi cập nhật.");
-        }
+        String detail;
+        if (failed > 0) detail = ", trong đó " + failed + " bản ghi gửi lỗi";
+        else if (waitedTooLong) detail = " và đã chờ quá 30 phút mà chưa gửi được";
+        else detail = " (đang gửi)";
 
-        String detail = failed > 0
-                ? "trong đó " + failed + " bản ghi gửi lỗi"
-                : "đã chờ quá 30 phút mà không gửi được";
-
-        return new Decision(false, true, "Còn " + pending + " bản ghi chưa gửi lên máy chủ, "
+        return new Decision(false, true, "Còn " + pending + " bản ghi chưa gửi lên máy chủ"
                 + detail + ".\n\n"
                 + "Dữ liệu này KHÔNG mất khi cập nhật — vẫn nằm trong máy và sẽ được gửi "
                 + "tiếp sau khi cài xong. Bản mới thường chính là bản sửa lỗi gửi dữ liệu.\n\n"

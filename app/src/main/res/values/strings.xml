@@ -225,7 +225,7 @@
          Mới nhất LÊN ĐẦU: người dùng mở màn hình này để xem bản vừa cài có gì, không phải
          để đọc lại lịch sử. Mỗi dòng viết theo việc thấy được trên xe, không theo tên hàm. -->
     <string name="version_release_notes_group_11_6">Bản 11.6 — mới nhất</string>
-    <string name="version_release_note_update_gate">• Cập nhật ứng dụng không còn bị khoá cứng khi dữ liệu chưa gửi bị kẹt: có cảnh báo rõ ràng và cho phép cập nhật, dữ liệu vẫn được giữ và gửi tiếp sau khi cài.</string>
+    <string name="version_release_note_update_gate">• Dữ liệu chưa gửi không còn chặn việc cập nhật: ứng dụng báo rõ còn bao nhiêu bản ghi rồi vẫn cho cập nhật. Dữ liệu được giữ nguyên và gửi tiếp sau khi cài — nhiều khi cập nhật chính là cách đẩy nó đi.</string>
     <string name="version_release_note_print_quality">• Bản in nhiệt đậm và nét hơn: in đậm toàn phiếu, tăng độ đậm và độ phân giải đầu in.</string>
     <string name="version_release_note_printer_setup">• Máy in tự nạp font tiếng Việt và tự chuyển về chế độ ZPL khi cần; phiếu In thử hiện rõ tình trạng máy in, chế độ và font.</string>
     <string name="version_release_note_device_number">• Phiếu in số đồng hồ theo tên thiết bị: “LCR: số” hoặc “TCS: số”, không còn dễ nhầm với số phiếu.</string>
