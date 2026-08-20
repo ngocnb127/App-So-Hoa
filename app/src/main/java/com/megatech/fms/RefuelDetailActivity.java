@@ -46,6 +46,7 @@ import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.LCRReader;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.RefuelApproachGuard;
 import com.megatech.fms.model.AirlineModel;
 import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.LCRDataModel;
@@ -1325,20 +1326,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 break;
 
             case R.id.btnApproach:
-                // Ghi nhận thời gian tiếp cận
-                Date now = new Date();
-                mItem.setApproachTime(now);
-
-                // Cập nhật hiển thị
-                TextView lblApproach = findViewById(R.id.lblApproachTime);
-                lblApproach.setText("Tiếp cận: " + DateUtils.formatDate(now, "dd/MM/yyyy HH:mm"));
-                lblApproach.setVisibility(View.VISIBLE);
-
-                // Ẩn nút sau khi bấm
-                v.setVisibility(View.GONE);
-
-                // Lưu dữ liệu lại local
-                enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
+                // Chuyến trước chưa bấm Rời đi thì không được mở chuyến mới. Kiểm tra đọc
+                // Room nên chạy ở thread nền, ghi mốc tiếp cận chỉ khi được phép.
+                checkApproachAllowed(() -> recordApproach(v));
                 break;
         }
 
@@ -2199,15 +2189,34 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         try {
             if (mItem != null) {
                 mItem.setEndTime(new Date());
-                if (Math.abs(mItem.getEndTime().getTime() - mItem.getStartTime().getTime()) > 1000L * 60 * 60 * 24) {
-                    mItem.setStartTime(mItem.getEndTime());
-                }
 
-                if (mItem.getDeviceEndTime() != null && mItem.getDeviceStartTime() != null && !mItem.isCompleted()) {
-                    long dateDiff = mItem.getDeviceEndTime().getTime() - mItem.getDeviceStartTime().getTime();
-                    if (dateDiff > 0) {
-                        mItem.setStartTime(new Date(mItem.getEndTime().getTime() - dateDiff));
-                    }
+                // Giờ bắt đầu chỉ được lấy từ đúng một trong hai nguồn:
+                //
+                //   1. Thời điểm bắt được sự kiện start của đồng hồ (LCR/TCS) — ưu tiên
+                //      tuyệt đối, đã chụp ở recordStartEvent() và lưu ngay xuống Room.
+                //   2. Nếu không bắt được sự kiện đó: thời điểm bấm kết thúc thủ công,
+                //      tức chính giờ kết thúc vừa đóng dấu ở trên.
+                //
+                // Trước đây chỗ này suy ngược StartTime = EndTime − (DeviceEndTime −
+                // DeviceStartTime), đè lên cả mốc đã bắt đúng ở nguồn 1. Còn khi không bắt
+                // được start thì StartTime giữ nguyên giá trị khởi tạo của RefuelItemData
+                // (`new Date()` lúc dựng object từ kế hoạch bay) nên phiếu đi tiếp với giờ
+                // tạo kế hoạch — lệch hàng giờ so với lúc tra nạp thật.
+                //
+                // PROCESSING là dấu vết bền của nguồn 1: chỉ recordStartEvent() đặt trạng
+                // thái này, và nó sống sót qua việc Activity bị dựng lại giữa mẻ, khác cờ
+                // startEventRecorded chỉ nằm trong bộ nhớ.
+                boolean meterStartCaptured = startEventRecorded
+                        || mItem.getStatus() == REFUEL_ITEM_STATUS.PROCESSING;
+
+                if (meterStartCaptured) {
+                    Logger.appendLog(LOG_TAG, "Giờ bắt đầu lấy theo sự kiện start của đồng hồ: "
+                            + DateUtils.formatDate(mItem.getStartTime(), "dd/MM/yyyy HH:mm:ss"));
+                } else {
+                    mItem.setStartTime(mItem.getEndTime());
+                    Logger.appendLog(LOG_TAG, "Không bắt được sự kiện start của đồng hồ,"
+                            + " lấy giờ bấm kết thúc làm giờ bắt đầu: "
+                            + DateUtils.formatDate(mItem.getStartTime(), "dd/MM/yyyy HH:mm:ss"));
                 }
 
                 // Tồn xe KHÔNG được cập nhật ở đây. Trước đây trừ ngay tại chỗ này, trước
@@ -2665,31 +2674,67 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 .setTitle(R.string.app_name)
                 .setMessage("Chuyến này chưa ghi nhận tiếp cận. Bạn có muốn ghi nhận thời điểm tiếp cận lúc này không?")
                 .setPositiveButton("Có", (dialog, which) -> {
-                    Date now = new Date();
-                    mItem.setApproachTime(now);
-
-                    TextView lblApproach = findViewById(R.id.lblApproachTime);
-                    Button btnApproach = findViewById(R.id.btnApproach);
-
-                    if (lblApproach != null) {
-                        lblApproach.setText(
-                                "Tiếp cận: " + DateUtils.formatDate(now, "dd/MM/yyyy HH:mm")
-                        );
-                        lblApproach.setVisibility(View.VISIBLE);
-                    }
-
-                    if (btnApproach != null) {
-                        btnApproach.setVisibility(View.GONE);
-                    }
-
-                    // Lưu lại
-                    enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
-
                     dialog.dismiss();
+                    checkApproachAllowed(() -> recordApproach(findViewById(R.id.btnApproach)));
                 })
                 .setNegativeButton("Không", (dialog, which) -> dialog.dismiss())
                 .setCancelable(false)
                 .show();
+    }
+
+    /**
+     * Ghi mốc tiếp cận cho phiếu đang mở và cập nhật hiển thị.
+     *
+     * @param btnApproach nút vừa bấm, ẩn đi sau khi ghi; có thể null nếu layout hiện tại
+     *                    không có nút (bản dọc không hiển thị khối tiếp cận).
+     */
+    private void recordApproach(View btnApproach) {
+        if (mItem == null) return;
+
+        Date now = new Date();
+        mItem.setApproachTime(now);
+
+        TextView lblApproach = findViewById(R.id.lblApproachTime);
+        if (lblApproach != null) {
+            lblApproach.setText("Tiếp cận: " + DateUtils.formatDate(now, "dd/MM/yyyy HH:mm"));
+            lblApproach.setVisibility(View.VISIBLE);
+        }
+
+        if (btnApproach != null) {
+            btnApproach.setVisibility(View.GONE);
+        }
+
+        enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
+    }
+
+    /**
+     * Chạy {@code onAllowed} trên UI thread nếu không còn chuyến nào đã tiếp cận mà chưa
+     * bấm Rời đi; ngược lại hiện hộp thoại chặn và không làm gì thêm.
+     */
+    private void checkApproachAllowed(Runnable onAllowed) {
+        new Thread(() -> {
+            List<RefuelItemData> blocking = RefuelApproachGuard.findBlocking(
+                    mItem == null ? null : mItem.getUniqueId());
+
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+
+                if (blocking.isEmpty()) {
+                    onAllowed.run();
+                    return;
+                }
+
+                Logger.appendLog(LOG_TAG, "Chặn tiếp cận, còn " + blocking.size()
+                        + " chuyến chưa rời đi");
+
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.app_name)
+                        .setMessage(RefuelApproachGuard.buildMessage(blocking))
+                        .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                        .setCancelable(false)
+                        .show();
+            });
+        }).start();
     }
 
 

@@ -56,6 +56,7 @@ import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.ImageUtil;
 import com.megatech.fms.helpers.LCRWorker;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.RefuelTimeValidator;
 import com.megatech.fms.helpers.ScreenshotAPI;
 import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.model.UserModel;
@@ -185,6 +186,7 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                 binding.setMItem(mItem);
                 setContentView(binding.getRoot());
                 binding.invalidateAll();
+                showTimeWarningPopup();
             }
         }
         closeProgressDialog();
@@ -351,6 +353,70 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
             binding.invalidateAll();
     }
 
+    /**
+     * Popup liệt kê các điểm bất thường của giờ tra nạp, hiện ngay khi mở màn xác nhận.
+     *
+     * <p>Chỉ nhắc, không chặn: người dùng đóng popup rồi chạm thẳng vào ô giờ để sửa. Nếu
+     * bỏ qua, {@link #confirmTimeWarningThenPost()} sẽ hỏi lại một lần nữa lúc bấm Xác nhận.
+     */
+    private void showTimeWarningPopup() {
+        if (isFinishing()) return;
+
+        String message = RefuelTimeValidator.describe(mItem);
+        if (message.isEmpty()) return;
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo giờ tra nạp: " + flatten(message));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage(message + "\n\nChạm vào ô giờ bắt đầu / giờ kết thúc để nhập lại.")
+                .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                .setCancelable(false)
+                .show();
+    }
+
+    /**
+     * Chốt phiếu, nhưng nếu giờ tra nạp vẫn còn bất thường thì hỏi lại một lần nữa.
+     *
+     * <p>Lần hỏi thứ hai này là chỗ người dùng chủ động nhận sai số liệu, nên cả hai nhánh
+     * đều ghi log: sau ca còn truy được ai đã chấp nhận và chấp nhận điều gì.
+     */
+    private void confirmTimeWarningThenPost() {
+        String message = RefuelTimeValidator.describe(mItem);
+
+        if (message.isEmpty()) {
+            post();
+            return;
+        }
+
+        Logger.appendLog(LOG_TAG, "Bấm Xác nhận khi giờ tra nạp còn bất thường: "
+                + flatten(message));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage(message + "\n\nGiờ tra nạp vẫn chưa được sửa. Bạn vẫn xác nhận phiếu?")
+                .setPositiveButton("Vẫn xác nhận", (dialog, which) -> {
+                    dialog.dismiss();
+                    Logger.appendLog(LOG_TAG, "NGƯỜI DÙNG CHẤP NHẬN giờ tra nạp bất thường"
+                            + " (flight=" + mItem.getFlightCode()
+                            + ", uid=" + mItem.getUniqueId() + "): " + flatten(message));
+                    post();
+                })
+                .setNegativeButton("Sửa lại", (dialog, which) -> dialog.dismiss())
+                .setCancelable(false)
+                .show();
+    }
+
+    private void post() {
+        Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
+        postData();
+    }
+
+    /** Log ghi theo dòng, nên gộp popup nhiều dòng lại thành một dòng. */
+    private static String flatten(String message) {
+        return message.replace('\n', ' ').replaceAll(" +", " ");
+    }
+
     Locale locale = Locale.getDefault();
     NumberFormat numberFormat = NumberFormat.getInstance(locale);
     Context context= this;
@@ -438,8 +504,10 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         else {
             //sendScreenshot();
 
-            Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
-            postData();
+            // Các kiểm tra ở trên là chặn cứng. Giờ tra nạp bất thường thì chỉ cảnh báo,
+            // vì hiện trường có ca dài hợp lệ thật — nhưng phải để người dùng nhận sai
+            // một cách có ý thức và có log.
+            confirmTimeWarningThenPost();
         }
     }
 

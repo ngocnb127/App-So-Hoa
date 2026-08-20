@@ -175,6 +175,18 @@ public class DataRepository {
         return toRefuelList(localList);
     }
 
+    /**
+     * Danh sách phiếu của xe đọc THẲNG từ Room, không đi qua mạng và không lọc theo ca.
+     *
+     * <p>{@link #getRefuelList} bản tương ứng ở {@code DataHelper} gọi HTTP khi không phải
+     * bản debug, nên không dùng được cho các kiểm tra phải chạy được cả khi mất sóng.
+     * {@code approachTime}/{@code leaveTime} chỉ nằm trong {@code jsonData} chứ không phải
+     * cột Room, nên lọc theo hai trường đó phải làm ở tầng Java sau khi giải mã.
+     */
+    public List<RefuelItemData> getLocalRefuelList(String truckNo) {
+        return toRefuelList(db.refuelItemDao().getByTruckNo(truckNo));
+    }
+
     private List<RefuelItemData> toRefuelList(List<RefuelItem> localList) {
 
         List<RefuelItemData> returnList = new ArrayList();

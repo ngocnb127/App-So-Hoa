@@ -32,6 +32,7 @@ import com.megatech.fms.UserBaseActivity;
 import com.megatech.fms.databinding.CardviewRefuelItemBinding;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.RefuelApproachGuard;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
 
@@ -308,14 +309,31 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
             // TIẾP CẬN
             binding.btnApproach.setOnClickListener(v -> {
-                final Date approachTime = new Date();
-                itemData.setApproachTime(approachTime);
-                // Ngoài màn hình tra nạp, mọi thay đổi đều do người dùng chủ động bấm nên
-                // PHẢI được chấp thuận. Precondition chỉ tồn tại để chặn số đồng hồ nhảy
-                // lung tung trong lúc tra nạp; đem nó ra đây chỉ tạo ra "Cập nhật phiếu chưa
-                // lưu được" trên một thao tác hoàn toàn hợp lệ. Patch đọc bản mới nhất rồi
-                // đặt đúng một trường lên trên, không cần nền cũ.
-                patchAndUpdate(itemData, latest -> latest.setApproachTime(approachTime));
+                // Đọc Room để biết còn chuyến nào đang mở dở, nên phải ra thread nền trước
+                // khi ghi mốc tiếp cận.
+                new Thread(() -> {
+                    List<RefuelItemData> blocking =
+                            RefuelApproachGuard.findBlocking(itemData.getUniqueId());
+
+                    Context context = itemView.getContext();
+                    if (!(context instanceof Activity)) return;
+                    Activity activity = (Activity) context;
+
+                    if (!blocking.isEmpty()) {
+                        activity.runOnUiThread(() -> showApproachBlocked(activity, blocking));
+                        return;
+                    }
+
+                    final Date approachTime = new Date();
+                    itemData.setApproachTime(approachTime);
+                    // Ngoài màn hình tra nạp, mọi thay đổi đều do người dùng chủ động bấm nên
+                    // PHẢI được chấp thuận. Precondition chỉ tồn tại để chặn số đồng hồ nhảy
+                    // lung tung trong lúc tra nạp; đem nó ra đây chỉ tạo ra "Cập nhật phiếu chưa
+                    // lưu được" trên một thao tác hoàn toàn hợp lệ. Patch đọc bản mới nhất rồi
+                    // đặt đúng một trường lên trên, không cần nền cũ.
+                    activity.runOnUiThread(() ->
+                            patchAndUpdate(itemData, latest -> latest.setApproachTime(approachTime)));
+                }).start();
             });
 
             // RỜI ĐI
@@ -388,6 +406,24 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
 
 
+        }
+
+        /**
+         * Báo không tiếp cận được vì còn chuyến chưa bấm Rời đi. Chỉ có nút đóng: đây là
+         * chặn thật, không phải cảnh báo cho qua.
+         */
+        private void showApproachBlocked(Activity activity, List<RefuelItemData> blocking) {
+            if (activity.isFinishing()) return;
+
+            Logger.appendLog("APPROACH", "Chặn tiếp cận, còn " + blocking.size()
+                    + " chuyến chưa rời đi");
+
+            new AlertDialog.Builder(activity)
+                    .setTitle(R.string.app_name)
+                    .setMessage(RefuelApproachGuard.buildMessage(blocking))
+                    .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                    .setCancelable(false)
+                    .show();
         }
 
         /**

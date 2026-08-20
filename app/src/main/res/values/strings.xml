@@ -225,6 +225,11 @@
          Mới nhất LÊN ĐẦU: người dùng mở màn hình này để xem bản vừa cài có gì, không phải
          để đọc lại lịch sử. Mỗi dòng viết theo việc thấy được trên xe, không theo tên hàm. -->
     <string name="version_release_notes_group_11_6">Bản 11.6 — mới nhất</string>
+    <string name="version_release_note_start_time">• Giờ bắt đầu tra nạp lấy đúng lúc đồng hồ báo bắt đầu. Nếu không bắt được tín hiệu đó thì lấy giờ bấm kết thúc, không còn ghi theo giờ tạo kế hoạch bay như trước.</string>
+    <string name="version_release_note_time_warning">• Màn hình xác nhận báo ngay khi giờ tra nạp bất thường (mẻ dài quá 60 phút, giờ nằm ngoài khoảng tiếp cận – rời đi). Nếu vẫn xác nhận, ứng dụng hỏi lại một lần nữa và ghi lại việc này.</string>
+    <string name="version_release_note_approach_guard">• Chưa bấm “Rời đi” cho chuyến đang phục vụ thì không tiếp cận được chuyến mới, tránh hai chuyến cùng mở một lúc.</string>
+    <string name="version_release_note_long_refuel_warning">• Trước khi in hóa đơn điện tử, ứng dụng cảnh báo mẻ có thời gian tra nạp quá dài để kiểm tra lại; vẫn in được nếu số liệu đúng.</string>
+    <string name="version_release_note_reversed_time">• Không tạo được phiếu khi giờ kết thúc sớm hơn giờ bắt đầu — phải sửa giờ trước.</string>
     <string name="version_release_note_update_gate">• Dữ liệu chưa gửi không còn chặn việc cập nhật: ứng dụng báo rõ còn bao nhiêu bản ghi rồi vẫn cho cập nhật. Dữ liệu được giữ nguyên và gửi tiếp sau khi cài — nhiều khi cập nhật chính là cách đẩy nó đi.</string>
     <string name="version_release_note_print_quality">• Bản in nhiệt đậm và nét hơn: in đậm toàn phiếu, tăng độ đậm và độ phân giải đầu in.</string>
     <string name="version_release_note_printer_setup">• Máy in tự nạp font tiếng Việt và tự chuyển về chế độ ZPL khi cần; phiếu In thử hiện rõ tình trạng máy in, chế độ và font.</string>

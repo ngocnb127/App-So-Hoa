@@ -64,6 +64,7 @@ import com.megatech.fms.helpers.BM2505Factory;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.RefuelTimeValidator;
 import com.megatech.fms.helpers.PrintWorker;
 import com.megatech.fms.model.AirlineModel;
 import com.megatech.fms.model.BM2505ContainerModel;
@@ -336,6 +337,97 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         return false;
     }
 
+    /**
+     * Chặn cứng việc tạo phiếu khi có mẻ ghi giờ kết thúc sớm hơn giờ bắt đầu.
+     *
+     * <p>Khác cảnh báo mẻ quá dài: ở đây không có nút đi tiếp. Một mẻ âm thời gian là sai
+     * chắc chắn, in ra thì hoá đơn mang số liệu không giải thích được.
+     *
+     * @return true nếu được phép đi tiếp.
+     */
+    private boolean blockReversedRefuelTime(List<RefuelItemData> items) {
+        StringBuilder detail = new StringBuilder();
+
+        if (items != null) {
+            for (RefuelItemData item : items) {
+                if (!RefuelTimeValidator.endsBeforeStart(item)) continue;
+
+                String flightCode = item.getFlightCode();
+                detail.append("\n• ")
+                        .append(flightCode == null || flightCode.isEmpty()
+                                ? "(chưa có số hiệu)" : flightCode)
+                        .append(": bắt đầu ")
+                        .append(DateUtils.formatDate(item.getStartTime(), "dd/MM HH:mm"))
+                        .append(", kết thúc ")
+                        .append(DateUtils.formatDate(item.getEndTime(), "dd/MM HH:mm"));
+            }
+        }
+
+        if (detail.length() == 0) return true;
+
+        Logger.appendLog(LOG_TAG, "CHẶN tạo phiếu, giờ kết thúc sớm hơn giờ bắt đầu:"
+                + detail.toString().replace('\n', ' '));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Không tạo được phiếu")
+                .setMessage("Giờ kết thúc sớm hơn giờ bắt đầu:" + detail
+                        + "\n\nPhải sửa lại giờ tra nạp trước khi tạo phiếu.")
+                .setPositiveButton("Đã hiểu", null)
+                .setCancelable(false)
+                .show();
+
+        return false;
+    }
+
+    /**
+     * Cảnh báo mẻ có thời gian tra nạp quá dài rồi chạy tiếp {@code onContinue}.
+     *
+     * <p>Chỉ cảnh báo, không chặn: hoá đơn vẫn in được sau khi người dùng bấm Tiếp tục.
+     * Ghi log cả lúc cảnh báo lẫn lúc người dùng chọn in tiếp, để sau ca đối chiếu được
+     * hoá đơn nào đã in với thời gian bất thường.
+     */
+    private void warnLongRefuelThen(List<RefuelItemData> items, Runnable onContinue) {
+        List<RefuelItemData> longItems = new ArrayList<>();
+
+        if (items != null) {
+            for (RefuelItemData item : items) {
+                if (RefuelTimeValidator.exceedsMaxDuration(item)) longItems.add(item);
+            }
+        }
+
+        if (longItems.isEmpty()) {
+            if (onContinue != null) onContinue.run();
+            return;
+        }
+
+        StringBuilder detail = new StringBuilder();
+        for (RefuelItemData item : longItems) {
+            String flightCode = item.getFlightCode();
+            detail.append("\n• ")
+                    .append(flightCode == null || flightCode.isEmpty()
+                            ? "(chưa có số hiệu)" : flightCode)
+                    .append(": ")
+                    .append(RefuelTimeValidator.durationMinutes(item))
+                    .append(" phút");
+        }
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo thời gian tra nạp quá dài trước khi tạo receipt:"
+                + detail.toString().replace('\n', ' '));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Cảnh báo thời gian tra nạp")
+                .setMessage("Thời gian tra nạp quá dài (trên "
+                        + RefuelTimeValidator.MAX_DURATION_MS / 60000 + " phút):"
+                        + detail + "\n\nBạn có muốn tiếp tục in không?")
+                .setPositiveButton("Tiếp tục", (dialog, which) -> {
+                    Logger.appendLog(LOG_TAG, "Người dùng tiếp tục in dù thời gian tra nạp"
+                            + " quá dài:" + detail.toString().replace('\n', ' '));
+                    if (onContinue != null) onContinue.run();
+                })
+                .setNegativeButton("Kiểm tra lại", null)
+                .show();
+    }
+
     private void showDensityWarningDialog(Runnable onContinue) {
         new AlertDialog.Builder(this)
                 .setTitle("Cảnh báo (Chỉ áp dụng với VN, 0V, VN1)")
@@ -539,7 +631,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
         if (!isReturn) {
 
-            if (validate()) {
+            if (validate() && blockReversedRefuelTime(printItems)) {
 
                 boolean hasWarning = hasDensityWarning(printItems);
 
@@ -552,10 +644,16 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     }
                 };
 
+                // Chặn cuối trước khi dựng receipt: mẻ dài bất thường vẫn in được, nhưng
+                // người dùng phải thấy nó một lần. Nối SAU cảnh báo tỷ trọng để hai hộp
+                // thoại không chồng lên nhau.
+                Runnable checkDurationThenContinue =
+                        () -> warnLongRefuelThen(printItems, continueAction);
+
                 if (hasWarning) {
-                    showDensityWarningDialog(continueAction);
+                    showDensityWarningDialog(checkDurationThenContinue);
                 } else {
-                    continueAction.run();
+                    checkDurationThenContinue.run();
                 }
             }
 

@@ -239,6 +239,16 @@ public class DataHelper {
 
     }
 
+    /**
+     * Phiếu của xe hiện tại đọc thẳng từ Room. Khác {@link #getRefuelList}, hàm này không
+     * bao giờ gọi HTTP nên dùng được cho kiểm tra phải chạy đúng cả khi mất sóng.
+     * Chạm DB, phải gọi ở thread nền.
+     */
+    public static List<RefuelItemData> getLocalRefuelList() {
+        return requireRepository().getLocalRefuelList(
+                FMSApplication.getApplication().getTruckNo());
+    }
+
     public static List<RefuelItemData> getRefuelList(boolean self, int type) {
         if (isDebug) {
 
