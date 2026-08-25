@@ -224,7 +224,16 @@
     <!-- ===== Nội dung cập nhật =====
          Mới nhất LÊN ĐẦU: người dùng mở màn hình này để xem bản vừa cài có gì, không phải
          để đọc lại lịch sử. Mỗi dòng viết theo việc thấy được trên xe, không theo tên hàm. -->
-    <string name="version_release_notes_group_11_6">Bản 11.6 — mới nhất</string>
+    <string name="version_release_notes_group_11_7">Bản 11.7 — mới nhất</string>
+    <string name="version_release_note_multi_truck">• Tối ưu dữ liệu các chuyến đường dài, nhiều mẻ: mở màn hình xuất hóa đơn là ứng dụng tự lấy lại số liệu và giờ tra nạp mới nhất của các xe khác trong cùng chuyến, nên hóa đơn không còn in theo bản cũ trên máy.</string>
+    <string name="version_release_note_others_offline">• Nếu không lấy được dữ liệu của xe khác (mạng yếu), ứng dụng báo rõ còn thiếu bao nhiêu mẻ để kiểm tra lại trước khi xuất hóa đơn.</string>
+    <string name="version_release_note_invoice_time_preview">• Trước khi xuất hóa đơn điện tử, ứng dụng hiện luôn giờ bắt đầu và giờ kết thúc sẽ in lên hóa đơn, kèm cảnh báo nếu giờ nằm ngoài khoảng tiếp cận – rời đi hoặc cả chuyến kéo dài bất thường.</string>
+    <string name="version_release_note_bm2508_attachment">• Ảnh và chữ ký của BM 25.08 chỉ gửi sau khi phiếu đã đồng bộ lên máy chủ, nên không còn báo lỗi gửi ảnh lặp lại. Nếu máy chủ từ chối, ứng dụng dừng thử lại và ghi rõ số phiếu thay vì gửi vòng vòng.</string>
+    <string name="version_release_note_time_from_server">• Giờ tra nạp sửa trên web nay về được tới xe: khi phiếu đã chốt và chỉ còn lệch giờ, ứng dụng lấy theo máy chủ thay vì gửi đi gửi lại mãi không xong.</string>
+    <string name="version_release_note_own_truck_only">• Máy chỉ gửi lên mẻ của xe mình; mẻ của xe khác chỉ để xem và in, không bị máy này ghi đè.</string>
+    <string name="version_release_note_volume_fix">• Sửa lỗi số lít và số kg của gói chốt mẻ bị giữ theo lần cập nhật trước. Số lít nay luôn tính lại theo số gallon ngay trước khi gửi, nên phiếu và hóa đơn không còn thiếu lít.</string>
+
+    <string name="version_release_notes_group_11_6">Bản 11.6</string>
     <string name="version_release_note_start_time">• Giờ bắt đầu tra nạp lấy đúng lúc đồng hồ báo bắt đầu. Nếu không bắt được tín hiệu đó thì lấy giờ bấm kết thúc, không còn ghi theo giờ tạo kế hoạch bay như trước.</string>
     <string name="version_release_note_time_warning">• Màn hình xác nhận báo ngay khi giờ tra nạp bất thường (mẻ dài quá 60 phút, giờ nằm ngoài khoảng tiếp cận – rời đi). Nếu vẫn xác nhận, ứng dụng hỏi lại một lần nữa và ghi lại việc này.</string>
     <string name="version_release_note_approach_guard">• Chưa bấm “Rời đi” cho chuyến đang phục vụ thì không tiếp cận được chuyến mới, tránh hai chuyến cùng mở một lúc.</string>
@@ -586,6 +595,7 @@
     <string name="bm2505_report_type">Loại phiếu</string>
     <string name="save_print_info_failed">Không lưu được thông tin in vào phiếu. Vui lòng kiểm tra lại phiếu trước khi rời đi.</string>
     <string name="save_leave_time_failed">Không lưu được giờ rời đi. Vui lòng thử lại.</string>
+    <string name="leave_named_flight">Rời đi cho chuyến %1$s</string>
     <string name="bm2505_airport_undetermined">Chưa xác định được sân bay</string>
     <string name="bm2505_airport_required">Chưa xác định được sân bay của xe tra nạp. Vui lòng kiểm tra lại cấu hình xe/tài khoản trước khi lưu phiếu BM2505.</string>
     <string name="bm2505_truck_airport_not_allowed">Sân bay của xe tra nạp không thuộc phạm vi phân quyền của tài khoản. Vui lòng liên hệ quản trị để cập nhật lại.</string>

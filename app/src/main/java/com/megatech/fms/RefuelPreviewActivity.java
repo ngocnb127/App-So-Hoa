@@ -35,6 +35,7 @@ import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SearchView;
+import android.widget.Toast;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -193,6 +194,10 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private int remoteId;
     private String uniqueId;
     private boolean hasReview ;
+
+    /** Kết quả lượt kéo lại mẻ của xe khác lúc mở màn hình; null khi chưa chạy xong. */
+    private DataHelper.RefreshResult othersRefresh;
+
     //AlertDialog progressDialog;
     @SuppressLint("StaticFieldLeak")
     private void loadData() {
@@ -210,6 +215,11 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     userList = DataHelper.getUsers();
                 productList = DataHelper.getProducts();
 
+                // Kéo lại mẻ của xe khác TRƯỚC khi dựng model: getRefuelItem đọc danh sách
+                // others thẳng từ Room, nên nếu không làm mới ở đây thì màn hình đứng trên
+                // bản đã tải từ lần đồng bộ trước, và hoá đơn gộp MIN/MAX trên dữ liệu cũ đó.
+                othersRefresh = DataHelper.refreshOthers(uniqueId);
+
                 //refuelData = DataHelper.getRefuelItem(remoteId, localId);
                 refuelData = DataHelper.getRefuelItem(uniqueId);
                 if (refuelData!=null)
@@ -221,12 +231,33 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             protected void onPostExecute(RefuelItemData itemData) {
                 refuelData = itemData;
                 bindData();
+                warnStaleOthers();
                 super.onPostExecute(itemData);
 
             }
         }.execute();
 
 
+    }
+
+    /**
+     * Báo cho người dùng biết màn hình đang đứng trên dữ liệu cũ của xe khác.
+     *
+     * <p>Chỉ cảnh báo, chưa chặn gì: hiện trường vẫn phải in được khi sóng chập chờn. Nhưng
+     * người dùng cần biết để đối chiếu lại các mẻ trước khi xuất hoá đơn, vì mẻ cũ kéo giờ
+     * bắt đầu trên hoá đơn đi sai mà nhìn từng dòng vẫn thấy hợp lệ.
+     */
+    private void warnStaleOthers() {
+        if (othersRefresh == null || !othersRefresh.hasFailure()) return;
+
+        String message = "Chưa cập nhật được " + othersRefresh.failed + "/"
+                + othersRefresh.total + " mẻ của xe khác. Vui lòng kiểm tra lại dữ liệu"
+                + " các mẻ trước khi xuất hoá đơn.";
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo dữ liệu mẻ xe khác chưa cập nhật: "
+                + othersRefresh.failed + "/" + othersRefresh.total);
+
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     boolean isEditable = true;
@@ -943,10 +974,87 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
         if (validate()) {
 
-            showInvoicePreview();
+            warnInvoiceTimeThen(printItems, this::showInvoicePreview);
 
         }
 
+    }
+
+    /**
+     * Cảnh báo giờ bất thường trước khi xuất hoá đơn rồi chạy tiếp {@code onContinue}.
+     *
+     * <p>Chỉ cảnh báo, chưa chặn: hiện trường có ca ngoại lệ thật và hoá đơn vẫn phải xuất được.
+     * Nhưng hai giá trị sẽ IN LÊN hoá đơn phải hiện ra một lần — trước bản vá này không màn hình
+     * nào cho người dùng thấy chúng, nên phiếu 2619EY0 in giờ bắt đầu 06:34 mà không ai biết cho
+     * tới lúc cầm tờ giấy.
+     */
+    private void warnInvoiceTimeThen(List<RefuelItemData> items, Runnable onContinue) {
+        List<String> issues = new ArrayList<>();
+
+        if (items != null) {
+            for (RefuelItemData item : items) {
+                List<String> outside = RefuelTimeValidator.outsideApproachWindow(item);
+                if (outside.isEmpty()) continue;
+
+                String truckNo = item.getTruckNo();
+                for (String error : outside)
+                    issues.add((truckNo == null || truckNo.isEmpty() ? "(chưa rõ xe)" : truckNo)
+                            + ": " + error);
+            }
+        }
+
+        long span = RefuelTimeValidator.invoiceSpanMs(items);
+        if (span > RefuelTimeValidator.MAX_INVOICE_SPAN_MS)
+            issues.add("Toàn chuyến kéo dài " + span / 60000 + " phút, nhiều khả năng có mẻ mang"
+                    + " giờ cũ chưa được cập nhật.");
+
+        if (issues.isEmpty()) {
+            if (onContinue != null) onContinue.run();
+            return;
+        }
+
+        StringBuilder detail = new StringBuilder();
+        for (String issue : issues) detail.append("\n• ").append(issue);
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo giờ trước khi xuất HĐĐT:"
+                + detail.toString().replace('\n', ' '));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Kiểm tra lại giờ tra nạp")
+                .setMessage("Giờ sẽ in lên hoá đơn:"
+                        + "\n  Bắt đầu:  " + DateUtils.formatDate(invoiceStart(items), "dd/MM HH:mm")
+                        + "\n  Kết thúc: " + DateUtils.formatDate(invoiceEnd(items), "dd/MM HH:mm")
+                        + "\n" + detail
+                        + "\n\nBạn có muốn tiếp tục xuất hoá đơn không?")
+                .setPositiveButton("Tiếp tục", (dialog, which) -> {
+                    Logger.appendLog(LOG_TAG, "Người dùng tiếp tục xuất HĐĐT dù giờ bất thường:"
+                            + detail.toString().replace('\n', ' '));
+                    if (onContinue != null) onContinue.run();
+                })
+                .setNegativeButton("Kiểm tra lại", null)
+                .show();
+    }
+
+    /** Giờ bắt đầu sẽ in lên hoá đơn — cùng phép gộp với {@code InvoiceModel.fromRefuel}. */
+    private Date invoiceStart(List<RefuelItemData> items) {
+        Date min = null;
+        if (items != null)
+            for (RefuelItemData item : items) {
+                Date start = item == null ? null : item.getStartTime();
+                if (start != null && (min == null || start.before(min))) min = start;
+            }
+        return min;
+    }
+
+    /** Giờ kết thúc sẽ in lên hoá đơn — cùng phép gộp với {@code InvoiceModel.fromRefuel}. */
+    private Date invoiceEnd(List<RefuelItemData> items) {
+        Date max = null;
+        if (items != null)
+            for (RefuelItemData item : items) {
+                Date end = item == null ? null : item.getEndTime();
+                if (end != null && (max == null || end.after(max))) max = end;
+            }
+        return max;
     }
 
     private void showInvoicePreview() {
@@ -2077,12 +2185,14 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                             case R.id.refuel_preview_realAmount:
                                 double realAmount = numberFormat.parse(m_Text).doubleValue();
                                 refuelData.setRealAmount(realAmount);
-                                if (BuildConfig.FHS) {
-                                    double vol = refuelData.getRealAmount() * GALLON_TO_LITTER;
-                                    refuelData.setVolume(vol);
-                                    refuelData.setStartNumber(refuelData.getEndNumber() - vol);
-                                } else
-                                    refuelData.setStartNumber(refuelData.getEndNumber() - realAmount);
+                                // Nhánh đồng hồ lít — không còn xe nào dùng; số đồng hồ trừ
+                                // theo gallon. setRealAmount đã tự tính lại số lít.
+                                // if (BuildConfig.FHS) {
+                                //     double vol = refuelData.getRealAmount() * GALLON_TO_LITTER;
+                                //     refuelData.setVolume(vol);
+                                //     refuelData.setStartNumber(refuelData.getEndNumber() - vol);
+                                // } else
+                                refuelData.setStartNumber(refuelData.getEndNumber() - realAmount);
                                 refuelData.setChangeFlag(RefuelItemData.CHANGE_FLAG.GROSS_QTY);
 
 
@@ -2333,10 +2443,27 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                                                   int minute) {
                                 c.set(Calendar.MINUTE, minute);
                                 c.set(Calendar.HOUR_OF_DAY, hourOfDay);
+
+                                // Đường sửa giờ trước đây KHÔNG ghi vết nào: log chỉ có cú
+                                // chạm vào ô, không có giá trị cũ, giá trị mới, hay việc sửa
+                                // có ăn hay không. Nhật ký xe HAN3-20-7005 ngày 25-08-2026 cho
+                                // thấy người dùng chạm ô giờ rồi bấm làm mới bốn lần trong 90
+                                // giây — không cách nào biết họ đã sửa gì.
+                                Date oldValue = id == R.id.refuel_preview_starttime
+                                        ? refuelData.getStartTime() : refuelData.getEndTime();
+
                                 if (id == R.id.refuel_preview_starttime)
                                     refuelData.setStartTime(c.getTime());
                                 else if (id == R.id.refuel_preview_endtime)
                                     refuelData.setEndTime(c.getTime());
+
+                                Logger.appendLog(LOG_TAG, String.format(java.util.Locale.US,
+                                        "Sửa tay %s uid=%s: %s -> %s",
+                                        id == R.id.refuel_preview_starttime
+                                                ? "giờ bắt đầu" : "giờ kết thúc",
+                                        refuelData.getUniqueId(),
+                                        DateUtils.formatDate(oldValue, "dd/MM HH:mm:ss"),
+                                        DateUtils.formatDate(c.getTime(), "dd/MM HH:mm:ss")));
 
                                 updateBinding(false);
                             }

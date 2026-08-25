@@ -408,22 +408,51 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
 
         }
 
-        /**
-         * Báo không tiếp cận được vì còn chuyến chưa bấm Rời đi. Chỉ có nút đóng: đây là
-         * chặn thật, không phải cảnh báo cho qua.
-         */
+        /** Báo chuyến đang chặn và cho phép rời đi ngay trước khi tiếp cận chuyến mới. */
         private void showApproachBlocked(Activity activity, List<RefuelItemData> blocking) {
             if (activity.isFinishing()) return;
 
             Logger.appendLog("APPROACH", "Chặn tiếp cận, còn " + blocking.size()
                     + " chuyến chưa rời đi");
 
-            new AlertDialog.Builder(activity)
+            RefuelItemData blockingItem = blocking.get(0);
+            AlertDialog dialog = new AlertDialog.Builder(activity)
                     .setTitle(R.string.app_name)
                     .setMessage(RefuelApproachGuard.buildMessage(blocking))
-                    .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton(activity.getString(R.string.leave_named_flight,
+                            RefuelApproachGuard.flightName(blockingItem)), (clickedDialog, which) -> {
+                        clickedDialog.dismiss();
+                        leaveBlockingAndApproach(activity, blockingItem);
+                    })
+                    .setNegativeButton("Đã hiểu", (clickedDialog, which) -> clickedDialog.dismiss())
                     .setCancelable(false)
-                    .show();
+                    .create();
+            dialog.setOnShowListener(ignored -> highlightLeaveButton(dialog));
+            dialog.show();
+        }
+
+        private void highlightLeaveButton(AlertDialog dialog) {
+            Button leaveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (leaveButton == null) return;
+            leaveButton.setBackgroundColor(Color.YELLOW);
+            leaveButton.setTextColor(Color.BLACK);
+        }
+
+        private void leaveBlockingAndApproach(Activity activity, RefuelItemData blockingItem) {
+            new Thread(() -> {
+                boolean saved = RefuelApproachGuard.leaveNow(blockingItem);
+                activity.runOnUiThread(() -> {
+                    if (activity.isFinishing()) return;
+                    if (!saved) {
+                        warnIfNotSaved(false);
+                        return;
+                    }
+
+                    // Tiếp tục đúng thao tác người dùng vừa yêu cầu. Nếu dữ liệu lỗi còn nhiều
+                    // chuyến đang mở, lần kiểm tra kế tiếp sẽ hiện chuyến gần nhất còn lại.
+                    binding.btnApproach.performClick();
+                });
+            }).start();
         }
 
         /**

@@ -77,6 +77,33 @@ public final class RefuelApproachGuard {
     }
 
     /**
+     * Ghi giờ rời đi hiện tại cho chuyến đang chặn thao tác tiếp cận.
+     *
+     * <p>Phương thức này chạm Room nên phải gọi ở thread nền. Việc ghi dùng patch trên bản
+     * mới nhất thay vì post lại snapshot trong danh sách, tránh làm mất dữ liệu vừa được đồng
+     * bộ hoặc vừa sửa ở màn hình khác.
+     */
+    public static boolean leaveNow(RefuelItemData blockingItem) {
+        if (blockingItem == null || blockingItem.getUniqueId() == null) return false;
+
+        final Date leaveTime = new Date();
+        try {
+            DataHelper.PatchResult result = DataHelper.patchRefuel(
+                    blockingItem.getUniqueId(), latest -> latest.setLeaveTime(leaveTime));
+            if (result != null && result.applied) {
+                blockingItem.setLeaveTime(leaveTime);
+                Logger.appendLog("APPROACH", "Đã rời đi chuyến đang chặn: "
+                        + blockingItem.getUniqueId());
+                return true;
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("APPROACH", "Không lưu được giờ rời đi chuyến đang chặn: "
+                    + ex.getMessage());
+        }
+        return false;
+    }
+
+    /**
      * Nội dung hộp thoại báo vì sao không bấm tiếp cận được.
      */
     public static String buildMessage(List<RefuelItemData> blocking) {
@@ -91,11 +118,19 @@ public final class RefuelApproachGuard {
         return sb.toString();
     }
 
+    /** Tên ngắn dùng trên nút xử lý nhanh của hộp thoại. */
+    public static String flightName(RefuelItemData item) {
+        if (item == null) return "chưa có số hiệu";
+        String flightCode = item.getFlightCode();
+        return flightCode == null || flightCode.trim().isEmpty()
+                ? "chưa có số hiệu"
+                : flightCode.trim();
+    }
+
     private static String describe(RefuelItemData item) {
         StringBuilder sb = new StringBuilder();
 
-        String flightCode = item.getFlightCode();
-        sb.append(flightCode == null || flightCode.isEmpty() ? "(chưa có số hiệu)" : flightCode);
+        sb.append(flightName(item));
 
         String parkingLot = item.getParkingLot();
         if (parkingLot != null && !parkingLot.isEmpty()) {

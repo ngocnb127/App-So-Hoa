@@ -125,6 +125,18 @@ public final class RefuelSyncGuard {
      */
     public static String mergeByOwnership(String localJson, String remoteJson,
                                           boolean adoptClientOwned) {
+        return mergeByOwnership(localJson, remoteJson, adoptClientOwned, false);
+    }
+
+    /**
+     * @param adoptMeasuredTimes nhận cả {@code StartTime}/{@code EndTime} từ server.
+     *
+     *                           <p>Chỉ đúng cho mẻ của XE KHÁC đã chốt: máy này không đo mẻ đó,
+     *                           nên bản server là nguồn chuẩn duy nhất. Với mẻ của chính máy thì
+     *                           phải để false — lý do ở nhánh {@code adoptClientOwned} bên dưới.
+     */
+    public static String mergeByOwnership(String localJson, String remoteJson,
+                                          boolean adoptClientOwned, boolean adoptMeasuredTimes) {
         if (remoteJson == null || remoteJson.isEmpty()) return localJson;
         if (localJson == null || localJson.isEmpty()) return remoteJson;
 
@@ -147,12 +159,18 @@ public final class RefuelSyncGuard {
             // Hai mốc này chỉ có nghĩa khi thiết bị thật sự bơm; giờ của server không phải
             // là dữ liệu, chỉ là dấu vết của lần sinh phản hồi.
             for (String key : remote.keySet()) {
-                if (DEVICE_MEASURED_TIME_KEYS.contains(key)) continue;
+                if (!adoptMeasuredTimes && DEVICE_MEASURED_TIME_KEYS.contains(key)) continue;
                 overlay(merged, remote, key);
             }
         } else {
             for (String key : SERVER_OWNED_KEYS)
                 overlay(merged, remote, key);
+            // Mẻ của xe khác đã chốt: giờ trên server là giờ xe đó thật sự đo, còn bản local
+            // chỉ là giá trị lúc phân xe. Giữ bản local ở đây chính là đường sinh ra hoá đơn
+            // in giờ bắt đầu 06:34 cho chuyến tra nạp lúc 15:28.
+            if (adoptMeasuredTimes)
+                for (String key : DEVICE_MEASURED_TIME_KEYS)
+                    overlay(merged, remote, key);
         }
 
         // Nhóm định danh/phiên bản không theo quyền sở hữu mà theo luật riêng: định danh đã có
@@ -269,10 +287,20 @@ public final class RefuelSyncGuard {
      */
     public static RefuelItemData applyRemote(RefuelItem localItem, RefuelItemData remote,
                                              boolean adoptClientOwned) {
+        return applyRemote(localItem, remote, adoptClientOwned, false);
+    }
+
+    /**
+     * @param adoptMeasuredTimes nhận cả giờ bắt đầu/kết thúc từ server; chỉ dùng cho mẻ của xe
+     *                           khác đã chốt. Xem {@link #mergeByOwnership(String, String, boolean, boolean)}.
+     */
+    public static RefuelItemData applyRemote(RefuelItem localItem, RefuelItemData remote,
+                                             boolean adoptClientOwned, boolean adoptMeasuredTimes) {
         if (localItem == null || remote == null) return null;
 
         String remoteJson = isBlank(remote.getRawJson()) ? remote.toJson() : remote.getRawJson();
-        String mergedJson = mergeByOwnership(localItem.getJsonData(), remoteJson, adoptClientOwned);
+        String mergedJson = mergeByOwnership(localItem.getJsonData(), remoteJson,
+                adoptClientOwned, adoptMeasuredTimes);
 
         RefuelItemData merged;
         try {
@@ -815,6 +843,30 @@ public final class RefuelSyncGuard {
 
     public static boolean isInconclusive(String ackReason) {
         return LEGACY_PROJECTION_UNKNOWN.equals(ackReason);
+    }
+
+    /**
+     * Chênh lệch DUY NHẤT giữa gói gửi lên và bản server nằm ở mốc giờ do thiết bị đo.
+     *
+     * <p>Đây là thế kẹt giữa hai lớp bảo vệ: server từ chối ghi giờ lên mẻ đã chốt, còn
+     * {@link #mergeByOwnership} từ chối nhận giờ từ server. Không bên nào nhường nên row ở lại
+     * hàng đợi vĩnh viễn. Đo trên xe HAN3-20-7005 ngày 25-08-2026: 90 lượt
+     * {@code CONFLICT:PAYLOAD_MISMATCH} trên 5 phiếu, tất cả đều đúng một cột {@code endTime};
+     * riêng phiếu 2118887 đẩy {@code ServerRevision} từ 17 lên 45 trong 8 giờ.
+     *
+     * <p>Khi mọi trường chốt khác đã khớp, giá trị ta muốn gửi đã nằm trên server rồi. Phần
+     * còn lại là bất đồng về giờ, và với mẻ đã chốt thì bản server mới là bản có hiệu lực —
+     * đó cũng là đường duy nhất để sửa giờ trên web về được tới xe.
+     */
+    public static boolean isOnlyMeasuredTimeDiff(RefuelItemData request, RefuelItemData response) {
+        if (request == null || response == null) return false;
+
+        String diff = describeFinalValueDiff(request, response, request.getStatus());
+        if (diff == null) return false;
+
+        // Chuỗi diff do chính lớp này sinh ra ngay bên dưới nên định dạng ổn định.
+        String withoutTime = diff.replaceAll("(startTime|endTime)\\([^)]*\\)\\s*", "").trim();
+        return withoutTime.isEmpty();
     }
 
     /**

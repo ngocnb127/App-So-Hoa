@@ -1982,13 +1982,13 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     mItem.setEndNumber(numberFormat.parse(((EditText) inputDlg.findViewById(R.id.dialog_meter)).getText().toString()).doubleValue());
                     mItem.setOriginalEndMeter(mItem.getEndNumber());
                     double amount = numberFormat.parse(((EditText) inputDlg.findViewById(R.id.dialog_volume)).getText().toString()).doubleValue();
-                    if (BuildConfig.FHS) {
-                        float gal = Math.round(amount / RefuelItemData.GALLON_TO_LITTER);
-                        mItem.setRealAmount(gal);
-                        mItem.setVolume(amount);
-
-                    } else
-                        mItem.setRealAmount(numberFormat.parse(((EditText) inputDlg.findViewById(R.id.dialog_volume)).getText().toString()).doubleValue());
+                    // Nhánh nhập tay theo LÍT — không còn xe nào dùng đồng hồ lít.
+                    // if (BuildConfig.FHS) {
+                    //     float gal = Math.round(amount / RefuelItemData.GALLON_TO_LITTER);
+                    //     mItem.setRealAmount(gal);
+                    //     mItem.setVolume(amount);
+                    // } else
+                    mItem.setRealAmount(amount);
                     mItem.setTemperature(numberFormat.parse(((EditText) inputDlg.findViewById(R.id.dialog_temperature)).getText().toString()).doubleValue());
                     mItem.setManualTemperature(numberFormat.parse(((EditText) inputDlg.findViewById(R.id.dialog_temperature)).getText().toString()).doubleValue());
                     mItem.setStartNumber(mItem.getEndNumber() - amount);
@@ -2135,6 +2135,16 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     String.format("Comparing: EndNumber=%.0f, Ticket=%.0f, Difference=%.0f",
                             endMeterFromInput, ticketNumValue, difference));
 
+            // Ticket = 0 nghĩa là đồng hồ KHÔNG CÓ số ticket, không phải số ticket bằng 0.
+            // So với 0 thì chênh lệch luôn đúng bằng số đồng hồ — cảnh báo lúc nào cũng nổ và
+            // luôn sai. Đo trên xe HAN3-20-7006 ngày 25-08-2026: mọi mẻ đều nhận
+            // "Ticket Number: 0" rồi báo "chênh lệch 78.514.784 L".
+            if (ticketNumValue <= 0) {
+                Logger.appendLog(LOG_TAG, "Thiết bị không trả số ticket (=0), bỏ qua đối chiếu");
+                finalizStop();
+                return;
+            }
+
             if (difference > 1.0) { // Sai khác > 1 lít
                 showEndNumberMismatchWarning(endMeterFromInput, ticketNumValue, lcrTicketNumber);
             } else {
@@ -2157,8 +2167,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 "Số đồng hồ kết thúc KHÔNG KHỚP với ticket device!\n\n" +
                         "📊 Nhập vào:     %.0f L\n" +
                         "🎫 Ticket device: %s\n" +
-                        "➖ Chênh lệch:     %.0f L\n\n" +
-                        "Bạn muốn tiếp tục hay sửa lại?",
+                        "➖ Chênh lệch:     %.0f L",
                 inputEndNumber,
                 ticketNumberStr,
                 Math.abs(inputEndNumber - deviceTicketNumber)
@@ -2166,16 +2175,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         builder.setMessage(message);
 
-        builder.setPositiveButton("✓ Tiếp Tục", (dialog, which) -> {
-            Logger.appendLog(LOG_TAG, "User confirmed mismatch - continuing");
+        builder.setPositiveButton("ĐÃ HIỂU", (dialog, which) -> {
+            Logger.appendLog(LOG_TAG, "User acknowledged end-meter mismatch warning");
             dialog.dismiss();
             finalizStop();
-        });
-
-        builder.setNegativeButton("✎ Sửa Lại", (dialog, which) -> {
-            Logger.appendLog(LOG_TAG, "User chose to edit - going back to input");
-            dialog.dismiss();
-            showDataInput(true);
         });
 
         builder.setCancelable(false);
@@ -2516,8 +2519,16 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
             // Hàng đợi ghi làm việc trên bản sao, nên phải trả phiên bản mới về cho đối
             // tượng của màn hình, nếu không lần lưu kế tiếp đứng trên baseline cũ.
-            if (RefuelItemData.isCommitted(result))
+            if (RefuelItemData.isCommitted(result)) {
                 source.adoptSaveState(snapshot);
+            } else if (result != null
+                    && result.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                // Lưu bị chặn: màn hình PHẢI đứng lại lên row hiện tại. Nếu không, baseline
+                // cũ ở lại mãi và mọi autosave sau đều hỏng — mỗi giây một lần cho tới khi
+                // rời màn hình. rebaseScreenOnStored chỉ nhận khi payload nghiệp vụ không
+                // đổi, nên xung đột thật vẫn bị chặn nguyên như cũ.
+                DataHelper.rebaseScreenOnStored(source);
+            }
 
             final RefuelItemData delivered = result;
             runOnUiThread(() -> onResult.accept(delivered));
@@ -2727,12 +2738,46 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 Logger.appendLog(LOG_TAG, "Chặn tiếp cận, còn " + blocking.size()
                         + " chuyến chưa rời đi");
 
-                new AlertDialog.Builder(this)
+                RefuelItemData blockingItem = blocking.get(0);
+                AlertDialog dialog = new AlertDialog.Builder(this)
                         .setTitle(R.string.app_name)
                         .setMessage(RefuelApproachGuard.buildMessage(blocking))
-                        .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                        .setPositiveButton(getString(R.string.leave_named_flight,
+                                RefuelApproachGuard.flightName(blockingItem)),
+                                (clickedDialog, which) -> {
+                            clickedDialog.dismiss();
+                            leaveBlockingAndContinue(blockingItem, onAllowed);
+                        })
+                        .setNegativeButton("Đã hiểu", (clickedDialog, which) -> clickedDialog.dismiss())
                         .setCancelable(false)
-                        .show();
+                        .create();
+                dialog.setOnShowListener(ignored -> highlightLeaveButton(dialog));
+                dialog.show();
+            });
+        }).start();
+    }
+
+    private void highlightLeaveButton(AlertDialog dialog) {
+        Button leaveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (leaveButton == null) return;
+        leaveButton.setBackgroundColor(Color.YELLOW);
+        leaveButton.setTextColor(Color.BLACK);
+    }
+
+    private void leaveBlockingAndContinue(RefuelItemData blockingItem, Runnable onAllowed) {
+        new Thread(() -> {
+            boolean saved = RefuelApproachGuard.leaveNow(blockingItem);
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (!saved) {
+                    Logger.appendLog(LOG_TAG, "Không lưu được giờ rời đi cho chuyến đang chặn");
+                    showErrorMessage(R.string.save_leave_time_failed);
+                    return;
+                }
+
+                // Kiểm tra lại thay vì tiếp cận thẳng: dữ liệu cũ có thể chứa hơn một chuyến
+                // chưa rời đi. Khi đã sạch, tiếp tục thao tác mà người dùng vừa yêu cầu.
+                checkApproachAllowed(onAllowed);
             });
         }).start();
     }

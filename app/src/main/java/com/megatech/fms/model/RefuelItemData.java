@@ -473,11 +473,19 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         this.unit = unit;
     }
 
+    /**
+     * Số lít, LUÔN suy từ số gallon.
+     *
+     * <p>Toàn đội xe dùng đồng hồ đo gallon; nhánh đồng hồ đo lít đã bỏ. Nhánh cũ trả thẳng
+     * field {@code volume} chính là nguồn lỗi số lít sai ở gói chốt mẻ (24-08-2026, mẻ 2118503
+     * và 2118695): Gson serialize FIELD chứ không gọi getter, nên chỉ cần một đường ghi đổi
+     * gallon mà quên field là gói tin mang số lít của lần cập nhật trước.
+     */
     public double getVolume() {
-        if (BuildConfig.FHS)
-            return volume;
-        else
-            return Math.round(Math.round(realAmount) * RefuelItemData.GALLON_TO_LITTER);
+        // Nhánh đồng hồ lít — không còn xe nào dùng, giữ lại để đối chiếu khi tra sử.
+        // if (BuildConfig.FHS)
+        //     return volume;
+        return Math.round(Math.round(realAmount) * RefuelItemData.GALLON_TO_LITTER);
     }
 
     public void setVolume(double val)
@@ -706,10 +714,39 @@ public class RefuelItemData extends BaseModel implements Cloneable {
     public void setRealAmount(double realAmount) {
         this.realAmount = Math.round(realAmount);
         this.gallon = this.realAmount;
-        if (!BuildConfig.FHS) {
 
-            this.volume = Math.round(this.realAmount * GALLON_TO_LITTER);
-        }
+        // Tính lại số lít cho MỌI bản dựng, không riêng bản không-FHS.
+        //
+        // Gson serialize FIELD chứ không gọi getter, nên gói tin mang thẳng `volume`. Nhánh
+        // FHS trước đây bỏ qua bước này, `getVolume()` thì tính lại nên màn hình vẫn đúng —
+        // chỉ gói tin gửi lên là mang số lít của lần cập nhật trước. Đo được ngày 24-08-2026
+        // trên hai mẻ ở hai sân bay: gói chốt mẻ 2118503 gửi 5.306 gallon kèm 17.190 lít,
+        // trong khi 17.190 lít là số của 4.541 gallon ở gói ngay trước đó.
+        //
+        // Các đường nhập tay số lít gọi setVolume() NGAY SAU hàm này nên vẫn ghi đè được.
+        this.volume = Math.round(this.realAmount * GALLON_TO_LITTER);
+    }
+
+    /** Lệch quá ngần này lít thì coi là dữ liệu trong bộ nhớ đang mâu thuẫn, không phải làm tròn. */
+    public static final double VOLUME_TOLERANCE_LITTER = 2d;
+
+    /**
+     * Ép lại bất biến {@code Volume = round(Gallon × 3.7854)} ngay trước khi gửi.
+     *
+     * <p>Chốt chặn cấu trúc, không phải chỗ sửa lỗi: nếu một đường ghi nào đó đổi
+     * {@code Gallon} mà quên số lít, gói tin vẫn đi đúng và để lại dấu vết để tìm ra đường đó.
+     *
+     * @return mô tả chênh lệch đã sửa, hoặc null nếu vốn đã khớp.
+     */
+    public String reconcileVolume() {
+        double expected = Math.round(Math.round(realAmount) * GALLON_TO_LITTER);
+        if (Math.abs(volume - expected) <= VOLUME_TOLERANCE_LITTER) return null;
+
+        double before = volume;
+        volume = expected;
+
+        return String.format(java.util.Locale.US,
+                "gallon=%.0f volume_in=%.0f volume_calc=%.0f", realAmount, before, expected);
     }
 
     public double getTemperature() {
@@ -1272,10 +1309,10 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         splitItem.setVolume(vol);
         splitItem.setReceiptNumber(null);
         splitItem.setReceiptCount(0);
-        if (BuildConfig.FHS)
-            splitItem.setEndNumber(this.getStartNumber()+vol);
-        else
-            splitItem.setEndNumber(this.getStartNumber()+gal);
+        // Đồng hồ đo gallon: số đồng hồ cộng theo gallon, không cộng theo lít.
+        // if (BuildConfig.FHS)
+        //     splitItem.setEndNumber(this.getStartNumber()+vol);
+        splitItem.setEndNumber(this.getStartNumber() + gal);
 
         this.setRealAmount(this.getRealAmount() - gal);
         this.setVolume(Math.round(this.getRealAmount()* GALLON_TO_LITTER));

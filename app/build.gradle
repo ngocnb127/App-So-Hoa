@@ -63,10 +63,10 @@ android {
         // Hệ quả: nâng riêng buildDate/patch tạo ra vòng lặp báo-tải-từ chối. Mỗi lần phát
         // hành có đổi mã nguồn PHẢI nâng versionCode. patchNumber chỉ để phân biệt các lần
         // dựng trong cùng một ngày, không thay thế được versionCode.
-        versionCode 111
+        versionCode 114
         def patchNumber = "1"
         def versionNumber = "11"
-        def buildNumber = "6"
+        def buildNumber = "7"
 
         versionName "${versionNumber}.${buildNumber}.${patchNumber}"
 

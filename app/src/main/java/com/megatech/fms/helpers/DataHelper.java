@@ -331,6 +331,82 @@ public class DataHelper {
         return remoteItem;
     }
 
+    /** Kết quả một lượt kéo lại mẻ của xe khác. */
+    public static final class RefreshResult {
+        public final int total;
+        public final int failed;
+
+        RefreshResult(int total, int failed) {
+            this.total = total;
+            this.failed = failed;
+        }
+
+        /** Có mẻ nào không kéo về được hay không. */
+        public boolean hasFailure() {
+            return failed > 0;
+        }
+    }
+
+    /**
+     * Kéo lại bản mới nhất của các mẻ do xe KHÁC thực hiện trên cùng chuyến.
+     *
+     * <p>{@link #getRefuelItem(String)} chỉ gọi HTTP cho mẻ đang mở; danh sách "others" đọc
+     * thẳng từ Room nên nó đứng yên ở bản tải về từ lần đồng bộ trước. Màn hình xuất hoá đơn
+     * gộp giờ bắt đầu/kết thúc bằng MIN/MAX trên chính danh sách đó, nên chỉ cần một mẻ cũ là
+     * hoá đơn mang giờ sai trong khi server đã có dữ liệu đúng — đúng hình dạng sự cố phiếu
+     * 2619EY0 in giờ bắt đầu 06:34 trong khi mẻ sớm nhất bắt đầu 15:28.
+     *
+     * <p>Không kiểm tra trạng thái mạng trước khi gọi: có sóng không đồng nghĩa với gọi được
+     * server. Tín hiệu đáng tin duy nhất là kết quả của chính lượt gọi, nên hàm đếm số mẻ
+     * thất bại và để màn hình quyết định cảnh báo thế nào.
+     *
+     * <p>Chạm mạng và DB, phải gọi ở thread nền.
+     */
+    public static RefreshResult refreshOthers(String uniqueId) {
+        if (uniqueId == null || uniqueId.isEmpty())
+            return new RefreshResult(0, 0);
+
+        List<String> otherIds = new ArrayList<>();
+        synchronized (REFUEL_WRITE_LOCK) {
+            for (RefuelItem item : requireRepository().getOthers(uniqueId)) {
+                String otherId = item.getUniqueId();
+                if (otherId != null && !otherId.isEmpty())
+                    otherIds.add(otherId);
+            }
+        }
+
+        int failed = 0;
+        for (String otherId : otherIds) {
+            // Gọi mạng NGOÀI khoá: giữ khoá ghi suốt một lượt HTTP sẽ chặn cả luồng đồng bộ nền.
+            RefuelItemData remote = requireHttpClient().getRefuelItem(otherId);
+            if (remote == null) {
+                failed++;
+                Logger.appendLog("SYNC", "REFRESH_OTHERS không lấy được uid=" + otherId);
+                continue;
+            }
+
+            synchronized (REFUEL_WRITE_LOCK) {
+                RefuelItem localItem = requireRepository().getRefuel(otherId);
+                if (localItem == null) {
+                    failed++;
+                    continue;
+                }
+                // Mẻ đã chốt và có sản lượng thì giờ trên server là giờ xe đó đo thật; nhận cả
+                // hai mốc giờ. Mẻ chưa chốt thì bỏ qua như cũ, vì server từng trả về đúng thời
+                // điểm sinh phản hồi làm StartTime cho các phiếu chưa hề tra nạp.
+                boolean settled = remote.getStatus() == REFUEL_ITEM_STATUS.DONE
+                        && remote.getRealAmount() > 0;
+
+                applyRemoteToLocal("REFRESH_OTHERS", localItem, remote, settled);
+            }
+        }
+
+        Logger.appendLog("SYNC", String.format(java.util.Locale.US,
+                "REFRESH_OTHERS uid=%s total=%d failed=%d", uniqueId, otherIds.size(), failed));
+
+        return new RefreshResult(otherIds.size(), failed);
+    }
+
     /**
      * Cập nhật một trường metadata trên bản ghi MỚI NHẤT trong Room.
      *
@@ -976,9 +1052,28 @@ public class DataHelper {
                         item.setAttachmentPending(false);
                         requireRepository().insertBM2508(item);
                         Logger.appendLog("BM2508_ATTACHMENT", "Stop retry, missing local attachment. id=" + item.getId());
-                    } else if (attachmentApi.postMultipartBM2508(itemData) != null) {
+                        continue;
+                    }
+
+                    // Model dựng lại từ jsonData, mà jsonData có thể được ghi TRƯỚC khi server
+                    // cấp Id. Cột id của row thì đã đúng (hàng đợi lọc theo id > 0), nên lấy
+                    // từ row xuống — nếu không, gói tin mang Id = 0 và chắc chắn bị từ chối.
+                    if (itemData.getId() == null || itemData.getId() <= 0)
+                        itemData.setId(item.getId());
+
+                    ReceiptAPI.AttachmentOutcome outcome = attachmentApi.send(itemData);
+
+                    if (outcome == ReceiptAPI.AttachmentOutcome.SENT) {
+                        item.setAttachmentPending(false);
+                        item.setJsonData(itemData.toJson());
+                        requireRepository().insertBM2508(item);
+                    } else if (outcome == ReceiptAPI.AttachmentOutcome.GIVE_UP) {
+                        // Gửi lại y hệt cũng hỏng. Dừng hàng đợi để không quay vòng vô hạn;
+                        // ảnh vẫn còn trên máy, gửi lại được bằng tay từ màn hình biểu mẫu.
                         item.setAttachmentPending(false);
                         requireRepository().insertBM2508(item);
+                        Logger.appendLog("BM2508_ATTACHMENT",
+                                "Dừng thử lại gửi ảnh, server từ chối nội dung. id=" + item.getId());
                     }
                 }
                 List<BM2508Model> lstModel = requireHttpClient().getBM2508List();
@@ -1110,6 +1205,46 @@ public class DataHelper {
      * verification backoff thì bỏ qua → không giành được marker in-flight thì bỏ qua →
      * POST trong {@code try} → xoá marker trong {@code finally}.
      */
+    /**
+     * Số xe của máy, hoặc null khi chưa đọc được.
+     *
+     * <p>Đi qua SharedPreferences và Firebase Remote Config, cả hai đều có thể chưa sẵn sàng
+     * (khởi động sớm, môi trường test). Không đọc được thì coi như KHÔNG BIẾT và bỏ qua bộ lọc
+     * xe — thà gửi như cũ còn hơn chặn nhầm toàn bộ hàng đợi.
+     */
+    private static String currentTruckNoSafe() {
+        try {
+            return FMSApplication.getApplication().getTruckNo();
+        } catch (Exception | NoClassDefFoundError ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Mẻ này do xe KHÁC thực hiện — máy không có quyền đẩy nó lên.
+     *
+     * <p>Bản sao mẻ của xe khác nằm sẵn trong Room để dựng phiếu gộp. Nếu một bản sao như vậy
+     * bị đánh dấu {@code localModified}, hàng đợi nền sẽ đẩy nó lên như dữ liệu của mình.
+     * Nhật ký xe HAN3-20-7005 ngày 25-08-2026 bắt được đúng việc này: máy 7005
+     * {@code BACKGROUND_SYNC} mẻ 2119160 của xe HAN3-20-7010 (localId=1625). Server ghi
+     * {@code TruckCode} theo bản ghi nên nhật ký phía server tưởng là 7010 gửi.
+     *
+     * <p>Row được để yên chứ không xoá cờ: nó vẫn là dữ liệu, chỉ là không phải của máy này
+     * để mà gửi. Lượt pull kế tiếp sẽ đưa nó về đúng bản server.
+     */
+    private static boolean isForeignTruckItem(RefuelItem item, String ownTruck) {
+        if (item == null || ownTruck == null || ownTruck.isEmpty()) return false;
+
+        String itemTruck = item.getTruckNo();
+        if (itemTruck == null || itemTruck.isEmpty()) return false;
+        if (itemTruck.equalsIgnoreCase(ownTruck)) return false;
+
+        Logger.appendLog("SYNC", String.format(java.util.Locale.US,
+                "Bỏ qua POST mẻ của xe khác: uid=%s id=%d xe=%s (máy này là %s)",
+                item.getUniqueId(), item.getId(), itemTruck, ownTruck));
+        return true;
+    }
+
     @androidx.annotation.VisibleForTesting
     static void syncModifiedRefuels() {
         List<RefuelItem> modified = requireRepository().getModifiedRefuel();
@@ -1117,7 +1252,11 @@ public class DataHelper {
 
         long now = System.currentTimeMillis();
 
+        String ownTruck = currentTruckNoSafe();
+
         for (RefuelItem item : modified) {
+
+            if (isForeignTruckItem(item, ownTruck)) continue;
 
             if (shouldDeferVerificationSync(item.getUniqueId(), now)) {
                 Logger.appendLog("SYNC", "Defer POST (verification backoff) uid=" + item.getUniqueId());
@@ -1296,6 +1435,16 @@ public class DataHelper {
     }
 
     private static void applyRemoteToLocal(String source, RefuelItem localItem, RefuelItemData remote) {
+        applyRemoteToLocal(source, localItem, remote, false);
+    }
+
+    /**
+     * @param adoptMeasuredTimes nhận cả giờ bắt đầu/kết thúc của bản server. Chỉ đúng cho mẻ do
+     *                           XE KHÁC thực hiện và đã chốt: máy này không đo mẻ đó nên không
+     *                           có gì để bảo vệ, còn giá trị local chỉ là giờ lúc phân xe.
+     */
+    private static void applyRemoteToLocal(String source, RefuelItem localItem, RefuelItemData remote,
+                                           boolean adoptMeasuredTimes) {
         if (localItem == null || remote == null) return;
 
         RefuelItemData before = localItem.toRefuelItemData();
@@ -1325,7 +1474,8 @@ public class DataHelper {
 
         String jsonBeforeMerge = localItem.getJsonData();
 
-        RefuelItemData merged = RefuelSyncGuard.applyRemote(localItem, remote, adoptClientOwned);
+        RefuelItemData merged = RefuelSyncGuard.applyRemote(localItem, remote, adoptClientOwned,
+                adoptMeasuredTimes);
         if (merged == null) {
             Logger.appendLog("SYNC", String.format(java.util.Locale.US,
                     "%s MERGE_FAILED uid=%s — giữ nguyên bản local",
@@ -1686,6 +1836,9 @@ public class DataHelper {
                                             RefuelItemData response) {
         if (localItem == null) return;
 
+        // Thế kẹt giờ: nhường cho server rồi rời hàng đợi, thay vì gửi lại vô hạn.
+        if (adoptServerMeasuredTime(localItem, request, response)) return;
+
         String uid = localItem.getUniqueId();
         String reason = RefuelSyncGuard.describeAck(request, response);
 
@@ -1725,6 +1878,44 @@ public class DataHelper {
                 response == null ? 0 : response.getRealAmount(),
                 response == null ? 0 : response.getEndNumber(),
                 Thread.currentThread().getName()));
+    }
+
+    /**
+     * Nhận giờ của server khi đó là khác biệt duy nhất còn lại, rồi cho row rời hàng đợi.
+     *
+     * <p>Chỉ áp dụng cho mẻ ĐÃ CHỐT ở cả hai phía. Mọi trường chốt khác đã khớp nghĩa là dữ
+     * liệu ta cần gửi đã nằm trên server; giữ row lại chỉ để tranh chấp một mốc giờ mà server
+     * sẽ không bao giờ nhận là quay vòng vô ích — và chặn luôn đường sửa giờ từ web về xe.
+     *
+     * @return true nếu đã xử lý xong, tầng trên không cần đánh dấu conflict nữa.
+     */
+    private static boolean adoptServerMeasuredTime(RefuelItem localItem, RefuelItemData request,
+                                                   RefuelItemData response) {
+        if (request == null || response == null) return false;
+        if (response.getStatus() != REFUEL_ITEM_STATUS.DONE) return false;
+        if (request.getStatus() != REFUEL_ITEM_STATUS.DONE) return false;
+        if (!RefuelSyncGuard.isOnlyMeasuredTimeDiff(request, response)) return false;
+
+        String uid = localItem.getUniqueId();
+
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=ADOPT_SERVER_TIME uid=%s id=%d localId=%d"
+                        + " startTime(%s->%s) endTime(%s->%s) seq=%d rev=%d",
+                uid, localItem.getId(), localItem.getLocalId(),
+                request.getStartTime(), response.getStartTime(),
+                request.getEndTime(), response.getEndTime(),
+                request.getClientSeq(), response.getServerRevision()));
+
+        // Đi qua đúng đường trộn dùng chung, có bật nhận mốc giờ. Row đang dirty nên nhánh
+        // giữ-nhóm-client vẫn chạy: chỉ trường server sở hữu và hai mốc giờ được phủ lên.
+        applyRemoteToLocal("ADOPT_SERVER_TIME", localItem, response, true);
+
+        localItem.setLocalModified(false);
+        localItem.setPostStatus(RefuelItem.ITEM_POST_STATUS.SUCCESS);
+        requireRepository().insertRefuel(localItem);
+        clearConflictStreak(uid);
+
+        return true;
     }
 
     /**
@@ -1886,6 +2077,68 @@ public class DataHelper {
      */
     private static RefuelItemData finishConflict(RefuelItem stored) {
         return finishConflict(stored, false);
+    }
+
+    /**
+     * Đưa đối tượng của MÀN HÌNH đứng lại lên row hiện tại, sau khi một lần lưu bị chặn.
+     *
+     * <p>Không có bước này, một conflict duy nhất đầu độc cả mẻ: màn hình giữ mãi baseline
+     * cũ nên mọi autosave sau đó đều hỏng, mỗi giây một lần, cho tới khi rời màn hình. Đo
+     * trên xe HAN3-20-7006 ngày 25-08-2026: chuyến VN 263 hỏng liên tục 9 phút (~430 lần
+     * lưu trượt), chỉ thoát được nhờ đường EndFieldsPatch lúc chốt mẻ.
+     *
+     * <p>Nguyên nhân là {@link RefuelSyncGuard.SaveDecision#CONFLICT_CLIENT_MOVED}: lượt
+     * ghi nền nhích {@code ClientSeq} của row trong khi màn hình đang mở. Seq chỉ là biến
+     * đếm — nó nhích cả khi không ai đụng vào số liệu nghiệp vụ.
+     *
+     * <p>ĐIỀU KIỆN AN TOÀN, không được nới: chỉ rebase khi vân tay payload nghiệp vụ của
+     * row vẫn ĐÚNG BẰNG vân tay màn hình đã chốt lần trước. Bằng nhau nghĩa là chưa ai sửa
+     * số liệu kể từ đó, nên đứng lên phiên bản mới không ghi đè việc của ai. Khác nhau là
+     * xung đột thật — giữ nguyên chặn, đúng như {@link #finishConflict} đã cảnh báo: nâng
+     * baseline vô điều kiện sẽ cho chính gói vừa bị từ chối vượt precondition ở lần sau.
+     *
+     * @return true nếu đã rebase; false nếu là xung đột thật hoặc không tìm thấy row
+     */
+    public static boolean rebaseScreenOnStored(RefuelItemData screen) {
+        if (screen == null) return false;
+
+        synchronized (REFUEL_WRITE_LOCK) {
+            RefuelItem latest = requireRepository().getRefuel(screen.getId(), screen.getLocalId());
+            if (latest == null) return false;
+
+            String storedFingerprint =
+                    RefuelSyncGuard.businessFingerprintOfJson(latest.getJsonData());
+            String baseFingerprint = screen.getBaseBusinessFingerprint();
+
+            if (baseFingerprint == null || !baseFingerprint.equals(storedFingerprint)) {
+                Logger.appendLog("DTH", String.format(java.util.Locale.US,
+                        "REBASE_SCREEN_REFUSED uid=%s: payload nghiệp vụ đã đổi, xung đột thật",
+                        screen.getUniqueId()));
+                return false;
+            }
+
+            long oldBaseSeq = screen.getBaseClientSeq();
+            int oldBaseRev = screen.getBaseServerRevision();
+
+            screen.setId(latest.getId());
+            if (latest.getUniqueId() != null && !latest.getUniqueId().isEmpty())
+                screen.setUniqueId(latest.getUniqueId());
+            if (latest.getLocalId() > 0) screen.setLocalId(latest.getLocalId());
+            screen.setClientSeq(Math.max(screen.getClientSeq(), latest.getClientSeq()));
+            screen.setServerRevision(
+                    Math.max(screen.getServerRevision(), latest.getServerRevision()));
+
+            screen.setBaseClientSeq(latest.getClientSeq());
+            screen.setBaseServerRevision(latest.getServerRevision());
+            screen.setBaseBusinessFingerprint(storedFingerprint);
+            screen.setBaseJson(latest.getJsonData());
+
+            Logger.appendLog("DTH", String.format(java.util.Locale.US,
+                    "REBASE_SCREEN_AFTER_CONFLICT uid=%s baseSeq=%d->%d baseRev=%d->%d",
+                    screen.getUniqueId(), oldBaseSeq, latest.getClientSeq(),
+                    oldBaseRev, latest.getServerRevision()));
+            return true;
+        }
     }
 
     /**

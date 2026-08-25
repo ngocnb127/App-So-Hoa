@@ -25,8 +25,38 @@ public class ReceiptAPI extends  BaseAPI{
         url = BASE_URL + "/api/receipts";
     }
 
+    /** Kết quả một lượt gửi ảnh — tầng trên cần biết có nên thử lại hay không. */
+    public enum AttachmentOutcome {
+        /** Server đã nhận. */
+        SENT,
+        /** Lỗi tạm (mạng, 5xx): gửi lại lượt sau có thể thành công. */
+        RETRY_LATER,
+        /** Gửi lại y hệt cũng hỏng (chưa có Id, hoặc server chê nội dung): dừng thử lại. */
+        GIVE_UP
+    }
+
     public BM2508Model postMultipartBM2508(BM2508Model model) {
-        if (model == null) return null;
+        return send(model) == AttachmentOutcome.SENT ? model : null;
+    }
+
+    /**
+     * Gửi ảnh và chữ ký của một phiếu BM2508 đã có trên server.
+     *
+     * <p>Bắt buộc phải có {@code Id} do server cấp: endpoint đính kèm gắn tệp vào một phiếu đã
+     * tồn tại, không tạo phiếu mới. Gửi khi {@code Id = 0} thì server trả
+     * {@code HTTP 400 "Missing or invalid BM2508 id"} — đúng lỗi ghi nhận trên xe sáng
+     * 25-08-2026, lặp lại mỗi vòng đồng bộ vì hàng đợi chỉ xoá cờ chờ khi thành công.
+     */
+    public AttachmentOutcome send(BM2508Model model) {
+        if (model == null) return AttachmentOutcome.GIVE_UP;
+
+        // Chốt chặn cuối, đặt ở đây chứ không ở từng chỗ gọi: có ba đường gửi ảnh (ký hãng,
+        // ký Skypec, lưu form) và cả ba đều chạy được trước khi phiếu kịp lên server.
+        if (model.getId() == null || model.getId() <= 0) {
+            Logger.appendLog("BM2508-1", "Chưa gửi ảnh BM2508: phiếu chưa có Id từ server"
+                    + " (số phiếu " + describe(model) + "). Ảnh sẽ gửi sau khi phiếu được đồng bộ.");
+            return AttachmentOutcome.GIVE_UP;
+        }
 
         String uploadUrl = BASE_URL + "/api/bm2508/multipart";
         try {
@@ -54,7 +84,7 @@ public class ReceiptAPI extends  BaseAPI{
             String body = response.body() != null ? response.body().string() : "";
 
             if (response.isSuccessful())
-                return gson.fromJson(body, BM2508Model.class);
+                return AttachmentOutcome.SENT;
 
             // Phân biệt lỗi xác thực với lỗi mạng: tầng trên còn biết có nên thử lại hay không.
             //
@@ -64,11 +94,35 @@ public class ReceiptAPI extends  BaseAPI{
             // server từ chối nội dung, nên chỉ thân phản hồi mới chỉ ra được trường nào sai.
             Logger.appendLog("BM2508-1", (response.code() == 401 ? "SAI XÁC THỰC" : "Lỗi")
                     + " khi gửi ảnh BM2508: HTTP " + response.code()
+                    + " (phiếu " + describe(model) + ")"
                     + " - " + shorten(body));
+
+            // 4xx là server chê NỘI DUNG, không phải trục trặc đường truyền: gửi lại đúng gói
+            // đó sẽ lại hỏng y hệt. Trước đây mọi lỗi đều được coi là tạm nên hàng đợi quay
+            // vòng vô hạn — sáng 25-08 ghi 7 lượt 400 trong 1 giây, và lặp lại mỗi vòng đồng bộ.
+            // Riêng 401 vẫn thử lại: token hết hạn rồi đăng nhập lại là gửi được.
+            boolean clientError = response.code() >= 400 && response.code() < 500;
+            return clientError && response.code() != 401
+                    ? AttachmentOutcome.GIVE_UP
+                    : AttachmentOutcome.RETRY_LATER;
         } catch (Exception ex) {
-            Logger.appendLog("BM2508-1", ex.getMessage());
+            Logger.appendLog("BM2508-1", "Lỗi mạng khi gửi ảnh BM2508 (phiếu "
+                    + describe(model) + "): " + ex.getMessage());
         }
-        return null;
+        return AttachmentOutcome.RETRY_LATER;
+    }
+
+    /** Nhãn nhận dạng phiếu cho log: có gì dùng nấy, để dòng log tự giải thích được. */
+    private static String describe(BM2508Model model) {
+        if (model == null) return "?";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("id=").append(model.getId());
+        if (model.getNumber() != null && !model.getNumber().isEmpty())
+            sb.append(" số=").append(model.getNumber());
+        if (model.getFlightCode() != null && !model.getFlightCode().isEmpty())
+            sb.append(" chuyến=").append(model.getFlightCode());
+        return sb.toString();
     }
 
     /**

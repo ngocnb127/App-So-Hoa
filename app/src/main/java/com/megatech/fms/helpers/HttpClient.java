@@ -578,6 +578,16 @@ public class HttpClient {
                 + " thread=" + Thread.currentThread().getName());
 
         try {
+            // Chốt chặn cuối trước khi serialize: Volume phải khớp Gallon. Đặt ở đây vì đây là
+            // đường DUY NHẤT mọi gói tin phiếu đi qua — cả DIRECT_POST lẫn BACKGROUND_SYNC.
+            // Còn dòng log này nghĩa là còn một đường ghi đổi Gallon mà quên số lít.
+            String volumeFix = refuelData.reconcileVolume();
+            if (volumeFix != null)
+                Logger.appendLog("VOLUME_MISMATCH", String.format(java.util.Locale.US,
+                        "uid=%s seq=%d status=%s %s -> dùng volume_calc",
+                        refuelData.getUniqueId(), refuelData.getClientSeq(),
+                        refuelData.getStatus(), volumeFix));
+
             String parm = gson.toJson(refuelData);
             HttpResponse response = sendPOST(url, parm);
             long elapsed = System.currentTimeMillis() - start;

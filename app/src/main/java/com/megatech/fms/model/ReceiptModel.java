@@ -10,6 +10,7 @@ import com.megatech.fms.FMSApplication;
 import com.megatech.fms.enums.RETURN_UNIT;
 import com.megatech.fms.exceptions.InvalidRefuelTimeException;
 import com.megatech.fms.helpers.DateUtils;
+import com.megatech.fms.helpers.Logger;
 
 import java.time.Year;
 import java.util.ArrayList;
@@ -325,6 +326,15 @@ public class ReceiptModel extends BaseModel {
             model.items = new ArrayList<>();
 
         if (!model.isReturn || itemData.getReturnAmount() > 0) {
+            // Phiếu dựng bằng JSON round-trip nên lấy FIELD `volume`, không gọi getVolume().
+            // Bản ghi lưu trong Room từ trước bản vá có thể còn số lít của lần cập nhật cũ —
+            // ép lại trước khi in để tờ giấy không mang số sai đó ra ngoài.
+            String volumeFix = itemData.reconcileVolume();
+            if (volumeFix != null)
+                Logger.appendLog("VOLUME_MISMATCH", String.format(java.util.Locale.US,
+                        "dựng phiếu uid=%s %s -> dùng volume_calc",
+                        itemData.getUniqueId(), volumeFix));
+
             ReceiptItemModel itemModel = gson.fromJson(itemData.toJson(), ReceiptItemModel.class);
             itemModel.setRefuelItemId(itemData.getUniqueId());
             itemModel.setRefuelId(itemData.getId());

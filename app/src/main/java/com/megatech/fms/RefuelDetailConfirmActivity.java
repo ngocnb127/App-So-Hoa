@@ -304,18 +304,20 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                     break;
                 case R.id.refuel_confirm_end_meter:
                     mItem.setEndNumber(numberFormat.parse(m_Text).doubleValue());
-                    mItem.setStartNumber(mItem.getEndNumber() - (BuildConfig.FHS? mItem.getVolume() :mItem.getRealAmount()));
+                    // Đồng hồ đo gallon: số đồng hồ trừ theo gallon, không trừ theo lít.
+                    // mItem.setStartNumber(mItem.getEndNumber() - (BuildConfig.FHS ? mItem.getVolume() : mItem.getRealAmount()));
+                    mItem.setStartNumber(mItem.getEndNumber() - mItem.getRealAmount());
                     break;
                 case R.id.refuel_confirm_real_amount:
                     double amount = numberFormat.parse(m_Text).doubleValue();
-                    if (BuildConfig.FHS) {
-                        mItem.setVolume(amount);
-                        double gal = Math.round(amount/ RefuelItemData.GALLON_TO_LITTER);
-                        mItem.setRealAmount(gal);
-                        mItem.setGallon(gal);
-                    }
-                    else
-                        mItem.setRealAmount(amount);
+                    // Nhánh nhập tay theo LÍT — không còn xe nào dùng đồng hồ lít.
+                    // if (BuildConfig.FHS) {
+                    //     double gal = Math.round(amount / RefuelItemData.GALLON_TO_LITTER);
+                    //     mItem.setRealAmount(gal);
+                    //     mItem.setGallon(gal);
+                    //     mItem.setVolume(amount);
+                    // }
+                    mItem.setRealAmount(amount);
                     mItem.setStartNumber(mItem.getEndNumber() - amount);
                     break;
                 case R.id.refuel_confirm_return:

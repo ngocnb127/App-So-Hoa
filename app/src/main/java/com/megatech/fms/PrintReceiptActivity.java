@@ -242,14 +242,18 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         try {
             // ← Check từng item, nếu có 1 item thoả mãn thì OK
             boolean found = false;
+            boolean gallonMatched = false;
+            double matchedItemMeter = 0;
 
             if (model != null && model.getItems() != null) {
                 for (ReceiptItemModel item : model.getItems()) {
-                    // ← Item thoả mãn nếu:
-                    // 1. Gallon của item == Gross từ device
-                    // 2. EndNumber của item == Total từ device
-                    if (Math.abs(item.getGallon() - lastReceivedGross) < 0.5 &&
-                            Math.abs(item.getEndNumber() - lastReceivedTotal) < 0.5) {
+                    if (Math.abs(item.getGallon() - lastReceivedGross) >= 0.5) continue;
+
+                    // Lượng nạp khớp — đây chính là mẻ đang in.
+                    gallonMatched = true;
+                    matchedItemMeter = item.getEndNumber();
+
+                    if (Math.abs(item.getEndNumber() - lastReceivedTotal) < 0.5) {
                         found = true;
                         Logger.appendLog("PRINT_CHECK",
                                 "Match found - Item Gallon: " + item.getGallon() +
@@ -257,6 +261,16 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                         break;
                     }
                 }
+            }
+
+            // Chưa đọc xong số đồng hồ tổng thì chưa đối chiếu được. Các trường của LCR về
+            // KHÔNG cùng lúc: đo trên xe HAN3-20-7006 ngày 25-08-2026, hàm này chạy ba lần với
+            // "Gross: 2274, Total: 0" trước khi totalizer về. So EndNumber với 0 thì không bao
+            // giờ khớp, và cảnh báo nổ dù thiết bị hoàn toàn bình thường.
+            if (lastReceivedTotal <= 0) {
+                Logger.appendLog("PRINT_CHECK",
+                        "Chưa đọc xong số đồng hồ tổng, chưa đối chiếu. Gross=" + lastReceivedGross);
+                return;
             }
 
             // Không đọc được lượng mẻ thì KHÔNG đối chiếu được — phải nói ra.
@@ -274,21 +288,28 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                 return;
             }
 
-            // ← Nếu không tìm thấy item nào thoả mãn
-            if (!found && lastReceivedGross > 0) {
-                final String message = String.format(
-                        "⚠️ Không tìm thấy mẻ nạp nào có Gallon = %.0f GL và Meter cuối = %.0f",
-                        lastReceivedGross, lastReceivedTotal
-                );
-                runOnUiThread(() -> {
-                    Toast.makeText(PrintReceiptActivity.this,
-                            message,
-                            Toast.LENGTH_LONG).show();
-                });
-                Logger.appendLog("PRINT_CHECK", "No matching item: " + message);
-            } else if (found) {
+            if (found) {
                 Logger.appendLog("PRINT_CHECK", "Device check passed");
+                return;
             }
+
+            if (gallonMatched) {
+                // Lượng nạp — con số đi vào hoá đơn — đã khớp thiết bị. Chỉ số đồng hồ lệch,
+                // và đó là chuyện bình thường khi nhân viên sửa tay số đồng hồ kết thúc ở màn
+                // xác nhận. Ghi log để còn đối chiếu, nhưng KHÔNG doạ người in bằng câu
+                // "không tìm thấy mẻ nạp nào" trong khi mẻ vẫn ở đó và số lượng vẫn đúng.
+                Logger.appendLog("PRINT_CHECK", String.format(java.util.Locale.US,
+                        "Khớp lượng nạp %.0f GL, lệch số đồng hồ: phiếu=%.0f thiết bị=%.0f",
+                        lastReceivedGross, matchedItemMeter, lastReceivedTotal));
+                return;
+            }
+
+            final String message = String.format(
+                    "⚠️ Lượng nạp trên phiếu không khớp đồng hồ. Đồng hồ báo %.0f GL — kiểm tra lại trước khi in",
+                    lastReceivedGross);
+            runOnUiThread(() -> Toast.makeText(PrintReceiptActivity.this,
+                    message, Toast.LENGTH_LONG).show());
+            Logger.appendLog("PRINT_CHECK", "Không có mẻ nào khớp lượng nạp: " + message);
 
         } catch (Exception e) {
             Logger.appendLog("PRINT_CHECK", "Check device data error: " + e.getMessage());

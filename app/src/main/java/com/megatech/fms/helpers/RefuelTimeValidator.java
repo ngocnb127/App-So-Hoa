@@ -20,6 +20,15 @@ public final class RefuelTimeValidator {
     /** Một mẻ tra nạp thực tế không quá 60 phút; dài hơn gần như chắc chắn là mốc giờ sai. */
     public static final long MAX_DURATION_MS = 60L * 60 * 1000;
 
+    /** Lệch dưới mức này giữa giờ tra nạp và mốc tiếp cận/rời đi coi như thao tác tay, bỏ qua. */
+    public static final long APPROACH_TOLERANCE_MS = 5L * 60 * 1000;
+
+    /**
+     * Khoảng thời gian tra nạp toàn chuyến vượt mức này thì gần như chắc chắn có mẻ mang giờ
+     * cũ: chuyến nhiều xe thực tế kéo dài vài giờ, không phải cả ca.
+     */
+    public static final long MAX_INVOICE_SPAN_MS = 6L * 60 * 60 * 1000;
+
     private static final String TIME_PATTERN = "HH:mm";
 
     private RefuelTimeValidator() {
@@ -79,6 +88,73 @@ public final class RefuelTimeValidator {
             sb.append("\n• ").append(error);
         }
         return sb.toString();
+    }
+
+    /**
+     * Chỉ các lỗi giờ tra nạp nằm ngoài khoảng tiếp cận – rời đi của mẻ.
+     *
+     * <p>Tách khỏi {@link #validate} vì đường xuất hoá đơn đã có cảnh báo riêng cho mẻ quá dài
+     * và cho mẻ thiếu giờ; gọi thẳng {@code validate} ở đó sẽ hiện lại cùng một nội dung hai
+     * lần trong hai hộp thoại liên tiếp.
+     *
+     * <p>Bỏ qua lệch dưới {@link #APPROACH_TOLERANCE_MS}: hiện trường có mẻ ghi tiếp cận sau
+     * giờ bắt đầu vài phút do thao tác tay, cảnh báo những ca đó chỉ làm người dùng quen với
+     * việc bấm bỏ qua.
+     *
+     * @return danh sách mô tả lỗi, rỗng nếu giờ nằm trong khoảng hoặc thiếu mốc để so.
+     */
+    public static List<String> outsideApproachWindow(RefuelItemData item) {
+        List<String> errors = new ArrayList<>();
+        if (item == null) return errors;
+
+        Date start = item.getStartTime();
+        Date end = item.getEndTime();
+        Date approach = item.getApproachTime();
+        Date leave = item.getLeaveTime();
+
+        if (start != null && approach != null
+                && approach.getTime() - start.getTime() > APPROACH_TOLERANCE_MS) {
+            errors.add("Giờ bắt đầu (" + time(start) + ") trước giờ tiếp cận ("
+                    + time(approach) + ").");
+        }
+
+        if (end != null && leave != null
+                && end.getTime() - leave.getTime() > APPROACH_TOLERANCE_MS) {
+            errors.add("Giờ kết thúc (" + time(end) + ") sau giờ rời đi ("
+                    + time(leave) + ").");
+        }
+
+        return errors;
+    }
+
+    /**
+     * Khoảng thời gian toàn chuyến in trên hoá đơn, tính từ mẻ sớm nhất tới mẻ muộn nhất.
+     *
+     * <p>Đây chính là cặp giá trị {@code InvoiceModel.fromRefuel} gộp ra và in lên hoá đơn.
+     * Một mẻ mang giờ bắt đầu cũ sẽ kéo mốc đầu đi rất xa mà từng mẻ nhìn riêng vẫn hợp lệ,
+     * nên phải soi ở mức tổng mới thấy.
+     *
+     * @return khoảng thời gian tính bằng mili giây, hoặc -1 khi không đủ dữ liệu để tính.
+     */
+    public static long invoiceSpanMs(List<RefuelItemData> items) {
+        if (items == null || items.isEmpty()) return -1;
+
+        long min = Long.MAX_VALUE;
+        long max = Long.MIN_VALUE;
+
+        for (RefuelItemData item : items) {
+            if (item == null) continue;
+            Date start = item.getStartTime();
+            Date end = item.getEndTime();
+            if (start == null || end == null) continue;
+
+            min = Math.min(min, start.getTime());
+            max = Math.max(max, end.getTime());
+        }
+
+        if (min == Long.MAX_VALUE || max == Long.MIN_VALUE) return -1;
+
+        return max - min;
     }
 
     /**
