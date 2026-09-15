@@ -195,9 +195,13 @@ public class FMSApplication extends Application implements LifecycleObserver {
     private static UserInfo _user;
     public UserInfo getUser()
     {
-        if (_user == null || _user.getUserId() <=0)
-            _user =  UserInfo.fromSharedPreferences(this);
-        return _user;
+        // Phải so lại với SharedPreferences: hết ca đổi tài khoản thì app không bị tắt, nên
+        // nếu chỉ nạp một lần thì biểu mẫu vẫn ghi tên và API vẫn dùng token của người ca trước.
+        final SharedPreferences preferences = getSharedPreferences("FMS", MODE_PRIVATE);
+        UserInfo cached = _user;
+        if (!UserInfo.isSameSession(cached, preferences.getInt("USER_ID", 0), preferences.getString("TOKEN", "")))
+            _user = cached = UserInfo.fromSharedPreferences(this);
+        return cached;
     }
 
     public String getDeviceIP() {
@@ -223,6 +227,7 @@ public class FMSApplication extends Application implements LifecycleObserver {
 
     public void logout() {
         UserInfo.logout(this);
+        _user = null;
     }
 
     public boolean isLoggedin()

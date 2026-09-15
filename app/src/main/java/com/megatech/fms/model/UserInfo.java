@@ -167,6 +167,22 @@ public class UserInfo {
         user.airportId = sharedPreferences.getInt("AIRPORT_ID", 0);
         return user;
     }
+    /**
+     * Bản UserInfo đang giữ trong bộ nhớ có còn đúng là người đang đăng nhập không.
+     *
+     * <p>Đăng nhập chỉ ghi SharedPreferences; nếu cache không so lại thì hết ca đổi tài khoản
+     * mà không tắt app, mọi biểu mẫu vẫn ghi người tạo/người thực hiện là người ca trước, và
+     * API vẫn gửi token của người ca trước.
+     */
+    public static boolean isSameSession(UserInfo cached, int savedUserId, String savedToken) {
+        if (cached == null || cached.userId <= 0)
+            return false;
+        if (cached.userId != savedUserId)
+            return false;
+        String cachedToken = cached.token == null ? "" : cached.token;
+        return cachedToken.equals(savedToken == null ? "" : savedToken);
+    }
+
     public static void logout(Context ctx){
         SharedPreferences sharedPreferences = ctx.getSharedPreferences("FMS",Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
