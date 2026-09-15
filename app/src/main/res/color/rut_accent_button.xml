@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nút bị khoá phải NHÌN THẤY được là đang khoá. Đặt màu đơn cho textColor/iconTint thì
+     MaterialButton không tự làm mờ, và người dùng bấm mãi một nút chết mà tưởng máy treo. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/rutAccent" android:state_enabled="true" />
+    <item android:alpha="0.38" android:color="@color/rutAccent" />
+</selector>

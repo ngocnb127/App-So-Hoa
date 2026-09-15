@@ -3,12 +3,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.megatech.fms.MainActivity">
 
+    <!--
+      Hai mục luôn hiện trên thanh công cụ vì cùng trả lời một câu hỏi mà người dùng hỏi
+      nhiều nhất giữa ca: "máy có mạng không, và mạng đó đến từ đâu".
+        - action_status: trạng thái đồng bộ dữ liệu của ứng dụng (sẵn có).
+        - action_rut_status: đường Internet đang dùng là của router trên xe hay 4G cá nhân.
+      Năm mục còn lại giữ nguyên như cũ trong menu tràn.
+    -->
     <item
         android:id="@+id/action_status"
         android:icon="@drawable/ic_no_connection"
         android:orderInCategory="100"
         android:title="@string/internet_status"
 
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_rut_status"
+        android:icon="@drawable/ic_rut_router"
+        android:orderInCategory="101"
+        android:title="@string/rut_menu_title"
         app:showAsAction="always" />
 
     <item

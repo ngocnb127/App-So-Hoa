@@ -16,4 +16,21 @@
 
     <color name="colorRed">#FF2222</color>
     <color name="colorWarning">#ff9800</color>
+    <!-- Popup trạng thái Router RUT. Xanh lá đậm là màu nhận dạng của khối thiết bị mạng,
+         cố ý khác colorPrimary để người dùng phân biệt được ngay đây là màn hình hạ tầng
+         chứ không phải nghiệp vụ tra nạp. -->
+    <color name="rutAccent">#0B6B5B</color>
+    <color name="rutOk">#1B8A3F</color>
+    <color name="rutOkSurface">#E4F5EA</color>
+    <color name="rutWarn">#B26A00</color>
+    <color name="rutWarnSurface">#FFF3E0</color>
+    <color name="rutDanger">#C62828</color>
+    <color name="rutDangerSurface">#FDECEA</color>
+    <color name="rutNeutral">#5F6368</color>
+    <color name="rutNeutralSurface">#EEEEEE</color>
+    <color name="rutMetricSurface">#F5F7F6</color>
+    <color name="rutCardStroke">#E0E4E2</color>
+    <color name="rutTextPrimary">#1A1C1B</color>
+    <color name="rutTextSecondary">#5F6368</color>
+    <color name="rutBarEmpty">#D5D9D7</color>
 </resources>

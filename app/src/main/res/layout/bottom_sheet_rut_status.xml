@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Popup trạng thái Router RUT — bản rút gọn.
+
+  Mỗi thẻ chỉ còn MỘT dòng giá trị: người vận hành ngoài sân đỗ liếc một cái là xong, không
+  phải đọc bảng số liệu kỹ thuật. Chi tiết RSRP/RSRQ/SINR và ba dòng dấu tích đã bỏ hẳn.
+
+  Toàn bộ nằm trong NestedScrollView vì trên máy nhỏ và ở cỡ chữ 2.0 nội dung vẫn dài hơn
+  màn hình — cắt mất nút "Đóng" là nhốt người dùng trong popup.
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/colorWhite"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="24dp">
+
+        <!-- Tay nắm kéo: dấu hiệu duy nhất cho biết tấm này kéo xuống được. -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="@color/rutBarEmpty" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_rut_router" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="@string/rut_title"
+                android:textColor="@color/rutTextPrimary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/rut_status_pill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_rut_pill"
+            android:minHeight="40dp"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/rut_state_checking"
+            android:textColor="@color/rutOk"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/rut_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/rut_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ================= Thẻ 1: Thông tin RUT ================= -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/RutCard"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout style="@style/RutRow">
+
+                        <ImageView
+                            style="@style/RutRowIcon"
+                            android:src="@drawable/ic_rut_sim" />
+
+                        <TextView
+                            style="@style/RutSectionTitle"
+                            android:text="@string/rut_info_title" />
+                    </LinearLayout>
+
+                    <!-- Một dòng duy nhất: "Đã kết nối : 4G - Viettel - SIM 1". Ghép ở
+                         runtime và bỏ hẳn thành phần router không trả lời, thay vì để lại
+                         dấu "—" lửng giữa câu. -->
+                    <TextView
+                        android:id="@+id/rut_info_value"
+                        style="@style/RutSummaryValue"
+                        android:text="@string/rut_no_value" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ================= Thẻ 2: cường độ sóng ================= -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/RutCard"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout style="@style/RutRow">
+
+                        <ImageView
+                            style="@style/RutRowIcon"
+                            android:src="@drawable/ic_rut_signal" />
+
+                        <TextView
+                            style="@style/RutSectionTitle"
+                            android:text="@string/rut_signal_title" />
+                    </LinearLayout>
+
+                    <!--
+                      Nhãn hạng tín hiệu nằm RIÊNG một dòng, vạch sóng và số dBm ở dòng dưới.
+
+                      Không gộp cả ba vào một hàng ngang có weight: LinearLayout đo phần
+                      wrap_content trước rồi mới chia phần còn lại, nên ở màn hình 320dp cỡ
+                      chữ 2.0 riêng chữ "Tín hiệu Không xác định" đã ăn hết bề ngang và con
+                      số dBm bị bóp về 0dp.
+                    -->
+                    <TextView
+                        android:id="@+id/rut_signal_rating"
+                        style="@style/RutSummaryValue"
+                        android:text="@string/rut_no_signal" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <!-- Bốn vạch sóng: kích thước cố định theo dp nên không bao giờ
+                             giành chỗ của con số; đổi màu ở runtime theo hạng. -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:importantForAccessibility="no"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:id="@+id/rut_bar_1"
+                                style="@style/RutSignalBar"
+                                android:layout_height="10dp" />
+
+                            <View
+                                android:id="@+id/rut_bar_2"
+                                style="@style/RutSignalBar"
+                                android:layout_height="17dp" />
+
+                            <View
+                                android:id="@+id/rut_bar_3"
+                                style="@style/RutSignalBar"
+                                android:layout_height="24dp" />
+
+                            <View
+                                android:id="@+id/rut_bar_4"
+                                style="@style/RutSignalBar"
+                                android:layout_height="31dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/rut_signal_value"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:textColor="@color/rutTextPrimary"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ================= Thẻ 3: xác minh ================= -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/RutCard"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout style="@style/RutRow">
+
+                        <ImageView
+                            style="@style/RutRowIcon"
+                            android:src="@drawable/ic_rut_shield" />
+
+                        <TextView
+                            style="@style/RutSectionTitle"
+                            android:text="@string/rut_verify_title" />
+                    </LinearLayout>
+
+                    <!-- "Thiết bị kết nối : RUTX50 - Đang sử dụng" kèm dấu tích/dấu chéo.
+                         contentDescription gắn ở runtime để TalkBack đọc được đạt/không đạt. -->
+                    <TextView
+                        android:id="@+id/rut_verify_value"
+                        style="@style/RutSummaryValue"
+                        android:drawablePadding="10dp"
+                        android:text="@string/rut_no_value" />
+
+                    <TextView
+                        android:id="@+id/rut_updated_at"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/rutTextSecondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Thông báo lỗi/hướng dẫn: chỉ hiện khi có việc người dùng phải làm. -->
+        <TextView
+            android:id="@+id/rut_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@color/rutTextSecondary"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rut_button_refresh"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:minHeight="52dp"
+            android:text="@string/rut_refresh"
+            android:textColor="@color/rut_accent_button"
+            app:icon="@drawable/ic_rut_refresh"
+            app:iconGravity="textStart"
+            app:iconTint="@color/rut_accent_button"
+            app:strokeColor="@color/rut_stroke_neutral" />
+
+        <!-- Bước nhẹ trước khi reboot: chỉ dựng lại phiên 4G, Wi-Fi vẫn chạy. Chỉ hiện khi
+             chẩn đoán cho thấy nó có thể giúp. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rut_button_restart_mobile"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="52dp"
+            android:text="@string/rut_restart_mobile"
+            android:textColor="@color/rut_accent_button"
+            android:visibility="gone"
+            app:icon="@drawable/ic_rut_signal"
+            app:iconGravity="textStart"
+            app:iconTint="@color/rut_accent_button"
+            app:strokeColor="@color/rut_accent_button" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rut_button_reboot"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="52dp"
+            android:text="@string/rut_reboot"
+            android:textColor="@color/rut_danger_button"
+            app:icon="@drawable/ic_rut_power"
+            app:iconGravity="textStart"
+            app:iconTint="@color/rut_danger_button"
+            app:strokeColor="@color/rut_danger_button" />
+
+        <!-- Lối thoát khi ghép cặp nhầm hoặc router bị cài lại: không có nút này thì mọi
+             lần đo sau đó bị từ chối vĩnh viễn và cách duy nhất là xoá dữ liệu ứng dụng.
+             Chỉ hiện đúng ở ca đó. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rut_button_repair"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="52dp"
+            android:text="@string/rut_repair"
+            android:textColor="@color/rut_accent_button"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rut_button_close"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="52dp"
+            android:backgroundTint="@color/rutNeutralSurface"
+            android:text="@string/rut_close"
+            android:textColor="@color/rutTextPrimary" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

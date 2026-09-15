@@ -182,6 +182,15 @@ android {
 
     }
 
+    // Test JVM chạy bằng Robolectric cần bảng tài nguyên thật, nếu không mọi lần
+    // getString() trong code được test đều ném Resources$NotFoundException — lỗi của hạ
+    // tầng test chứ không phải của code.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
     dataBinding {
         enabled = true
     }
@@ -220,6 +229,9 @@ dependencies {
     //implementation 'com.google.firebase:firebase-messaging:20.1.0'
     //implementation 'com.android.volley:dc-volley:1.1.0'
     implementation 'com.google.code.gson:gson:2.8.6'
+    // Tài khoản quản trị router RUT là bí mật thật (đổi được cấu hình mạng của cả xe), nên
+    // lưu bằng kho có khoá nằm trong Android Keystore chứ không phải SharedPreferences.
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     implementation project(path: ':tcpclient')
     implementation 'android.arch.lifecycle:extensions:1.1.1'
     implementation 'androidx.room:room-common:2.6.1'

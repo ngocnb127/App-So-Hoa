@@ -304,6 +304,19 @@ public class UserBaseActivity extends BaseActivity {
 
     }
 
+    /**
+     * Mở popup trạng thái router RUT.
+     *
+     * <p>Chỉ mở một bản: người dùng bấm nhanh hai lần trên thanh công cụ sẽ chồng hai popup
+     * cùng gọi router, vừa tốn phiên đăng nhập vừa để lại một tấm nền không đóng được.
+     */
+    public void showRutStatus() {
+        if (getSupportFragmentManager().findFragmentByTag(
+                com.megatech.fms.rut.RutStatusBottomSheet.TAG) != null) return;
+        com.megatech.fms.rut.RutStatusBottomSheet.newInstance()
+                .show(getSupportFragmentManager());
+    }
+
     protected Menu optionMenu;
 
     @Override
@@ -325,6 +338,9 @@ public class UserBaseActivity extends BaseActivity {
         switch (id) {
 
 
+            case R.id.action_rut_status:
+                showRutStatus();
+                break;
             case R.id.action_info:
                 showUpdate();
                 break;

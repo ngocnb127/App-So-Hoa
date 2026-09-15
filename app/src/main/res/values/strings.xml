@@ -698,4 +698,107 @@
         <item>Sai hành trình</item>
         <item>Lý do khác</item>
     </string-array>
+    <!-- ==================== Popup trạng thái Router RUT ==================== -->
+    <string name="rut_menu_title">Trạng thái Router RUT</string>
+    <string name="rut_title">Trạng thái Router RUT</string>
+
+    <string name="rut_state_checking">Đang kiểm tra kết nối…</string>
+    <string name="rut_state_verified">Đang dùng Internet qua RUT</string>
+    <string name="rut_state_no_internet">Đã nối RUT nhưng Router mất Internet</string>
+    <string name="rut_state_phone_cellular">Điện thoại đang dùng 4G/5G riêng</string>
+    <string name="rut_state_not_connected">Chưa kết nối Wi-Fi của Router</string>
+    <string name="rut_state_auth_failed">Không đăng nhập được Router</string>
+    <string name="rut_state_unreachable">Không kết nối được Router RUT</string>
+    <string name="rut_state_rebooting">Router đang khởi động lại…</string>
+    <string name="rut_state_unknown">Chưa xác định</string>
+
+    <string name="rut_mobile_connection">Kết nối di động</string>
+    <string name="rut_active_sim">SIM đang dùng</string>
+    <string name="rut_operator">Nhà mạng</string>
+    <string name="rut_signal_strength">Cường độ sóng</string>
+    <string name="rut_verification">Xác minh đường truyền</string>
+
+    <string name="rut_check_wifi">Đã kết nối Wi-Fi của RUT</string>
+    <string name="rut_check_identity">Đúng thiết bị RUT</string>
+    <string name="rut_check_internet">Internet đang đi qua Router</string>
+
+    <string name="rut_connected">Đã kết nối</string>
+    <string name="rut_disconnected">Chưa kết nối</string>
+    <string name="rut_sim_slot">SIM %1$d</string>
+    <string name="rut_no_value">—</string>
+    <string name="rut_dbm">%1$d dBm</string>
+    <string name="rut_db">%1$d dB</string>
+    <string name="rut_metric_rsrp">RSRP %1$s</string>
+    <string name="rut_metric_rsrq">RSRQ %1$s</string>
+    <string name="rut_metric_sinr">SINR %1$s</string>
+    <string name="rut_metric_rssi">RSSI %1$s</string>
+
+    <string name="rut_signal_excellent">Rất tốt</string>
+    <string name="rut_signal_good">Tốt</string>
+    <string name="rut_signal_fair">Trung bình</string>
+    <string name="rut_signal_weak">Yếu</string>
+    <string name="rut_signal_very_weak">Rất yếu</string>
+    <string name="rut_signal_unknown">Không xác định</string>
+
+    <string name="rut_updated_just_now">Cập nhật vài giây trước</string>
+    <string name="rut_updated_at">Cập nhật lúc %1$s</string>
+
+    <string name="rut_refresh">Làm mới</string>
+    <string name="rut_reboot">Khởi động lại Router</string>
+    <string name="rut_close">Đóng</string>
+
+    <string name="rut_reboot_confirm_title">Khởi động lại Router?</string>
+    <string name="rut_reboot_confirm_message">Kết nối Internet sẽ bị gián đoạn trong vài phút. Bạn có chắc muốn tiếp tục?</string>
+    <string name="rut_reboot_confirm_ok">Khởi động lại</string>
+    <string name="rut_reboot_confirm_cancel">Hủy</string>
+
+    <string name="rut_error_auth">Không thể đăng nhập Router. Vui lòng kiểm tra tài khoản quản trị.</string>
+    <string name="rut_error_not_connected">Hãy kết nối Wi-Fi của Router RUT rồi thử lại.</string>
+    <string name="rut_error_phone_cellular">Điện thoại đang dùng dữ liệu di động thay vì Internet từ Router. Hãy tắt dữ liệu di động rồi thử lại.</string>
+    <string name="rut_error_unreachable">Không kết nối được Router RUT. Hãy kiểm tra Wi-Fi rồi thử lại.</string>
+    <string name="rut_error_wrong_router">Không đúng Router đã ghép cặp với thiết bị này.</string>
+    <string name="rut_error_no_signal_data">Router chưa cung cấp dữ liệu tín hiệu.</string>
+    <string name="rut_error_reboot_timeout">Đã gửi yêu cầu. Router có thể vẫn đang khởi động lại.</string>
+    <string name="rut_reboot_in_progress">Router đang khởi động lại, quá trình mất khoảng 2–4 phút. Giữ nguyên màn hình này để theo dõi.</string>
+    <string name="rut_check_pass">đạt</string>
+    <string name="rut_check_fail">không đạt</string>
+    <string name="rut_repair">Ghép cặp lại Router</string>
+    <string name="rut_repair_confirm_title">Ghép cặp lại Router?</string>
+    <string name="rut_repair_confirm_message">Ứng dụng sẽ quên router đã ghi nhớ và nhận router đang trả lời làm router của xe này. Chỉ làm khi bạn vừa thay router hoặc router vừa được cài lại.</string>
+    <string name="rut_stale_data">Số liệu dưới đây là bản trước khi khởi động lại.</string>
+
+    <!-- Bản rút gọn: mỗi khối chỉ còn MỘT dòng người dùng cần đọc. -->
+    <string name="rut_connected_to_truck">Kết nối với xe</string>
+    <string name="rut_connected_to_truck_named">Kết nối với xe · %1$s</string>
+    <string name="rut_info_title">Thông tin RUT</string>
+    <string name="rut_signal_title">Cường độ sóng</string>
+    <string name="rut_verify_title">Xác minh</string>
+    <string name="rut_device_connected">Thiết bị kết nối</string>
+    <string name="rut_in_use">Đang sử dụng</string>
+    <string name="rut_not_in_use">Không sử dụng</string>
+    <string name="rut_signal_prefix">Tín hiệu %1$s</string>
+    <string name="rut_no_sim">Không có SIM</string>
+    <string name="rut_sim_pin_locked">SIM khoá PIN</string>
+    <string name="rut_sim_no_network">SIM chưa vào được mạng</string>
+    <string name="rut_no_signal">Chưa bắt được sóng</string>
+    <string name="rut_labeled_value">%1$s : %2$s</string>
+    <string name="rut_restart_mobile">Khởi động lại kết nối 4G</string>
+    <string name="rut_state_restarting_mobile">Đang khởi động lại kết nối 4G…</string>
+    <string name="rut_restart_mobile_in_progress">Router đang dựng lại kết nối 4G, Wi-Fi của Router vẫn giữ nguyên. Ứng dụng sẽ tự kiểm tra lại trong khoảng 1 phút.</string>
+    <string name="rut_stale_data_restart">Số liệu dưới đây là bản trước khi khởi động lại kết nối 4G.</string>
+    <string name="rut_error_restart_failed">Router không nhận lệnh khởi động lại kết nối 4G.</string>
+    <string name="rut_error_no_modem">Không đọc được modem của Router nên chưa gửi được lệnh.</string>
+    <string name="rut_state_server_unreachable">Router có Internet, máy chủ FMS không phản hồi</string>
+    <string name="rut_cause_data_off">Dữ liệu di động của Router đang bị tắt (thường do tin nhắn điều khiển “mobileoff”). Báo quản trị bật lại.</string>
+    <string name="rut_cause_no_sim">Router không nhận SIM. Rút SIM ra, lau chân tiếp xúc rồi cắm lại.</string>
+    <string name="rut_cause_sim_pin">SIM đang khoá PIN. Báo quản trị mở khoá SIM.</string>
+    <string name="rut_cause_sim_not_registered">SIM chưa vào được mạng: có thể hết tiền, bị khoá hoặc ngoài vùng phủ sóng. Rút cắm lại không giải quyết được — báo quản trị kiểm tra SIM.</string>
+    <string name="rut_cause_sim_other">Router đang gặp lỗi SIM. Báo quản trị kiểm tra SIM.</string>
+    <string name="rut_cause_data_limit">Router đã dùng hết hạn mức dữ liệu cài trên Router nên tự chặn Internet. Báo quản trị xoá hoặc nâng hạn mức.</string>
+    <string name="rut_cause_connection_not_ready">Router chưa dựng xong kết nối 4G. Bấm “Khởi động lại kết nối 4G”.</string>
+    <string name="rut_cause_mobile_no_traffic">Router đã kết nối 4G nhưng không ra được Internet — thường do SIM hết tiền, hết gói dữ liệu, hoặc phiên 4G bị treo. Bấm “Khởi động lại kết nối 4G”; nếu vẫn lỗi, báo quản trị kiểm tra tài khoản SIM.</string>
+    <string name="rut_cause_dns">Router ra được Internet nhưng không tra được tên máy chủ (lỗi DNS). Bấm “Khởi động lại kết nối 4G”.</string>
+    <string name="rut_cause_app_server">Router vẫn có Internet; chỉ máy chủ FMS không phản hồi. Không cần khởi động lại Router — thử lại sau ít phút hoặc báo bộ phận hỗ trợ.</string>
+    <string name="rut_cause_unknown">Đã kết nối Router nhưng Router chưa có Internet. Thử “Khởi động lại kết nối 4G”; nếu vẫn lỗi, khởi động lại Router.</string>
+    <string name="rut_value_separator" translatable="false">" - "</string>
 </resources>
