@@ -2627,6 +2627,14 @@ public class DataHelper {
         return requireRepository().getTruckFuels(date);
     }
 
+    /**
+     * Số phiếu hoá nghiệm cho các chuyến tiếp theo, tính lại từ các phiếu 2502 còn trong máy.
+     * Chạm Room nên phải gọi ngoài luồng giao diện. {@code null} nghĩa là giữ nguyên số hiện hành.
+     */
+    public static String qcNoForNextFlights(int truckId) {
+        return TruckFuelQcPolicy.qcNoForNextFlights(requireRepository().getAllTruckFuels(), truckId);
+    }
+
     public static void postTruckFuel(TruckFuelModel model) {
         TruckFuel localModel = TruckFuel.fromTruckFuelModel(model);
         localModel.setLocalModified(true);

@@ -121,12 +121,17 @@ public class B2502Activity extends UserBaseActivity implements OnClickListener, 
                         @Override
                         protected List<TruckFuelModel> doInBackground(Void... voids) {
                             DataHelper.deleteTruckFuels(ids);
+                            // Xoá phiếu mới nhất thì số phiếu hoá nghiệm quay về phiếu còn lại
+                            // mới nhất (luật 2026-09-16). Room không đọc được từ luồng giao diện.
+                            qcNoAfterDelete = DataHelper.qcNoForNextFlights(currentApp.getTruckId());
                             List<TruckFuelModel> lst = DataHelper.getTruckFuels(selectedDate);
                             return lst;
                         }
 
                         @Override
                         protected void onPostExecute(List<TruckFuelModel> models) {
+                            if (qcNoAfterDelete != null)
+                                currentApp.setQCNo(qcNoAfterDelete);
                             truckFuelModels = models;
                             bindData();
                         }
@@ -180,6 +185,9 @@ public class B2502Activity extends UserBaseActivity implements OnClickListener, 
     }
 
     public List<UserModel> userList = null;
+
+    /** Số phiếu hoá nghiệm sau khi xoá, tính trên luồng nền. */
+    private String qcNoAfterDelete;
 
 
 

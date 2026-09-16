@@ -375,6 +375,15 @@ public class DataRepository {
         return returnList;
     }
 
+    /** Toàn bộ phiếu 2502 còn trong máy, không giới hạn ngày (dùng để tìm phiếu mới nhất). */
+    public List<TruckFuelModel> getAllTruckFuels() {
+        List<TruckFuelModel> returnList = new ArrayList();
+        for (TruckFuel item : db.truckFuelDao().getAll()) {
+            returnList.add(item.toTruckFuelModel());
+        }
+        return returnList;
+    }
+
     public void insertTruckFuel(TruckFuel model) {
         // Đọc rồi ghi trong một giao dịch: nếu worker đồng bộ vừa gắn id server vào dòng
         // giữa hai bước, bản lưu này không được ghi id = 0 đè lại (sẽ POST tạo phiếu trùng).

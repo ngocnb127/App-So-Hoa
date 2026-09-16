@@ -286,6 +286,9 @@ public class B2502NewItemFragement extends DialogFragment {
             protected Boolean doInBackground(Void... voids) {
                 try {
                     DataHelper.postTruckFuel(model);
+                    // Tính ngay trên luồng nền: Room không đọc được từ luồng giao diện.
+                    qcNoForNextFlights = DataHelper.qcNoForNextFlights(
+                            FMSApplication.getApplication().getTruckId());
                     return true;
                 } catch (Exception ex) {
                     Logger.appendLog("B2502", "Save failed: " + ex.getMessage());
@@ -301,15 +304,17 @@ public class B2502NewItemFragement extends DialogFragment {
                     return;
                 }
 
-                // QC No gần nhất phải phản ánh cả thao tác tạo mới lẫn chỉnh sửa.
-                activity.currentApp.setQCNo(model.getQcNo());
-
                 if (isNewRecord) {
                     if (!model.getFullVolumn())
                         activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo());
                     else
                         activity.currentApp.setInventory((float) Math.round(model.getAmount()), model.getQcNo(), model.getFullVolumn());
                 }
+
+                // Số cho các chuyến tiếp theo là số của phiếu 2502 MỚI NHẤT, không phải của phiếu
+                // vừa lưu: sửa một phiếu cũ không được kéo số quay ngược lại (luật 2026-09-16).
+                if (qcNoForNextFlights != null)
+                    activity.currentApp.setQCNo(qcNoForNextFlights);
                 activity.loaddata();
                 dlg.dismiss();
             }
@@ -398,6 +403,8 @@ public class B2502NewItemFragement extends DialogFragment {
     }
     private String m_Text = "";
     private String m_Title = "";
+    /** Số phiếu hoá nghiệm cho các chuyến sau, tính trên luồng nền lúc lưu. */
+    private String qcNoForNextFlights;
 
     private void showEditDialog(final int id, int inputType) {
         showEditDialog(id, inputType, ".*");
