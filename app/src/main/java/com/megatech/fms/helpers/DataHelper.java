@@ -567,6 +567,11 @@ public class DataHelper {
         return syncPending.get();
     }
 
+    @androidx.annotation.VisibleForTesting
+    static boolean isSyncProcessing() {
+        return processing.get();
+    }
+
     public static void unlockSync() {
         syncLocked.set(false);
         Logger.appendLog("SYNC", "UNLOCK sync"
@@ -866,13 +871,12 @@ public class DataHelper {
                         TruckFuelModel newData = requireHttpClient().postTruckFuel(itemData);
                         if (newData != null) {
                             // Giữ payload local đầy đủ; response POST của API có thể chỉ trả một phần field.
-                            item.setId(newData.getId());
-                            itemData.setId(newData.getId());
-                            item.setJsonData(itemData.toJson());
-                            item.setLocalModified(false);
-                            requireRepository().insertTruckFuel(item);
+                            // Không ghi lại `item`: đó là bản chụp trước khi gửi, người dùng có thể
+                            // đã lưu bản sửa trong lúc gói còn trên đường.
+                            boolean settled = requireRepository().markTruckFuelSynced(item, newData.getId());
                             Logger.appendLog("B2502", "Synced localId=" + item.getLocalId()
-                                    + ", responseId=" + newData.getId());
+                                    + ", responseId=" + newData.getId()
+                                    + (settled ? "" : ", có bản lưu mới trong lúc gửi -> giữ chờ gửi"));
                         }
                     }
                 }

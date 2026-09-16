@@ -73,7 +73,9 @@ public class B2502NewItemFragement extends DialogFragment {
         B2502NewItemFragement fragment = new B2502NewItemFragement();
         if (model != null) {
             Bundle args = new Bundle();
-            args.putSerializable(ARG_MODEL, model);
+            // Bundle chưa bị tuần tự hoá sẽ trả lại đúng object này. Truyền thẳng dòng của danh
+            // sách thì bấm Quay lại (hoặc Lưu bị chặn) vẫn để giá trị chưa lưu hiện trên danh sách.
+            args.putSerializable(ARG_MODEL, model.copy());
             fragment.setArguments(args);
         }
         return fragment;

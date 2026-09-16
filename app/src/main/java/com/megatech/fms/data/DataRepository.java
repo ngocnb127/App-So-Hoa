@@ -376,27 +376,64 @@ public class DataRepository {
     }
 
     public void insertTruckFuel(TruckFuel model) {
-        TruckFuel item = db.truckFuelDao().get(model.getId(), model.getLocalId());
+        // Đọc rồi ghi trong một giao dịch: nếu worker đồng bộ vừa gắn id server vào dòng
+        // giữa hai bước, bản lưu này không được ghi id = 0 đè lại (sẽ POST tạo phiếu trùng).
+        db.runInTransaction(() -> {
+            TruckFuel item = db.truckFuelDao().get(model.getId(), model.getLocalId());
 
-        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
-            db.truckFuelDao().insert(model);
-        } else {
-            model.setLocalId(item.getLocalId());
-            if (model.getId() == 0) {
-                model.setId(item.getId());
+            if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
+                db.truckFuelDao().insert(model);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0) {
+                    model.setId(item.getId());
+                }
+                db.truckFuelDao().update(model);
             }
-            db.truckFuelDao().update(model);
-        }
+        });
+    }
+
+    /**
+     * Ghi kết quả POST phiếu 2502 mà không đè bản người dùng lưu trong lúc gói còn đang gửi.
+     *
+     * <p>Trước đây worker ghi lại nguyên bản chụp đã gửi và xoá cờ chờ gửi: sửa số phiếu hoá
+     * nghiệm đúng lúc đó thì bản sửa mất khỏi máy và không bao giờ lên server.
+     *
+     * @param posted bản chụp đúng như đã gửi lên server
+     * @return true nếu dòng vẫn là bản đã gửi (đã xoá cờ chờ gửi); false nếu có bản mới hơn
+     *         (chỉ gắn id server, giữ cờ để lượt sau gửi tiếp) hoặc dòng không còn
+     */
+    public boolean markTruckFuelSynced(TruckFuel posted, int serverId) {
+        return db.runInTransaction(() -> {
+            TruckFuel current = db.truckFuelDao().get(0, posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                TruckFuelModel synced = current.toTruckFuelModel();
+                current.setJsonData(synced.toJson());
+                current.setLocalModified(false);
+            }
+            db.truckFuelDao().update(current);
+            return unchanged;
+        });
     }
 
     public void mergeRemoteTruckFuel(TruckFuel remote) {
-        TruckFuel local = db.truckFuelDao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.truckFuelDao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.truckFuelDao().update(remote);
-        }
+        // Kiểm tra cờ chờ gửi và ghi phải liền một khối, không để lần lưu của người dùng chen giữa.
+        db.runInTransaction(() -> {
+            TruckFuel local = db.truckFuelDao().get(remote.getId(), remote.getLocalId());
+            if (local == null) {
+                db.truckFuelDao().insert(remote);
+            } else if (!local.isLocalModified()) {
+                remote.setLocalId(local.getLocalId());
+                db.truckFuelDao().update(remote);
+            }
+        });
     }
 
 

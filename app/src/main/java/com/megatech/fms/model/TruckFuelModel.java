@@ -221,5 +221,19 @@ public class TruckFuelModel extends BaseModel {
         this.FullVolumn = FullVolumn;
     }
 
-
+    /** Bản sao độc lập, giữ nguyên từng trường (kể cả null), để sửa mà không đụng bản gốc. */
+    public TruckFuelModel copy() {
+        try {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            try (java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(bytes)) {
+                out.writeObject(this);
+            }
+            try (java.io.ObjectInputStream in = new java.io.ObjectInputStream(
+                    new java.io.ByteArrayInputStream(bytes.toByteArray()))) {
+                return (TruckFuelModel) in.readObject();
+            }
+        } catch (java.io.IOException | ClassNotFoundException ex) {
+            throw new IllegalStateException("Không sao chép được phiếu 2502", ex);
+        }
+    }
 }
