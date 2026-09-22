@@ -143,12 +143,12 @@ public class A2307NewItemFragement extends DialogFragment {
         this.model.setResult49("Đ");
         this.model.setResult50("Đ");
 
-        this.model.Note7 ="Không móp méo,nứt vỡ,bất thường";
-        this.model.Note8 ="Bằng mắt lốp không xẹp,phồng rộp,nứt, mòn quá thời hạn";
+        this.model.Note7 ="Không móp méo, nứt vỡ, bất thường";
+        this.model.Note8 ="Bằng mắt lốp không xẹp, phồng rộp, nứt, mòn quá giới hạn";
         this.model.Note1 ="Kẹp không bị hư hỏng, dây không bị đứt";
-        this.model.Note2 ="Không bị đứt,mờ số niêm";
+        this.model.Note2 ="Không bị đứt, mờ số niêm";
         this.model.Note32 ="Kiểm tra lần lượt quay vòng các vị trí interlock trên xe tra nạp";
-        this.model.Note44 ="Tình trạng dây đai an toàn,các bản lề,chốt khóa...tra mỡ nếu cần";
+        this.model.Note44 ="Tình trạng dây đai an toàn, các bản lề, chốt khóa... tra mỡ nếu cần";
         this.model.Note17 ="Không bị mòn quá giới hạn và không có hư hỏng và bị rò chảy";
         this.model.Note4 ="Vòng đai không bị mòn quá 4cm và không có các hư hỏng bất thường";
         this.model.Note3 ="Kẹp không bị hư hỏng, dây không bị đứt";
@@ -157,30 +157,30 @@ public class A2307NewItemFragement extends DialogFragment {
         this.model.Note21 ="Vệ sinh sạch sẽ";
         this.model.Note50 ="Không có nước và cặn bẩn";
         this.model.Note12 ="Nằm trong mức quy định";
-        this.model.Note13 ="Xả sạch nước";
+        this.model.Note13 ="Xả sạch nước. Kiểm tra rò rỉ dầu DO và khắc phục rò rỉ nếu có";
         this.model.Note14 ="Nằm trong mức quy định";
         this.model.Note15 ="Nằm trong mức quy định";
         this.model.Note16 ="Nằm trong mức quy định";
         this.model.Note19 ="Nằm trong mức quy định";
-        this.model.Note18 ="Không có hư hỏng bất thường,vị trí kết nối đảm bảo";
+        this.model.Note18 ="Không có hư hỏng bất thường, vị trí kết nối đảm bảo";
         this.model.Note5 ="C&B";
         this.model.Note6 ="C&B";
         this.model.Note20 ="Xả sạch nước";
         this.model.Note9 ="Không có hư hỏng bất thường";
-        this.model.Note10 ="Không bị rò rỉ,có nắp đậy,niên chì";
+        this.model.Note10 ="Không bị rò rỉ, có nắp đậy, niêm chì";
         this.model.Note41 ="Đảm bảo tiếp xúc tốt với thân xe và mặt đất";
-        this.model.Note11 ="Có 03 bình cứu hỏa,chỉ vạch xanh";
+        this.model.Note11 ="Có 02 cứu hỏa, chỉ vạch xanh";
         this.model.Note40 ="Có đủ";
         this.model.Note46 ="Có thể hiện số trên màn hình LCR";
         this.model.Note47 ="Lên nguồn và sử dụng bình thường";
         this.model.Note48 ="In được hóa đơn bình thường";
-        this.model.Note49 ="Sử dụng máy tính bảng kết nối được với LCR, Kết nối được với máy in, Kết nối được ineternet";
-        this.model.Note25 ="Xem có bất thường không,nhiệt độ nước làm mát,áp suất dầu bôi trơn";
-        this.model.Note26 ="Không bị rạn nứt,hoạt động bình thường";
+        this.model.Note49 ="Sử dụng máy tính bảng kết nối được với LCR, kết nối được với máy in, kết nối được internet";
+        this.model.Note25 ="Xem có bất thường không, nhiệt độ nước làm mát, áp suất dầu bôi trơn..";
+        this.model.Note26 ="Không bị rạn nứt, hoạt động bình thường";
         this.model.Note27 ="Không có hư hỏng bất thường";
-        this.model.Note34 ="▲P =";
-        this.model.Note35 ="Bộ đếm  hoạt động bình thường, có đủ niêm phong chì";
-        this.model.Note36 ="Bơm hoạt động bình thường không bị dò rỉ";
+        this.model.Note34 ="ΔP = ";
+        this.model.Note35 ="Bộ đếm hoạt động bình thường, có đủ niêm phong chì";
+        this.model.Note36 ="Bơm hoạt động bình thường, không bị rò rỉ";
         this.model.Note43 = "Xe hoạt động bình thường";
 
     }

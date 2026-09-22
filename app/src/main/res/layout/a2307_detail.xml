@@ -69,7 +69,7 @@
                     android:layout_weight=".1"
                     android:padding="0dp"
                     android:textColor="@android:color/black"
-                    android:text="PHIẾU BẢO DƯỠNG HÀNG NGÀY - CA LÀM VIỆC : "></TextView>
+                    android:text="PHIẾU BẢO DƯỠNG HÀNG NGÀY CỦA XE TRA NẠP - CA LÀM VIỆC : "></TextView>
                 <TextView
                     style="?android:attr/textAppearanceMedium"
                     android:layout_width="0dp"
@@ -125,7 +125,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight=".06"
-                    android:text="Số giờ/km hoạt động của xe:"></TextView>
+                    android:text="Số giờ hoạt động của xe:"></TextView>
 
                 <TextView
                     style="?android:attr/textAppearanceMedium"
@@ -501,52 +501,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight=".35"
                     android:padding="5dp"
-                    android:text="@string/Result32"></TextView>
-
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                   android:layout_weight=".03"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text="@{mItem.result32}"></TextView>
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                   android:layout_weight=".05"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text='@{mItem.hasNote32 != true? "JIG" : @string/gcdetail}'></TextView>
-
-                <TextView
-                    android:id="@+id/a2307_new_Note32"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-
-                    android:focusable="false"
-                    android:hint="@string/notNote"
-                    android:onClick="onClick"
-                    android:padding="5dp"
-                    android:text="@{mItem.Note32}"></TextView>
-            </TableRow>
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#efefef"
-                android:padding="5dp">
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-                    android:padding="5dp"
                     android:text="@string/Result44"></TextView>
 
 
@@ -580,53 +534,6 @@
                     android:onClick="onClick"
                     android:padding="5dp"
                     android:text="@{mItem.Note44}"></TextView>
-
-            </TableRow>
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#efefef"
-                android:padding="5dp">
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-                    android:padding="5dp"
-                    android:text="@string/Result28"></TextView>
-
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                   android:layout_weight=".03"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text="@{mItem.result28}"></TextView>
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                   android:layout_weight=".05"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text='@{mItem.hasNote28 != true? "JIG" : @string/gcdetail}'></TextView>
-
-                <TextView
-                    android:id="@+id/a2307_new_Note28"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-
-                    android:focusable="false"
-                    android:hint="@string/notNote"
-                    android:onClick="onClick"
-                    android:padding="5dp"
-                    android:text="@{mItem.Note28}"></TextView>
 
             </TableRow>
             <TableRow
@@ -2194,6 +2101,99 @@
                     android:padding="5dp"
                     android:text="@{mItem.Note31}"></TextView>
 
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result32"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result32}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote32 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note32}"></TextView>
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:padding="5dp"
+                    android:text="@string/Result28"></TextView>
+
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".03"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@{mItem.result28}"></TextView>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                   android:layout_weight=".05"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text='@{mItem.hasNote28 != true? "JIG" : @string/gcdetail}'></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+
+                    android:focusable="false"
+                    android:hint="@string/notNote"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note28}"></TextView>
 
             </TableRow>
             <TableRow

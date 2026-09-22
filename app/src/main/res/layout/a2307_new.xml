@@ -454,65 +454,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight=".25"
                     android:padding="5dp"
-                    android:text="@string/Result32"></TextView>
-
-                <TextView
-                    android:id="@+id/a2307_new_Note32"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-                    android:drawableStart="@drawable/ic_edit"
-                    android:focusable="false"
-                    android:hint="@string/touch_to_edit"
-                    android:onClick="onClick"
-                    android:padding="5dp"
-                    android:text="@{mItem.Note32}"></TextView>
-
-
-                <Spinner
-                    android:id="@+id/a2307_new_Result32"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="25dp"
-                    android:layout_weight=".15"
-                    android:padding="5dp"></Spinner>
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".1"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text="@string/gc"></TextView>
-
-                <CheckBox
-                    android:id="@+id/a2307_new_hasNote32"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.15"
-                    android:checked="@={mItem.hasNote32}"
-                    android:focusable="false"
-                    android:onClick="onClick"
-
-                    android:padding="3dp"
-                    android:textIsSelectable="true" />
-
-            </TableRow>
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#efefef"
-                android:padding="5dp">
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".25"
-                    android:padding="5dp"
                     android:text="@string/Result44"></TextView>
 
                 <TextView
@@ -553,65 +494,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="0.15"
                     android:checked="@={mItem.hasNote44}"
-                    android:focusable="false"
-                    android:onClick="onClick"
-
-                    android:padding="3dp"
-                    android:textIsSelectable="true" />
-
-            </TableRow>
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#efefef"
-                android:padding="5dp">
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".25"
-                    android:padding="5dp"
-                    android:text="@string/Result28"></TextView>
-
-                <TextView
-                    android:id="@+id/a2307_new_Note28"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".35"
-                    android:drawableStart="@drawable/ic_edit"
-                    android:focusable="false"
-                    android:hint="@string/touch_to_edit"
-                    android:onClick="onClick"
-                    android:padding="5dp"
-                    android:text="@{mItem.Note28}"></TextView>
-
-
-                <Spinner
-                    android:id="@+id/a2307_new_Result28"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="25dp"
-                    android:layout_weight=".15"
-                    android:padding="5dp"></Spinner>
-
-                <TextView
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight=".1"
-                    android:padding="5dp"
-                    android:layout_marginLeft="15dp"
-                    android:text="@string/gc"></TextView>
-
-                <CheckBox
-                    android:id="@+id/a2307_new_hasNote28"
-                    style="?android:attr/textAppearanceMedium"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.15"
-                    android:checked="@={mItem.hasNote28}"
                     android:focusable="false"
                     android:onClick="onClick"
 
@@ -2575,6 +2457,124 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="0.15"
                     android:checked="@={mItem.hasNote31}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result32"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note32}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote32"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote32}"
+                    android:focusable="false"
+                    android:onClick="onClick"
+
+                    android:padding="3dp"
+                    android:textIsSelectable="true" />
+
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#efefef"
+                android:padding="5dp">
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".25"
+                    android:padding="5dp"
+                    android:text="@string/Result28"></TextView>
+
+                <TextView
+                    android:id="@+id/a2307_new_Note28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".35"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:focusable="false"
+                    android:hint="@string/touch_to_edit"
+                    android:onClick="onClick"
+                    android:padding="5dp"
+                    android:text="@{mItem.Note28}"></TextView>
+
+
+                <Spinner
+                    android:id="@+id/a2307_new_Result28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="25dp"
+                    android:layout_weight=".15"
+                    android:padding="5dp"></Spinner>
+
+                <TextView
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight=".1"
+                    android:padding="5dp"
+                    android:layout_marginLeft="15dp"
+                    android:text="@string/gc"></TextView>
+
+                <CheckBox
+                    android:id="@+id/a2307_new_hasNote28"
+                    style="?android:attr/textAppearanceMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.15"
+                    android:checked="@={mItem.hasNote28}"
                     android:focusable="false"
                     android:onClick="onClick"
 
