@@ -104,6 +104,8 @@
             android:exported="true" />
         <activity android:name=".B2505Activity" />
         <activity android:name=".B2508Activity" />
+        <activity android:name=".B2506Activity" />
+        <activity android:name=".B2509Activity" />
         <activity android:name=".B2502Activity" />
         <activity android:name=".A2307Activity" />
         <activity

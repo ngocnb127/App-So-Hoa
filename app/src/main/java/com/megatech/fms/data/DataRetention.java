@@ -139,6 +139,8 @@ public final class DataRetention {
         total += db.bm2504Dao().deleteOlderThan(cutoff);
         total += db.bm2505Dao().deleteOlderThan(cutoff);
         total += db.bm2508Dao().deleteOlderThan(cutoff);
+        total += db.bm2506Dao().deleteOlderThan(cutoff);
+        total += db.bm2509Dao().deleteOlderThan(cutoff);
         total += db.checkTrucksDao().deleteOlderThan(cutoff);
         total += db.reviewDao().deleteOlderThan(cutoff);
         total += db.bm7501Dao().deleteOlderThan(cutoff);

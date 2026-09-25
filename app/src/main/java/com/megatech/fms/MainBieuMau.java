@@ -21,7 +21,9 @@ public class MainBieuMau extends AppCompatActivity implements View.OnClickListen
         bindClick(R.id.card_2503);
         bindClick(R.id.card_2504);
         bindClick(R.id.card_2505);
+        bindClick(R.id.card_2506);
         bindClick(R.id.card_2508);
+        bindClick(R.id.card_2509);
         bindClick(R.id.card_2507a);
         bindClick(R.id.card_2507a);
 
@@ -60,8 +62,16 @@ public class MainBieuMau extends AppCompatActivity implements View.OnClickListen
                 openBM2505();
                 break;
 
+            case R.id.card_2506:
+                openBMForm(B2506Activity.class);
+                break;
+
             case R.id.card_2508:
                 openBM2508();
+                break;
+
+            case R.id.card_2509:
+                openBMForm(B2509Activity.class);
                 break;
 
             case R.id.card_2507a:
@@ -100,6 +110,14 @@ public class MainBieuMau extends AppCompatActivity implements View.OnClickListen
 
     private void openBM2508() {
         startActivity(new Intent(this, B2508Activity.class));
+    }
+
+    private void openBMForm(Class<?> activity) {
+        try {
+            startActivity(new Intent(this, activity));
+        } catch (Exception ex) {
+            Log.e(activity.getSimpleName(), "Open error", ex);
+        }
     }
 
     private void openA2307() {
