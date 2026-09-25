@@ -5,27 +5,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * Sinh {@code signedSnapshotHash} cho BM 75.01 theo <b>canonical manifest</b>.
+ * Băm SHA-256 cho BM 75.01: dùng cho ảnh chữ ký (đối chiếu file còn nguyên vẹn) và cho
+ * phần sinh số chứng từ.
  *
- * <p>Yêu cầu của review: không nối byte tùy ý và <b>không hash trực tiếp JSON do Gson sinh</b>,
- * vì thứ tự field có thể đổi giữa các phiên bản thư viện/model. Thay vào đó hash một manifest
- * có thứ tự cố định, mã hóa UTF-8:
- *
- * <pre>
- * schemaVersion
- * uniqueId
- * refuelItemUniqueId
- * revisionNumber
- * localNumber
- * payloadSha256
- * customerSectionASignatureSha256
- * customerFinalSignatureSha256
- * skypecSignatureSha256
- * signedAt
- * </pre>
- *
- * <p>{@code payloadSha256} là băm của <b>đúng chuỗi payload đã lưu</b> (bytes UTF-8), không
- * phải của một lần serialize lại — nhờ vậy giá trị ổn định theo thời gian.
+ * <p>Trước đây lớp này còn sinh {@code signedSnapshotHash} của bản đã ký; phần đó đã bỏ cùng
+ * luồng khoá phiếu sau khi in (chốt 2026-09-23) — phiếu sửa và in lại được nên không có
+ * "bản đã đóng băng" để băm.
  */
 public final class BM7501Canonical {
 
@@ -35,41 +20,6 @@ public final class BM7501Canonical {
     /** Ký tự phân tách dòng cố định, không phụ thuộc nền tảng. */
     private static final String LF = "\n";
 
-    /**
-     * Dựng manifest canonical. Trường null được ghi thành chuỗi rỗng để độ dài dòng ổn định.
-     *
-     * @param signedAtEpochMilli thời điểm ký, tính bằng mili giây epoch (UTC)
-     */
-    public static String manifest(int schemaVersion,
-                                  String uniqueId,
-                                  String refuelItemUniqueId,
-                                  int revisionNumber,
-                                  String localNumber,
-                                  String payloadSha256,
-                                  String customerSectionASignatureSha256,
-                                  String customerFinalSignatureSha256,
-                                  String skypecSignatureSha256,
-                                  long signedAtEpochMilli) {
-        StringBuilder b = new StringBuilder();
-        b.append(schemaVersion).append(LF);
-        b.append(nz(uniqueId)).append(LF);
-        b.append(nz(refuelItemUniqueId)).append(LF);
-        b.append(revisionNumber).append(LF);
-        b.append(nz(localNumber)).append(LF);
-        b.append(nz(payloadSha256)).append(LF);
-        b.append(nz(customerSectionASignatureSha256)).append(LF);
-        b.append(nz(customerFinalSignatureSha256)).append(LF);
-        b.append(nz(skypecSignatureSha256)).append(LF);
-        b.append(signedAtEpochMilli).append(LF);
-        return b.toString();
-    }
-
-    /** SHA-256 của manifest, trả về hex thường. */
-    public static String hashManifest(String manifest) {
-        return sha256Hex(utf8(manifest));
-    }
-
-    /** SHA-256 của một chuỗi payload đã lưu. */
     public static String sha256OfString(String s) {
         return sha256Hex(utf8(s));
     }

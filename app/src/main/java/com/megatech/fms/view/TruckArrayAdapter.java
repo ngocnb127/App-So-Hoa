@@ -96,6 +96,29 @@ public class TruckArrayAdapter extends ArrayAdapter<RefuelItemData> {
         return  checkedItems;
     }
 
+    /**
+     * Tích lại đúng các mẻ theo UniqueId sau khi danh sách được dựng lại.
+     *
+     * <p>Cần thiết vì mỗi lần bind lại màn hình xem trước là một adapter mới với toàn bộ ô
+     * tích về false: không khôi phục thì lượt làm mới dữ liệu xe khác sẽ âm thầm bỏ trắng
+     * danh sách người dùng đã chọn.
+     *
+     * @return số mẻ tích lại được — ít hơn danh sách đưa vào nghĩa là có mẻ đã biến mất.
+     */
+    public int restoreChecked(java.util.Collection<String> uniqueIds) {
+        if (uniqueIds == null || uniqueIds.isEmpty()) return 0;
+        int restored = 0;
+        for (int i = 0; i < allItems.size() && i < checked.size(); i++) {
+            RefuelItemData item = allItems.get(i);
+            String uid = item == null ? null : item.getUniqueId();
+            if (uid == null || !uniqueIds.contains(uid)) continue;
+            checked.set(i, true);
+            restored++;
+        }
+        notifyDataSetChanged();
+        return restored;
+    }
+
     public void selectAll() {
         selectAll(true);
         notifyDataSetChanged();

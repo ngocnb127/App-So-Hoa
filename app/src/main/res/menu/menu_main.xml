@@ -15,7 +15,6 @@
         android:icon="@drawable/ic_no_connection"
         android:orderInCategory="100"
         android:title="@string/internet_status"
-
         app:showAsAction="always" />
 
     <item
@@ -34,24 +33,33 @@
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="@string/setting"
-        app:showAsAction="never" android:visible="true" />
+        android:visible="true"
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_send_log"
         android:orderInCategory="100"
         android:title="@string/send_log"
-        app:showAsAction="never" android:visible="true" />
+        android:visible="true"
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_printer_test"
         android:orderInCategory="100"
         android:title="@string/printer_test"
-        app:showAsAction="never" android:visible="true" />
+        android:visible="true"
+        app:showAsAction="never" />
+    <!-- Chỉ bản máy in nhiệt Zebra mới hiện; UserBaseActivity.onCreateOptionsMenu bật lên. -->
+    <item
+        android:id="@+id/action_printer_factory"
+        android:orderInCategory="100"
+        android:title="@string/printer_factory"
+        android:visible="false"
+        app:showAsAction="never" />
     <item
         android:id="@+id/action_restart"
         android:orderInCategory="100"
         android:title="@string/restart_app"
         app:showAsAction="never" />
-
 
 </menu>

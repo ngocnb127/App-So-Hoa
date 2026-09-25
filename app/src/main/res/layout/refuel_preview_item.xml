@@ -56,7 +56,7 @@
             android:layout_weight=".3"
             android:gravity="center"
             android:hint="@string/refuelTime"
-            android:text='@{String.format("%s - %s",truckItem.status == REFUEL_ITEM_STATUS.DONE ? DateUtils.formatDate(truckItem.startTime,"HH:mm:ss"):"",truckItem.status == REFUEL_ITEM_STATUS.DONE ? DateUtils.formatDate(truckItem.endTime,"HH:mm:ss"):"")}' />
+            android:text='@{String.format("%s - %s",(truckItem.status == REFUEL_ITEM_STATUS.PROCESSING || truckItem.status == REFUEL_ITEM_STATUS.DONE) &amp;&amp; truckItem.startTime != null ? DateUtils.formatDate(truckItem.startTime,"HH:mm:ss"):"",truckItem.status == REFUEL_ITEM_STATUS.DONE &amp;&amp; truckItem.endTime != null ? DateUtils.formatDate(truckItem.endTime,"HH:mm:ss"):"")}' />
 
 
 

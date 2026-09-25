@@ -1,5 +1,8 @@
 package com.megatech.fms.sdk_tcs.sdk_tcs.tcs;
 
+import android.os.SystemClock;
+
+import com.megatech.fms.helpers.MeterFieldHealth;
 import com.megatech.fms.sdk_tcs.sdk_tcs.DeviceConnectState;
 import com.megatech.fms.sdk_tcs.sdk_tcs.IDevice;
 import com.megatech.fms.sdk_tcs.sdk_tcs.model.DeviceDataView;
@@ -447,12 +450,48 @@ public class TcsDevice implements IDevice {
         processValue(cmd, 1, dataRev);
     }
 
+    /**
+     * Trường TCS được theo dõi sức khoẻ; null nghĩa là không nằm trong diện theo dõi.
+     *
+     * <p>TCS cũng đọc TỪNG lệnh riêng và khi một lệnh hỏng thì biến cũ được GIỮ NGUYÊN, rồi
+     * {@code updateDataView()} vẫn phát một snapshot gộp. Nhìn từ màn hình, snapshot đó
+     * không phân biệt được với snapshot toàn số mới — nên phải đo ngay tại chỗ đọc.
+     */
+    private static MeterFieldHealth.Field healthField(TcsMsgCmd command) {
+        if (command == null) return null;
+        switch (command) {
+            case CMD_DEL_GROSSDSP: return MeterFieldHealth.Field.GROSSQTY;
+            case CMD_SYS_GROSSTOTAL: return MeterFieldHealth.Field.TOTALIZER;
+            case CMD_DEL_AVGTEMP: return MeterFieldHealth.Field.TEMPERATURE;
+            case CMD_SYS_TICKETNR: return MeterFieldHealth.Field.TICKET;
+            default: return null;
+        }
+    }
+
+    private static void markTcsHealth(TcsMsgCmd command, boolean ok) {
+        MeterFieldHealth.Field field = healthField(command);
+        if (field == null) return;
+        // Mốc ĐƠN ĐIỆU: đồng bộ NTP nhảy tiến sẽ làm phép so theo thời gian trôi vô nghĩa.
+        long now = SystemClock.elapsedRealtime();
+        if (ok) {
+            // TCS không có bộ lọc ngưỡng: đọc được là giá trị được nhận luôn.
+            MeterFieldHealth.shared().markRead(field, now);
+            MeterFieldHealth.shared().markAccepted(field, now);
+        } else MeterFieldHealth.shared().markFail(field, now);
+    }
+
     private void processValue(TcsMsgCmd command, int type, byte[] dataRev) {
+        if (dataRev == null || dataRev.length <= 6) {
+            // Không có gói trả lời: giá trị cũ được giữ lại im lặng, phải ghi nhận là hỏng.
+            markTcsHealth(command, false);
+        }
         if (dataRev != null && dataRev.length > 6) {
             countDisconnect = 0;
             int returnCode = dataRev[6];
             TcsMsgCmd tempCommand = command;
             //textLog.WriteToErrorLog("Cmd " + command, haveWriteLog);
+
+            markTcsHealth(command, returnCode == 0);
 
             if (returnCode == 0) {
                 double retvalue = 0;

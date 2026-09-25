@@ -457,20 +457,49 @@ public class NewRefuelActivity extends UserBaseActivity implements View.OnClickL
     }
 
     private void postRefuelCompleted(RefuelItemData response) {
-        // Chỉ mở màn hình tra nạp khi phiếu đã thực sự nằm trong Room.
+        // Lưu được thì đi thẳng. Không lưu được thì CẢNH BÁO nhưng vẫn phải còn đường đi
+        // tiếp: người dùng đang đứng tại tàu bay, chặn ở đây là không bơm được chuyến nào.
         if (RefuelItemData.isCommitted(response)) {
-
             refuelData.setId(response.getId());
-            refuelData.setAlert(currentApp.getCurrentAmount() < refuelData.getEstimateAmount());
-            if (refuelData != null) {
-                Intent intent = new Intent(this, RefuelDetailActivity.class);
-                com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
-                startActivity(intent);
-                finish();
-            }
-        } else
-            Toast.makeText(this, getString(R.string.error_saving_data), Toast.LENGTH_SHORT).show();
+            openRefuelDetail();
+            return;
+        }
 
+        Logger.appendLog("NRF", "Chưa lưu được phiếu mới ("
+                + (response == null ? "FAILED" : response.getSaveOutcome())
+                + "), cảnh báo và để người dùng chọn Thử lại hoặc Tiếp tục");
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.error)
+                .setMessage(R.string.error_saving_data)
+                .setPositiveButton(R.string.retry, (dialog, which) -> save())
+                .setNegativeButton(R.string.refuel_end_save_failed_continue, (dialog, which) -> {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=NEW_REFUEL_SAVE_FAILED_CONTINUED uid=%s outcome=%s flight=%s",
+                            refuelData == null ? "null" : refuelData.getUniqueId(),
+                            response == null ? "FAILED" : response.getSaveOutcome(),
+                            refuelData == null ? "null" : refuelData.getFlightCode()));
+                    Toast.makeText(this, R.string.warn_new_refuel_save_failed_continued,
+                            Toast.LENGTH_LONG).show();
+                    openRefuelDetail();
+                })
+                .setCancelable(true)
+                .show();
+    }
+
+    /**
+     * Mở màn hình tra nạp cho phiếu đang tạo.
+     *
+     * <p>Màn hình đó tự lưu lại phiếu ở mỗi lần autosave và ở lần chốt mẻ, nên một lần lưu
+     * hỏng tại đây không có nghĩa là số liệu mất — chỉ có nghĩa là phải soát lại.
+     */
+    private void openRefuelDetail() {
+        if (refuelData == null) return;
+        refuelData.setAlert(currentApp.getCurrentAmount() < refuelData.getEstimateAmount());
+        Intent intent = new Intent(this, RefuelDetailActivity.class);
+        com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
+        startActivity(intent);
+        finish();
     }
 
     private void showDateDialog(View v) {

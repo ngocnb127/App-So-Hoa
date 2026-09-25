@@ -82,6 +82,18 @@
                 android:padding="8dp"
                 android:stretchColumns="0"
                 app:layout_constraintTop_toTopOf="parent">
+
+<!-- Ghi chú ngữ cảnh về giờ tra nạp (thiếu giờ tiếp cận, mẻ 0 phút): hiển thị TẠI CHỖ,
+     không popup — hai ca này rất phổ biến nên popup sẽ làm nhờn cảnh báo thật. -->
+<TextView
+    android:id="@+id/txtTimeContextNotes"
+    style="?android:attr/textAppearanceSmall"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp"
+    android:textColor="@color/colorWarning"
+    android:visibility="gone" />
+
 <TableRow android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#efefef"

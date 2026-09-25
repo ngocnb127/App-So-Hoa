@@ -72,9 +72,26 @@ public class BaseActivity extends AppCompatActivity implements View.OnClickListe
         return FMSApplication.getApplication().getSetting();
     }
 
+    /**
+     * Màn hình có đang ở giai đoạn KHÔNG được rời đi hay không.
+     *
+     * <p>Mặc định là CHO PHÉP Back. Trước đây {@code onBackPressed()} là no-op cho toàn bộ
+     * ứng dụng, nên màn hình nào thiếu nút thoát là ngõ cụt thật sự — điển hình là màn Xác
+     * nhận dữ liệu tra nạp, layout chỉ có đúng nút "Xác nhận".
+     *
+     * <p>Màn hình nào thật sự cần chặn thì override và chỉ chặn đúng lúc cần.
+     */
+    protected boolean isBackBlocked() {
+        return false;
+    }
+
     @Override
     public void onBackPressed() {
-        return;
+        if (isBackBlocked()) {
+            Logger.appendLog(TAG, "Back bị chặn: màn hình đang ở giai đoạn không được rời đi");
+            return;
+        }
+        super.onBackPressed();
     }
 
     AlertDialog progressDialog;
@@ -321,10 +338,14 @@ public class BaseActivity extends AppCompatActivity implements View.OnClickListe
             public void onClick(View v) {
                 if (input.getText().toString().isEmpty())
                     showErrorMessage(R.string.empty_required_field);
-                else {
-                    if (onComplete != null && onComplete.onOK(input.getText().toString()))
+                else if (onComplete != null) {
+                    // onCompleted() CHỈ được gọi khi onOK() nhận giá trị. Trước đây nó nằm
+                    // ngoài nhánh thành công, nên giá trị vừa bị chính hàm kiểm tra từ chối
+                    // vẫn được đẩy đi tiếp.
+                    if (onComplete.onOK(input.getText().toString())) {
                         dialog.dismiss();
-                    onComplete.onCompleted();
+                        onComplete.onCompleted();
+                    }
                 }
 
             }

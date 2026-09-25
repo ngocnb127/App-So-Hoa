@@ -106,6 +106,20 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
         return (mDataFiltered != null) ? mDataFiltered.size() : 0;
     }
 
+    /**
+     * Số phiếu BM 75.01 đã xuất, theo {@code uniqueId} của mẻ hút.
+     *
+     * <p>Tra sẵn ở nền rồi truyền vào đây: {@code bind()} chạy trên luồng giao diện nên không
+     * được đọc DB. Danh sách tra nạp không đặt map này nên không hiện gì — đúng yêu cầu chỉ
+     * hiện ở danh sách mẻ hút.
+     */
+    private java.util.Map<String, String> exportedBM7501 = java.util.Collections.emptyMap();
+
+    public void setExportedBM7501(java.util.Map<String, String> exported) {
+        this.exportedBM7501 = exported == null ? java.util.Collections.emptyMap() : exported;
+        notifyDataSetChanged();
+    }
+
     int REQUEST_CODE = 5546;
     int dlgResult = 0;
     private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
@@ -238,6 +252,7 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
         TextView mRefuelTime;
         CheckedTextView mCheck;
         CheckedTextView mSync;
+        TextView mBM7501;
         private CardviewRefuelItemBinding binding;
         UserBaseActivity ctx;
 
@@ -250,6 +265,7 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
             super(binding.getRoot());
             mSync = binding.getRoot().findViewById(R.id.refuel_item_sync);
             mRefuelTime = binding.getRoot().findViewById(R.id.refuel_item_refuel_time);
+            mBM7501 = binding.getRoot().findViewById(R.id.refuel_item_bm7501);
 
             ctx = (UserBaseActivity)binding.getRoot().getContext();
             mSync.setOnClickListener(new View.OnClickListener() {
@@ -276,7 +292,21 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
             mCheck = itemView.findViewById(R.id.refuel_item_chk);
             mSync = itemView.findViewById(R.id.refuel_item_sync);
             mRefuelTime = itemView.findViewById(R.id.refuel_item_refuel_time);
+            mBM7501 = itemView.findViewById(R.id.refuel_item_bm7501);
 
+        }
+
+        /** Nhãn "Đã xuất (số phiếu)" của BM 75.01; mẻ chưa xuất hoặc không phải mẻ hút thì ẩn. */
+        private void showExportedBM7501(RefuelItemData itemData) {
+            if (mBM7501 == null) return;
+            String number = itemData == null || itemData.getUniqueId() == null
+                    ? null : exportedBM7501.get(itemData.getUniqueId());
+            if (number == null) {
+                mBM7501.setVisibility(View.GONE);
+                return;
+            }
+            mBM7501.setText(mBM7501.getContext().getString(R.string.bm7501_list_exported, number));
+            mBM7501.setVisibility(View.VISIBLE);
         }
 
         RefuelItemData mData ;
@@ -284,6 +314,8 @@ public class RefuelRecyclerViewAdapter extends RecyclerView.Adapter<RefuelRecycl
             binding.setMItem(itemData);
             mData = itemData;
             binding.executePendingBindings();
+
+            showExportedBM7501(itemData);
 
 
 

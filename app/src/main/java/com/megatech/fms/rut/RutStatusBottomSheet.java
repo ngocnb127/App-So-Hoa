@@ -306,7 +306,13 @@ public final class RutStatusBottomSheet extends BottomSheetDialogFragment {
             signalValue.setVisibility(View.GONE);
         } else {
             signalRating.setText(getString(R.string.rut_signal_prefix, labelOf(rating)));
-            signalValue.setText(getString(R.string.rut_dbm, primary));
+            // PHẢI ghi tên chỉ số. RSRP và RSSI là hai đại lượng khác nhau, cùng một sóng
+            // cho hai con số cách nhau hàng chục dB. Hiện trơ "-71 dBm" thì người dùng đem
+            // so với số RSRP trên trang quản trị router và kết luận app báo sai.
+            signalValue.setText(getString(
+                    model.primarySignalIsRsrp() ? R.string.rut_metric_rsrp
+                            : R.string.rut_metric_rssi,
+                    getString(R.string.rut_dbm, primary)));
             signalValue.setVisibility(View.VISIBLE);
         }
 

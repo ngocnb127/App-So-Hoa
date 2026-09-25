@@ -9,11 +9,13 @@ import android.content.Context;
 import androidx.room.Room;
 import androidx.test.core.app.ApplicationProvider;
 
+import com.megatech.fms.FMSApplication;
 import com.megatech.fms.data.AppDatabase;
 import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.data.entity.RefuelItem;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
+import com.megatech.fms.model.TruckModel;
 
 import org.junit.After;
 import org.junit.Before;
@@ -50,6 +52,9 @@ public class UnknownKeyPreservationTest {
     @Before
     public void setUp() {
         Context context = ApplicationProvider.getApplicationContext();
+        TruckModel setting = new TruckModel();
+        setting.setTruckId(173);
+        ((FMSApplication) context).saveSetting(setting, false);
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase.class)
                 .allowMainThreadQueries().build();
         repo = DataRepository.forTesting(db);
@@ -69,6 +74,7 @@ public class UnknownKeyPreservationTest {
         data.setUniqueId(UID);
         data.setRefuelItemType(RefuelItemData.REFUEL_ITEM_TYPE.REFUEL);
         data.setStatus(REFUEL_ITEM_STATUS.PROCESSING);
+        data.setTruckId(173);
         data.setEndTime(new Date(1_787_000_000_000L));
 
         RefuelItem row = RefuelItem.fromRefuelItemData(data);
@@ -200,6 +206,7 @@ public class UnknownKeyPreservationTest {
         data.setUniqueId("brand-new");
         data.setRefuelItemType(RefuelItemData.REFUEL_ITEM_TYPE.REFUEL);
         data.setStatus(REFUEL_ITEM_STATUS.NONE);
+        data.setTruckId(173);
         data.setRealAmount(50);
 
         assertTrue(RefuelItemData.isCommitted(DataHelper.postRefuel(data, false)));

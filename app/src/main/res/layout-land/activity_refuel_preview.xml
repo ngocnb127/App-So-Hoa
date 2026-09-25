@@ -543,15 +543,36 @@
                         android:onClick="onClick"
                         android:visibility="@{mItem.leaveTime == null ? View.VISIBLE : View.GONE}" />
 
+                    <!--
+                        Bấm "Rời đi" xong thì giờ đó trước đây KHÔNG sửa lại được nữa: nhãn
+                        chỉ để đọc. Bấm nhầm là hỏng mốc giờ của mẻ mà không có đường quay
+                        lại. Nay nhãn thành ô SỬA ĐƯỢC như các trường khác (biểu tượng bút
+                        + onClick), mở hộp thoại sửa CẢ giờ tiếp cận LẪN giờ rời đi.
+                    -->
+                    <!--
+                        MỘT DÒNG, không được xuống dòng. Ô này hẹp (chiều rộng cột do
+                        TableLayout quyết theo các hàng khác) mà lại còn mất chỗ cho biểu
+                        tượng bút, nên "dd/MM/yyyy HH:mm:ss" bị bẻ làm hai dòng và đẩy cao cả
+                        hàng. Giây không có giá trị nghiệp vụ ở mốc rời đi nên cắt đi; maxLines
+                        chặn xuống dòng; autoSize co chữ khi vẫn chật thay vì cắt cụt bằng "…".
+                    -->
                     <TextView
                         android:id="@+id/lblLeaveTime"
                         style="?android:attr/textAppearanceMedium"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="0.5"
+                        android:drawableLeft="@drawable/ic_edit"
+                        android:focusable="false"
+                        android:maxLines="1"
+                        android:onClick="onClick"
                         android:padding="3dp"
-                        android:text='@{mItem.leaveTime != null ? String.format("Rời đi: %s", DateUtils.formatDate(mItem.leaveTime,"dd/MM/yyyy HH:mm:ss")) : ""}'
-                        android:visibility="@{mItem.leaveTime != null ? View.VISIBLE : View.GONE}" />
+                        android:text='@{mItem.leaveTime != null ? DateUtils.formatDate(mItem.leaveTime,"dd/MM/yyyy HH:mm") : ""}'
+                        android:visibility="@{mItem.leaveTime != null ? View.VISIBLE : View.GONE}"
+                        app:autoSizeMaxTextSize="18sp"
+                        app:autoSizeMinTextSize="11sp"
+                        app:autoSizeStepGranularity="1sp"
+                        app:autoSizeTextType="uniform" />
 
                 </TableRow>
 

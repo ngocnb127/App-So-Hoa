@@ -20,7 +20,9 @@ public class Invoice extends BaseEntity {
 
     public InvoiceModel toModel() {
         InvoiceModel model = gson.fromJson(this.getJsonData(), InvoiceModel.class);
-        model.setLocalId(this.getId());
+        // Trước đây gán nhầm getId() (id server) vào localId ⇒ payload gửi lên server mang
+        // LocalId = idServer. localId là rowId Room, phải lấy đúng getLocalId().
+        model.setLocalId(this.getLocalId());
         model.setDeleted(this.isDeleted());
         model.setLocalModified(this.isLocalModified());
         return model;

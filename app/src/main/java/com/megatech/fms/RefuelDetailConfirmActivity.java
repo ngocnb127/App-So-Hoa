@@ -186,6 +186,7 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                 binding.setMItem(mItem);
                 setContentView(binding.getRoot());
                 binding.invalidateAll();
+                showTimeContextNotes();
                 showTimeWarningPopup();
             }
         }
@@ -356,6 +357,28 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
     }
 
     /**
+     * Ghi chú ngữ cảnh về giờ tra nạp, hiển thị TẠI CHỖ ngay đầu bảng dữ liệu.
+     *
+     * <p>Hai ca "chưa có giờ tiếp cận" và "mẻ 0 phút" xảy ra thường xuyên do chính thiết kế
+     * hiện tại, nên KHÔNG được đưa vào popup: người dùng sẽ quen tay bấm bỏ qua và bỏ qua
+     * luôn cảnh báo lỗi thật. Ở đây chỉ hiện một dòng chữ, không chặn, không hỏi.
+     */
+    private void showTimeContextNotes() {
+        TextView view = findViewById(R.id.txtTimeContextNotes);
+        if (view == null) return;
+
+        String notes = RefuelTimeValidator.describeContextNotes(mItem);
+        if (notes.isEmpty()) {
+            view.setVisibility(View.GONE);
+            return;
+        }
+
+        view.setText(notes);
+        view.setVisibility(View.VISIBLE);
+        Logger.appendLog(LOG_TAG, "Ghi chú giờ tra nạp: " + flatten(notes));
+    }
+
+    /**
      * Popup liệt kê các điểm bất thường của giờ tra nạp, hiện ngay khi mở màn xác nhận.
      *
      * <p>Chỉ nhắc, không chặn: người dùng đóng popup rồi chạm thẳng vào ô giờ để sửa. Nếu
@@ -487,7 +510,12 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
             showErrorMessage(R.string.invalid_density);
         else if(mItem.getManualTemperature()<=0)
             showErrorMessage(R.string.invalid_temperature);
-        else if(mItem.getRealAmount()<=0)
+        // Mẻ 0 lít KHÔNG còn bị chặn ở đường GHI NHẬN. Xe đã ra hiện trường, đã tiếp cận
+        // nhưng không nạp (chuyến huỷ, khách không lấy) là sự kiện có thật cần ghi lại; chặn
+        // ở đây chỉ dồn người dùng vào chỗ BỊA SỐ hoặc khởi động lại app. Đường XUẤT PHIẾU
+        // vẫn chặn mẻ 0 lít như cũ (RefuelPreviewActivity / OthersFreshness / InvoiceModel),
+        // nên không có nguy cơ phát hành chứng từ rỗng.
+        else if(mItem.getRealAmount()<0)
             showErrorMessage(R.string.invalid_real_amount);
         else if(mItem.getStartNumber()<=0 || mItem.getEndNumber()<=0 || mItem.getEndNumber() != mItem.getStartNumber() + ( BuildConfig.FHS? mItem.getVolume(): mItem.getRealAmount()))
             showErrorMessage(R.string.invalid_start_end_meter);
@@ -501,10 +529,28 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         {
             showErrorMessage(R.string.real_amount_too_big);
         }
-        else if (mItem.getDriverId() <=0 || mItem.getOperatorId() <=0)
-            showErrorMessage(R.string.invalid_driver_operator);
+        else if (mItem.getDriverId() <=0 || mItem.getOperatorId() <=0) {
+            // Bắt buộc chọn lái xe / nhân viên là đúng — NHƯNG chỉ khi có gì để chọn. Danh
+            // mục tải theo mạng; mất mạng thì hộp chọn không mở được và người dùng kẹt hẳn
+            // ở màn xác nhận với một mẻ đã bơm xong. Khi đó cho đi tiếp kèm cảnh báo và log.
+            if (userList == null || userList.isEmpty())
+                confirmWithoutUserCatalog();
+            else
+                showErrorMessage(R.string.invalid_driver_operator);
+        }
         else {
             //sendScreenshot();
+
+            // Mẻ 0 lít ghi nhận được, nhưng người dùng phải biết trước là nó KHÔNG xuất được
+            // phiếu — nếu không họ sẽ đi tới màn xuất rồi mới ngạc nhiên vì bị chặn ở đó.
+            // Cảnh báo dạng thông báo ngắn, không hộp thoại, không chặn.
+            if (mItem.getRealAmount() == 0) {
+                Logger.appendLog(LOG_TAG, "Ghi nhận mẻ 0 lít uid=" + mItem.getUniqueId());
+                Logger.appendRefuelAnomaly("event=ZERO_AMOUNT_REFUEL_CONFIRMED uid="
+                        + mItem.getUniqueId());
+                android.widget.Toast.makeText(this, R.string.warn_zero_amount_no_receipt,
+                        android.widget.Toast.LENGTH_LONG).show();
+            }
 
             // Các kiểm tra ở trên là chặn cứng. Giờ tra nạp bất thường thì chỉ cảnh báo,
             // vì hiện trường có ca dài hợp lệ thật — nhưng phải để người dùng nhận sai
@@ -513,6 +559,29 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
         }
     }
 
+
+    /**
+     * Cho xác nhận phiếu khi CHƯA tải được danh mục nhân viên.
+     *
+     * <p>Hai nút, không nút nào là ngõ cụt, và lựa chọn đi tiếp được ghi vào nhật ký bất
+     * thường để bổ sung lái xe / nhân viên sau ca.
+     */
+    private void confirmWithoutUserCatalog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage(R.string.warn_confirm_without_user)
+                .setPositiveButton(R.string.accept, (dialog, which) -> {
+                    dialog.dismiss();
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=CONFIRM_WITHOUT_USER_CATALOG uid=%s flight=%s",
+                            mItem == null ? "null" : mItem.getUniqueId(),
+                            mItem == null ? "null" : mItem.getFlightCode()));
+                    confirmTimeWarningThenPost();
+                })
+                .setNegativeButton(R.string.back, (dialog, which) -> dialog.dismiss())
+                .setCancelable(false)
+                .show();
+    }
 
     private int mHour, mMinute, mYear, mMonth, mDay;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -555,6 +624,16 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
 
             }
         }, mYear, mMonth, mDay);
+        // Không cho chọn ngày mai: giờ tra nạp ở tương lai là dữ liệu sai chắc chắn.
+        // setMaxDate NÉM IllegalArgumentException nếu giá trị đang hiển thị đã ở tương lai,
+        // nên vừa kẹp điều kiện vừa bọc try/catch — hỏng cái chặn còn hơn hỏng màn hình.
+        try {
+            long nowMs = System.currentTimeMillis();
+            if (date.getTime() <= nowMs)
+                datePickerDialog.getDatePicker().setMaxDate(nowMs);
+        } catch (Exception ex) {
+            Logger.appendLog(LOG_TAG, "Không đặt được giới hạn ngày: " + ex);
+        }
         datePickerDialog.show();
     }
 
@@ -580,17 +659,23 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                 item.getManualTemperature(), item.getDensity());
     }
 
+    /**
+     * Báo cho người dùng biết mẻ đang xác nhận thuộc chuyến chưa phân công cho xe này.
+     *
+     * <p>Toast, KHÔNG phải dialog: người vận hành đang đứng tại tàu bay, mọi thứ chặn luồng
+     * ở bước này đều tệ hơn việc ghi nhầm chủ sở hữu. Dữ liệu vẫn được ghi bình thường.
+     */
+    private void warnUnassignedTakeover() {
+        Logger.appendLog(LOG_TAG, "Xác nhận mẻ của chuyến chưa phân công cho xe, uid="
+                + (mItem == null ? "null" : mItem.getUniqueId()));
+        runOnUiThread(() -> android.widget.Toast.makeText(this,
+                R.string.warn_confirm_unassigned_flight,
+                android.widget.Toast.LENGTH_LONG).show());
+    }
+
     private final String LOG_TAG = "RFC";
     private void postData()
     {
-        if (!BuildConfig.FHS) {
-            if (mItem.getTruckId() != currentApp.getTruckId() && mItem.getReceiptNumber() !=null && !mItem.getReceiptNumber().isEmpty())
-            {
-                mItem.setReceiptNumber(null);
-            }
-            mItem.setTruckId(currentApp.getTruckId());
-            mItem.setTruckNo(currentApp.getTruckNo());
-        }
         setProgressDialog();
         new AsyncTask<Void, Void, RefuelItemData>() {
             @Override
@@ -599,7 +684,37 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                     Logger.appendLog(LOG_TAG, "Post item " + mItem.getId() + " UniqueId: " + mItem.getUniqueId());
                     Logger.appendLog(LOG_TAG, formatMeterLog(mItem));
 
-                    RefuelItemData saved = DataHelper.postRefuel(mItem, false);
+                    // PHẢI hỏi ở LUỒNG NỀN. isForeignTruckRefuel() đọc Room để biết mẻ này
+                    // đang mang dấu xe nào, mà Room chặn cứng mọi truy vấn trên luồng giao
+                    // diện (assertNotMainThread) — gọi ở ngoài là VĂNG APP ngay khi bấm Xác
+                    // nhận, cho MỌI mẻ và cả hai cách kết thúc. Đo trên xe thật 06-09-2026,
+                    // bốn lần liên tiếp cùng một stack:
+                    //   IllegalStateException: Cannot access database on the main thread
+                    //     at DataHelper.isForeignTruckRefuel(DataHelper.java:3847)
+                    //     at RefuelDetailConfirmActivity.postData(:681)
+                    // StrictMode.permitAll() ở BaseActivity KHÔNG che được chốt này: đó là
+                    // chốt riêng của Room, không phải của StrictMode.
+                    //
+                    // Và phải hỏi TRƯỚC khi đóng dấu lại số xe ở ngay dưới, nếu không thì mọi
+                    // mẻ đều trông như của xe hiện tại và cảnh báo không bao giờ hiện.
+                    final boolean takeover = DataHelper.isForeignTruckRefuel(mItem);
+                    if (takeover) warnUnassignedTakeover();
+
+                    if (!BuildConfig.FHS) {
+                        if (mItem.getTruckId() != currentApp.getTruckId() && mItem.getReceiptNumber() !=null && !mItem.getReceiptNumber().isEmpty())
+                        {
+                            mItem.setReceiptNumber(null);
+                        }
+                        mItem.setTruckId(currentApp.getTruckId());
+                        mItem.setTruckNo(currentApp.getTruckNo());
+                    }
+
+                    // Chuyến chưa phân công cho xe mà người này vừa bơm hộ: VẪN GHI. Chặn ở
+                    // đây là mất trắng số liệu của một mẻ có thật — đúng ca T1-07. Việc bất
+                    // thường đã được ghi anomaly trong DataHelper để đối soát sau ca.
+                    RefuelItemData saved = takeover
+                            ? DataHelper.postRefuelFromRefuelScreen(mItem, false)
+                            : DataHelper.postRefuel(mItem, false);
 
                     // Lưu thường bị precondition từ chối: thử lại theo kiểu PATCH — đọc row
                     // mới nhất dưới khoá ghi rồi chỉ đắp đúng những trường màn hình này cho
@@ -608,7 +723,9 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
                     if (saved != null
                             && saved.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
                         Logger.appendLog(LOG_TAG, "Lưu bị chặn, thử lại bằng ConfirmFieldsPatch");
-                        saved = DataHelper.saveConfirmFields(mItem);
+                        saved = takeover
+                                ? DataHelper.saveConfirmFieldsFromRefuelScreen(mItem)
+                                : DataHelper.saveConfirmFields(mItem);
                     }
 
                     // Chỉ khi dữ liệu THỰC SỰ vào Room mới được gán bản ghi trả về lên mItem.
@@ -690,21 +807,61 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
     private void postRefuelCompleted(RefuelItemData saved) {
         closeProgressDialog();
 
-        // Điều hướng CHỈ sau khi dữ liệu đã vào Room. null cũng là thất bại: đi tiếp là mất
-        // trắng số liệu vừa nhập mà người dùng không hề biết.
+        // Chưa vào được Room thì PHẢI báo — nhưng KHÔNG chặn đường sang màn hình sau. Người
+        // dùng còn phải soát lại toàn bộ số liệu ở màn xem trước trước khi xuất phiếu; giữ họ
+        // đứng lại đây khi lỗi dai dẳng là làm chết cả quy trình chứ không cứu được dữ liệu.
         if (!RefuelItemData.isCommitted(saved)) {
             Logger.appendLog(LOG_TAG, "Chưa lưu được ("
                     + (saved == null ? "FAILED" : saved.getSaveOutcome())
-                    + "), giữ nguyên màn hình xác nhận");
-            showErrorMessage(saved != null
-                    && saved.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT
-                    ? R.string.error_refuel_save_conflict
-                    : R.string.error_refuel_save_failed);
+                    + "), cảnh báo và để người dùng chọn Thử lại hoặc Tiếp tục");
+            showSaveFailedButAllowContinue(saved);
             return;
         }
 
         openPreview();
 
+    }
+
+    /**
+     * Báo lưu hỏng, KHÔNG chặn quy trình.
+     *
+     * <p>"Thử lại" ghi lại, "Tiếp tục" sang màn xem trước kèm cảnh báo phải soát lại số liệu,
+     * huỷ hộp thoại thì ở lại đây sửa tiếp. Không lối nào là ngõ cụt.
+     */
+    private void showSaveFailedButAllowContinue(RefuelItemData saved) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.error)
+                .setMessage(saved != null
+                        && saved.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT
+                        ? R.string.error_refuel_save_conflict
+                        : R.string.error_refuel_save_failed)
+                .setPositiveButton(R.string.retry, (dialog, which) -> post())
+                .setNegativeButton(R.string.refuel_end_save_failed_continue,
+                        (dialog, which) -> continueWithoutSave(saved))
+                .setCancelable(true)
+                .show();
+    }
+
+    /**
+     * Sang màn xem trước dù chưa lưu được.
+     *
+     * <p>KHÔNG nhận {@code saved} lên {@code mItem}: kết quả bị chặn chỉ là bản đọc lại row
+     * đang có trong máy, gán vào là xoá đúng những gì người dùng vừa nhập.
+     */
+    private void continueWithoutSave(RefuelItemData saved) {
+        Logger.appendLog(LOG_TAG, "Người dùng chọn đi tiếp khi phiếu chưa lưu được ("
+                + (saved == null ? "FAILED" : saved.getSaveOutcome())
+                + "), uid=" + (mItem == null ? "null" : mItem.getUniqueId()));
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=CONFIRM_SAVE_FAILED_CONTINUED uid=%s outcome=%s flight=%s amount=%.0f",
+                mItem == null ? "null" : mItem.getUniqueId(),
+                saved == null ? "FAILED" : saved.getSaveOutcome(),
+                mItem == null ? "null" : mItem.getFlightCode(),
+                mItem == null ? 0d : mItem.getRealAmount()));
+
+        Toast.makeText(this, R.string.warn_refuel_save_failed_continued,
+                Toast.LENGTH_LONG).show();
+        openPreview();
     }
 
     private void openPreview() {
@@ -727,7 +884,17 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
 
 
 
-        if (userList != null) {
+        // Danh mục nhân viên tải theo mạng. Trước đây chỉ có nhánh `if (userList != null)`:
+        // danh mục chưa về thì bấm vào ô lái xe / nhân viên KHÔNG xảy ra gì cả, người dùng
+        // không biết vì sao. Danh mục rỗng-mà-không-null thì findUser() duyệt list rỗng và
+        // màn hình đứng lại ở lựa chọn -1.
+        if (userList == null || userList.isEmpty()) {
+            Logger.appendLog(LOG_TAG, "Danh mục nhân viên rỗng, không mở được hộp chọn");
+            showWarningMessage(R.string.warn_user_list_empty);
+            return;
+        }
+
+        {
             Dialog dialog = new Dialog(this);
             SelectUserBinding binding = DataBindingUtil.inflate(dialog.getLayoutInflater(), R.layout.select_user, null, false);
             binding.setRefuelItem(mItem);
@@ -737,13 +904,15 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
             ArrayAdapter<UserModel> spinnerAdapter = new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item, userList);
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
 
+            // findUser trả -1 khi phiếu đang mang một nhân viên không còn trong danh mục.
+            // Đặt selection = -1 thì getSelectedItem() trả null và nút Chọn ném NPE.
             spn.setAdapter(spinnerAdapter);
-            spn.setSelection(findUser(mItem.getDriverId(), userList));
+            spn.setSelection(Math.max(0, findUser(mItem.getDriverId(), userList)));
 
             spn = dialog.findViewById(R.id.select_user_operator);
 
             spn.setAdapter(spinnerAdapter);
-            spn.setSelection(findUser(mItem.getOperatorId(), userList));
+            spn.setSelection(Math.max(0, findUser(mItem.getOperatorId(), userList)));
 
             dialog.show();
 
@@ -759,6 +928,13 @@ public class RefuelDetailConfirmActivity extends UserBaseActivity implements Vie
 
                     Spinner spnOperator = dialog.findViewById(R.id.select_user_operator);
                     UserModel operator = (UserModel) spnOperator.getSelectedItem();
+
+                    if (driver == null || operator == null) {
+                        // Danh mục vừa bị làm rỗng giữa chừng: đóng hộp thay vì ném NPE.
+                        Logger.appendLog(LOG_TAG, "Hộp chọn nhân viên không có lựa chọn hợp lệ");
+                        dialog.dismiss();
+                        return;
+                    }
 
                     if (driver.getId() == operator.getId()) {
                         new AlertDialog.Builder(dialog.getContext())

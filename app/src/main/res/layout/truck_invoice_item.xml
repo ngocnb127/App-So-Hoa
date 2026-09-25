@@ -10,4 +10,8 @@
     <TextView android:id="@+id/txtInvoiceStatus" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.1" />
     <ImageButton android:id="@+id/btnInvoicePdf" android:layout_width="48dp" android:layout_height="48dp"
         android:src="@drawable/ic_pdf" android:contentDescription="PDF" android:background="?android:attr/selectableItemBackgroundBorderless" />
+    <ImageButton android:id="@+id/btnReceiptReprint" android:layout_width="48dp" android:layout_height="48dp"
+        android:src="@drawable/ic_print" android:scaleType="fitCenter" android:padding="8dp"
+        android:contentDescription="In lại phiếu" android:visibility="gone"
+        android:background="?android:attr/selectableItemBackgroundBorderless" />
 </LinearLayout>

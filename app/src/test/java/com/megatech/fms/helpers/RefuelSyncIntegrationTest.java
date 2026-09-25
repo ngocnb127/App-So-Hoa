@@ -11,11 +11,13 @@ import android.content.Context;
 import androidx.room.Room;
 import androidx.test.core.app.ApplicationProvider;
 
+import com.megatech.fms.FMSApplication;
 import com.megatech.fms.data.AppDatabase;
 import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.data.entity.RefuelItem;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
+import com.megatech.fms.model.TruckModel;
 
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +51,9 @@ public class RefuelSyncIntegrationTest {
     @Before
     public void setUp() {
         Context context = ApplicationProvider.getApplicationContext();
+        TruckModel setting = new TruckModel();
+        setting.setTruckId(173);
+        ((FMSApplication) context).saveSetting(setting, false);
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase.class)
                 .allowMainThreadQueries()
                 .build();

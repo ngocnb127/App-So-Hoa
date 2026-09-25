@@ -157,6 +157,15 @@ public class RefuelItemData extends BaseModel implements Cloneable {
      */
     private transient String rawJson;
 
+    /**
+     * Response chi tiết có mang một mảng {@code Others} đầy đủ và đã được kiểm tra hay không.
+     *
+     * <p>Danh sách rỗng và danh sách không được server gửi là hai ý nghĩa khác nhau. Cờ này
+     * cho phép tầng đồng bộ chỉ coi {@code Others} là snapshot có thẩm quyền khi parser đã
+     * nhìn thấy đúng một JSON array và gắn raw JSON cho từng phần tử.
+     */
+    private transient boolean completeOthersSnapshot;
+
     public Boolean getApplied() {
         return applied;
     }
@@ -179,6 +188,14 @@ public class RefuelItemData extends BaseModel implements Cloneable {
 
     public void setRawJson(String rawJson) {
         this.rawJson = rawJson;
+    }
+
+    public boolean hasCompleteOthersSnapshot() {
+        return completeOthersSnapshot;
+    }
+
+    public void setCompleteOthersSnapshot(boolean completeOthersSnapshot) {
+        this.completeOthersSnapshot = completeOthersSnapshot;
     }
 
     /**
@@ -452,6 +469,66 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         }
 
     }
+    /**
+     * Giờ tra nạp của phiếu này đã bị KHOÁ chưa.
+     *
+     * <p>Mốc khoá là ĐÃ XUẤT HOÁ ĐƠN. Trước mốc đó, hiện trường vẫn còn nhu cầu chính đáng:
+     * sửa giờ nhập sai, sửa giờ khi đồng hồ không bắt được sự kiện start — ca này xảy ra
+     * thường xuyên và để lại {@code StartTime == EndTime}.
+     *
+     * <p>KHÔNG khoá theo {@code Status == DONE}: trạng thái đó được đặt ngay khi bấm kết thúc
+     * mẻ, rất lâu trước khi chốt sổ. "Đã bơm xong" và "đã chốt sổ" là hai chuyện khác nhau.
+     *
+     * <p>Lưu ý: API hiện tại còn khoá theo {@code Status == DONE || Printed || ReceiptId},
+     * rộng hơn luật này — xem {@code docs/YEUCAU-SERVER-API-KHOA-GIO-TRA-NAP.md}. Tới khi
+     * server đổi theo, phiếu đã DONE mà chưa xuất hoá đơn vẫn sẽ bị server từ chối; app giữ
+     * nguyên giá trị người dùng và gửi lại, không tự đè về bản server.
+     */
+    public boolean isMeasuredTimeLockedOnServer() {
+        return invoiceNumber != null && !invoiceNumber.trim().isEmpty();
+    }
+
+    /**
+     * Bản sao dùng cho "NẠP THÊM": một mẻ MỚI của xe {@code truckNo} trên cùng chuyến.
+     *
+     * <p>Nguồn có thể là mẻ của XE KHÁC — nghiệp vụ cho phép nhìn phiếu xe bạn rồi nạp tiếp
+     * phần còn lại của chuyến đó. Vì vậy bản sao tuyệt đối không được mang theo bất kỳ dấu
+     * vết định danh nào của phiếu nguồn.
+     *
+     * <p>{@link #copy()} đã cấp UniqueId mới và xoá Id/LocalId/số đồng hồ/số chứng từ, nhưng
+     * nó dựa trên {@link #clone()} nên các trường NGOÀI nghiệp vụ vẫn còn nguyên:
+     * {@code rawJson} vẫn là JSON server của phiếu nguồn (kèm UniqueId, Id, TruckNo của xe
+     * kia) và {@code baseJson}/{@code baseClientSeq} vẫn là baseline của row kia. Để nguyên
+     * thì dữ liệu replica có đường lên server dưới danh nghĩa xe này.
+     *
+     * @return mẻ mới, hoặc null nếu không sao chép được
+     */
+    public RefuelItemData copyForNewBatch(int truckId, String truckNo) {
+        RefuelItemData item = copy();
+        if (item == null) return null;
+
+        item.setTruckId(truckId);
+        item.setTruckNo(truckNo);
+
+        // Mẻ mới chưa từng tồn tại ở server: không có raw JSON, không có baseline nào để đứng lên.
+        item.setRawJson(null);
+        item.setBaseJson(null);
+        item.setBaseClientSeq(0);
+        item.setBaseServerRevision(0);
+        item.setBaseBusinessFingerprint(null);
+        item.setPostStatus(ITEM_POST_STATUS.NONE);
+
+        // Chưa nạp giọt nào. Trạng thái của phiếu nguồn có thể đã DONE; chép sang thì mẻ mới
+        // vào màn tra nạp trong trạng thái đã chốt.
+        item.setStatus(REFUEL_ITEM_STATUS.NONE);
+
+        // Collection Others thuộc phiếu gốc, không thuộc mẻ mới.
+        item.setOthers(null);
+        item.setCompleteOthersSnapshot(false);
+
+        return item;
+    }
+
     @Override
     public Object clone() throws CloneNotSupportedException {
         return super.clone();
@@ -644,6 +721,11 @@ public class RefuelItemData extends BaseModel implements Cloneable {
 
     public void setStartTime(Date startTime) {
 
+        if (startTime == null) {
+            this.startTime = null;
+            return;
+        }
+
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(startTime);
 
@@ -729,6 +811,14 @@ public class RefuelItemData extends BaseModel implements Cloneable {
 
     /** Lệch quá ngần này lít thì coi là dữ liệu trong bộ nhớ đang mâu thuẫn, không phải làm tròn. */
     public static final double VOLUME_TOLERANCE_LITTER = 2d;
+
+    /**
+     * Ngưỡng tương ứng cho khối lượng.
+     *
+     * <p>Khối lượng là {@code round(Volume × Density)}, nên số lít khớp thì khối lượng khớp
+     * tuyệt đối. Ngưỡng ở đây chỉ để một chênh lệch làm tròn không bị báo thành sai dữ liệu.
+     */
+    public static final double WEIGHT_TOLERANCE_KG = 2d;
 
     /**
      * Ép lại bất biến {@code Volume = round(Gallon × 3.7854)} ngay trước khi gửi.
@@ -1324,9 +1414,25 @@ public class RefuelItemData extends BaseModel implements Cloneable {
         return  splitItem;
     }
 
+    /**
+     * Giờ tra nạp có dùng được để xuất phiếu hay không.
+     *
+     * <p>Ba điều khác nhau, đừng gộp lại:
+     * <ul>
+     *   <li>Thiếu giờ ⇒ KHÔNG hợp lệ. Trước đây chỗ này ném NPE.</li>
+     *   <li>Giờ đảo ngược ({@code end < start}) ⇒ CHẶN CỨNG, giữ nguyên.</li>
+     *   <li>Mẻ 0 phút ({@code start == end}) ⇒ CHO QUA. Có ca bơm rất ít, và chính
+     *       {@code finalizStop()} tạo ra ca này khi không bắt được sự kiện bắt đầu của
+     *       đồng hồ: nó lấy luôn giờ bấm kết thúc làm giờ bắt đầu.</li>
+     * </ul>
+     * Mẻ dài quá 2 giờ vẫn bị chặn như cũ.
+     */
     public boolean validTime() {
-        return startTime.before(endTime) && startTime.after(new Date(endTime.getTime() - 120 *60 *1000));
-
+        if (startTime == null || endTime == null)
+            return false;
+        if (endTime.before(startTime))
+            return false;
+        return startTime.after(new Date(endTime.getTime() - 120 * 60 * 1000));
     }
 
 

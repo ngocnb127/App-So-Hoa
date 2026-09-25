@@ -6,6 +6,8 @@ import androidx.room.TypeConverter;
 import com.google.gson.annotations.SerializedName;
 import com.megatech.fms.model.RefuelItemData;
 
+import org.json.JSONObject;
+
 import java.util.Date;
 
 import static com.megatech.fms.model.RefuelItemData.GALLON_TO_LITTER;
@@ -37,6 +39,23 @@ public class RefuelItem extends BaseEntity {
             itemData.setId(this.getId());
         itemData.setClientSeq(Math.max(this.getClientSeq(), itemData.getClientSeq()));
         itemData.setServerRevision(Math.max(this.getServerRevision(), itemData.getServerRevision()));
+
+        // Model khởi tạo Start/EndTime bằng new Date(). Với JSON legacy thiếu khoá giờ,
+        // Gson vì thế tự sinh thời điểm đọc — kể cả row v13 chưa kịp được đánh dấu replica.
+        // Khi khoá vắng/null, cột Room mới là nguồn chuẩn (và có thể hợp lệ là null).
+        try {
+            JSONObject raw = new JSONObject(getJsonData());
+            if (!raw.has("StartTime") || raw.isNull("StartTime"))
+                itemData.setStartTime(getStartTime());
+            if (!raw.has("EndTime") || raw.isNull("EndTime"))
+                itemData.setEndTime(getEndTime());
+        } catch (Exception ignored) {
+            // JSON hỏng sẽ được tầng gọi xử lý; riêng replica vẫn không được phép tự sinh giờ.
+            if (isRemoteReplica()) {
+                itemData.setStartTime(getStartTime());
+                itemData.setEndTime(getEndTime());
+            }
+        }
 
         // Đóng dấu phiên bản của row tại thời điểm đọc: mọi màn hình giữ snapshot này
         // đều biết mình đang sửa trên nền phiên bản nào, và trên payload nền nào.
@@ -291,12 +310,43 @@ public class RefuelItem extends BaseEntity {
 
     private ITEM_POST_STATUS postStatus = ITEM_POST_STATUS.SUCCESS;
 
+    /**
+     * Bản sao read-only của mẻ do xe khác thực hiện.
+     *
+     * <p>Cột riêng thay vì suy từ {@code truckNo}: cấu hình xe có thể chưa sẵn sàng lúc app
+     * khởi động hoặc server có thể điều xe lại. DAO dùng cờ này như lớp chặn cuối để remote
+     * replica không bao giờ lọt vào hàng đợi POST.
+     */
+    private boolean remoteReplica = false;
+
+    /**
+     * JSON array UID của collection Others đầy đủ gần nhất trả cho chính row này.
+     * Null = chưa từng nhận snapshot membership; "[]" = server xác nhận không có mẻ khác.
+     */
+    private String remoteOthersUidsJson;
+
     public ITEM_POST_STATUS getPostStatus() {
         return postStatus;
     }
 
     public void setPostStatus(ITEM_POST_STATUS postStatus) {
         this.postStatus = postStatus;
+    }
+
+    public boolean isRemoteReplica() {
+        return remoteReplica;
+    }
+
+    public void setRemoteReplica(boolean remoteReplica) {
+        this.remoteReplica = remoteReplica;
+    }
+
+    public String getRemoteOthersUidsJson() {
+        return remoteOthersUidsJson;
+    }
+
+    public void setRemoteOthersUidsJson(String remoteOthersUidsJson) {
+        this.remoteOthersUidsJson = remoteOthersUidsJson;
     }
 
     public double getStartNumber() {

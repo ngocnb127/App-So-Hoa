@@ -46,6 +46,7 @@ import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.LCRReader;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.MeterFieldHealth;
 import com.megatech.fms.helpers.RefuelApproachGuard;
 import com.megatech.fms.model.AirlineModel;
 import com.megatech.fms.model.AirportsModel;
@@ -86,6 +87,46 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     AlertDialog inputDlg;
     private Button btnBack;
     private final String LOG_TAG = "RFW";
+
+    /**
+     * Các hộp thoại màn này đang mở.
+     *
+     * <p>Đo trên máy thật (Crashlytics, bản 118, 13 thiết bị):
+     * {@code IllegalArgumentException: View=DecorView[RefuelDetailActivity] not attached to
+     * window manager} — bấm một nút trên hộp thoại thuộc về một Activity ĐÃ kết thúc.
+     *
+     * <p>Vì sao bọc {@code try/catch} quanh {@code dialog.dismiss()} KHÔNG cứu được: sau mỗi
+     * lần bấm nút, {@code AlertController} tự gửi thêm một lệnh dismiss của riêng nó
+     * ({@code MSG_DISMISS_DIALOG}). Lệnh đó nằm trong khung của hệ thống, ta không bắt được,
+     * và nó ném đúng exception này. Cách duy nhất là ĐỪNG để hộp thoại sống lâu hơn cửa sổ
+     * của màn hình — không còn hộp thoại thì không còn nút để bấm.
+     */
+    private final List<Dialog> openDialogs = new ArrayList<>();
+
+    /** Ghi lại một hộp thoại vừa mở. Trả về chính nó để gọi lồng ngay tại chỗ {@code show()}. */
+    private <T extends Dialog> T track(T dialog) {
+        if (dialog != null) openDialogs.add(dialog);
+        return dialog;
+    }
+
+    /**
+     * Đóng mọi hộp thoại còn mở của màn này.
+     *
+     * <p>Gọi ở {@code onPause} khi màn hình đang KẾT THÚC, và một lần nữa ở {@code onDestroy}
+     * làm lưới cuối. Cố ý KHÔNG đóng khi chỉ là tạm dừng (tắt màn hình, chuyển app): hộp nhập
+     * tay đang giữ số đồng hồ người dùng vừa gõ, đóng nó đi là làm mất dữ liệu thật.
+     */
+    private void dismissOpenDialogs() {
+        for (Dialog dialog : new ArrayList<>(openDialogs)) {
+            try {
+                if (dialog.isShowing()) dialog.dismiss();
+            } catch (Exception ignored) {
+                // Đóng một hộp thoại đã chết không phải là lỗi cần báo.
+            }
+        }
+        openDialogs.clear();
+        inputDlg = null;
+    }
 
     private enum CONNECTION_STATUS {
         /** Đang nhận số từ đồng hồ. */
@@ -397,6 +438,15 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         builder.setPositiveButton(getString(id == R.id.btnStart ? R.string.start : R.string.stop), (dialog, id12) -> {
             Logger.appendLog(id == R.id.btnStart ? "Confirm start " : "Confirm stop");
             if (id == R.id.btnStop) {
+                // Nhánh TCS ở đây KHÔNG BAO GIỜ CHẠY, và đó là ĐÚNG THIẾT KẾ.
+                //
+                // Xe TCS bắt đầu và dừng NGAY TẠI ĐỒNG HỒ, không điều khiển từ app (chủ dự án
+                // xác nhận 2026-09-05). Vì vậy startButtonSupported chỉ bật cho LCR600, btnStart
+                // không hiện trên TCS, nên không có đường nào bấm tới đây.
+                //
+                // Giữ lại nhánh này thay vì xoá: nếu sau này TCS được phép điều khiển từ xa thì
+                // đây là chỗ nối lại, và xoá đi rồi viết lại dễ sai hơn là để nguyên có ghi chú.
+                // Đường kết thúc THẬT của TCS là sự kiện từ thiết bị -> doStopTCS() -> finalizStop().
                 if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
                     stopTCS();
                 } else {
@@ -408,7 +458,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             dialog.dismiss();
         });
         builder.setNegativeButton(getString(R.string.back), (dialog, id1) -> dialog.dismiss());
-        builder.create().show();
+        track(builder.create()).show();
     }
 
 
@@ -659,7 +709,15 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
             reader = LCRReader.create(this, storedIP, 10001, false);
-            if (reader.isLCR600()) btnStart.setVisibility(View.VISIBLE);
+            // Chỉ LCR600 nhận được lệnh bắt đầu/dừng từ xa. Ghi lại thành cờ để hàm quyết
+            // định hiển thị dùng chung, thay vì đặt visibility một lần rồi bị ghi đè.
+            //
+            // Cờ này CỐ Ý chỉ được đặt trong nhánh LCR: xe TCS bắt đầu và dừng NGAY TẠI ĐỒNG HỒ
+            // (chủ dự án xác nhận 2026-09-05), nên trên TCS nút Bắt đầu/Dừng không bao giờ hiện.
+            // Đừng "sửa" bằng cách đặt cờ này ở nhánh TCS — start() gọi thẳng reader.start(), mà
+            // trên TCS reader không được tạo, nên hiện nút ở đó là crash.
+            startButtonSupported = reader.isLCR600();
+            if (startButtonSupported) btnStart.setVisibility(View.VISIBLE);
             addListeners();
             startDataFreshnessWatchdog();
             deviceIsReady = reader.getConnected();
@@ -709,6 +767,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
      */
     private void startDataFreshnessWatchdog() {
         if (tmrDataFreshness != null) tmrDataFreshness.cancel();
+        // Phiên đo mới: xoá số đếm cũ và bật khoảng ân hạn của hàng đợi đăng ký trường.
+        MeterFieldHealth.shared().beginSession(android.os.SystemClock.elapsedRealtime());
+        meterDataStale = false;
+        meterFieldLogLatch.beginSession();
         tmrDataFreshness = new Timer("FMS-Meter-Freshness");
         tmrDataFreshness.schedule(new TimerTask() {
             @Override
@@ -719,10 +781,36 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                         : (reader != null && reader.getConnected());
                 if (!connected) return;
 
-                long last = lastMeterDataAt;
-                if (last <= 0) return;                // chưa từng có số, chưa kết luận được
+                // Sức khoẻ TỪNG TRƯỜNG chỉ để GHI VẾT, KHÔNG bật cảnh báo trên màn hình.
+                //
+                // Đây là quyết định có chủ ý, không phải bỏ sót. Phép đo theo trường quá nhạy
+                // với những chuyện bình thường của thiết bị — trường đọc một lần rồi thôi,
+                // trường phụ im tiếng, số tổng bị bộ lọc giữ lại vài nhịp — nên nó bật cảnh
+                // báo trong lúc đồng hồ vẫn trả số đúng. Cảnh báo sai vài lần thì đến lần
+                // đồng hồ chết thật cũng không còn ai nhìn.
+                //
+                // Cái thật sự bảo vệ số liệu KHÔNG nằm ở màu sắc mà ở hai chỗ khác, cả hai
+                // vẫn nguyên: MeterFieldHealth.resolveStartNumber chặn số đồng hồ đầu mẻ hỏng
+                // ghi xuống Room, và dòng nhật ký ngay dưới đây để đối soát sau ca. Cảnh báo
+                // cho người vận hành chỉ còn dựa trên MỘT tín hiệu: không có gói nào về.
+                java.util.List<MeterFieldHealth.Field> staleFields =
+                        MeterFieldHealth.shared().staleFields(
+                                android.os.SystemClock.elapsedRealtime());
+                if (meterFieldLogLatch.update(!staleFields.isEmpty())) {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=%s uid=%s fields=%s health=%s",
+                            staleFields.isEmpty() ? "METER_FIELD_RECOVERED" : "METER_FIELD_STALE",
+                            mItem == null ? "null" : mItem.getUniqueId(),
+                            staleFields,
+                            MeterFieldHealth.shared().snapshotForLog()));
+                }
 
-                boolean stale = System.currentTimeMillis() - last > METER_DATA_STALE_MS;
+                long last = lastMeterDataAt;
+
+                // Chỉ CẢNH BÁO: dấu kết nối đổi màu, không dialog, không dừng đo, không
+                // chặn Start/Stop. Tự tắt vì tính lại từ đầu mỗi chu kỳ, không có cờ dính.
+                boolean stale = last > 0
+                        && System.currentTimeMillis() - last > METER_DATA_STALE_MS;
                 if (stale != meterDataStale) {
                     meterDataStale = stale;
                     Logger.appendLog(LOG_TAG, stale
@@ -733,6 +821,13 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             }
         }, METER_DATA_STALE_MS, 2000L);
     }
+
+    /**
+     * Chốt GHI VẾT sức khoẻ trường: chỉ để nhật ký ghi mỗi lần CHUYỂN trạng thái thay vì
+     * ghi lại y hệt mỗi 2 giây. Không còn điều khiển bất cứ thứ gì trên màn hình.
+     */
+    private final MeterFieldHealth.WarningLatch meterFieldLogLatch =
+            new MeterFieldHealth.WarningLatch();
 
     private boolean meterDataStale = false;
 
@@ -787,12 +882,19 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 : getResources().getColor(android.R.color.black, getTheme()));
     }
 
+    /** Listener màn này gắn vào đồng hồ dùng chung — giữ lại để chỉ gỡ đúng chúng. */
+    private LCRReader.LCRConnectionListener lcrConnectionListener;
+    private LCRReader.LCRDataListener lcrDataListener;
+    private LCRReader.LCRStateListener lcrStateListener;
+
+    /**
+     * Gỡ listener CỦA MÀN NÀY. Không dùng {@code setXxxListener(null)}: onDestroy chạy muộn,
+     * lúc màn kế tiếp (màn in, hoặc màn tra nạp của chuyến sau) đã gắn listener của nó vào
+     * cùng đồng hồ — gán null là gỡ nhầm của màn đó.
+     */
     private void clearListeners() {
-        if (reader != null) {
-            reader.setConnectionListener(null);
-            reader.setStateListener(null);
-            reader.setFieldDataListener(null);
-        }
+        if (reader != null)
+            reader.removeListeners(lcrDataListener, lcrConnectionListener, lcrStateListener);
     }
 
     private void showData() {
@@ -834,7 +936,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         activity = this;
         if (mItem.isAlert()) {
-            new AlertDialog.Builder(activity)
+            track(new AlertDialog.Builder(activity)
                     .setTitle(R.string.app_name)
                     .setMessage(R.string.inventory_alert)
                     .setIcon(R.drawable.ic_warning)
@@ -843,8 +945,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                         dialog.dismiss();
                         finish();
                     })
-                    .create()
-                    .show();
+                    .create()).show();
         }
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -1032,7 +1133,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         Context context = this;
         final AlertDialog dialog = builder.create();// builder.show();
 
-        dialog.show();
+        track(dialog).show();
         input.requestFocus();
         if (view.getId() == R.id.refuelitem_detail_Density)
             input.setSelection(2, input.getText().length());
@@ -1116,7 +1217,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     }
 
     private void updateBinding() {
-        enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
+        // Mọi caller của hàm này là một hộp thoại người dùng vừa nhập xong.
+        enqueueSave(false, SaveKind.USER_EDIT, RefuelDetailActivity.this::warnIfNotSaved);
 
         showData();
 
@@ -1142,7 +1244,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             spn.setAdapter(spinnerAdapter);
             spn.setSelection(findUser(mItem.getOperatorId(), userList));
 
-            dialog.show();
+            track(dialog).show();
 
             dialog.findViewById(R.id.btn_select).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -1156,7 +1258,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     UserModel operator = (UserModel) spnOperator.getSelectedItem();
 
                     if (driver.getId() == operator.getId()) {
-                        new AlertDialog.Builder(dialog.getContext())
+                        track(new AlertDialog.Builder(dialog.getContext())
                                 .setTitle(R.string.select_user)
                                 .setMessage(R.string.error_same_user)
                                 .setIcon(R.drawable.ic_error)
@@ -1166,7 +1268,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                                         dialogInterface.dismiss();
                                     }
                                 })
-                                .show();
+                                .create()).show();
                         return;
                     }
 
@@ -1337,7 +1439,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     private void showCancelDialog() {
 
         if (refuel_status == REFUEL_STATUS.STARTED) {
-            new AlertDialog.Builder(this)
+            track(new AlertDialog.Builder(this)
                     .setTitle(R.string.accept)
                     .setMessage(R.string.cancel_refuel_message)
                     .setPositiveButton(R.string.accept, new DialogInterface.OnClickListener() {
@@ -1353,7 +1455,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                             dialogInterface.dismiss();
                         }
                     })
-                    .show();
+                    .create()).show();
         }
     }
 
@@ -1596,7 +1698,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 ((EditText) inputDlg.findViewById(R.id.dialog_endtime)).setText(DateUtils.formatDate(cal.getTime(), "HH:mm"));
             }
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true);
-        timePicker.show();
+        track(timePicker).show();
 
     }
 
@@ -1618,7 +1720,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         });
 
-        Dialog dlg = builder.create();
+        Dialog dlg = track(builder.create());
         dlg.show();
         ((TextView) dlg.findViewById(android.R.id.message)).setTextSize(18);
         ((TextView) dlg.findViewById(android.R.id.button1)).setTextSize(18);
@@ -1626,9 +1728,43 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     }
 
+    /**
+     * Màn tra nạp là màn hình DUY NHẤT còn chặn Back, và chỉ chặn khi mẻ ĐANG chạy: rời màn
+     * hình lúc đó là bỏ dở một mẻ đang bơm. Ở NONE và ENDED thì Back đi được bình thường.
+     */
+    @Override
+    protected boolean isBackBlocked() {
+        return isRefuelRunning(refuel_status);
+    }
+
+    /** Mẻ đang chạy: KHÔNG được rời màn hình giữa chừng. */
+    private static boolean isRefuelRunning(REFUEL_STATUS status) {
+        return status == REFUEL_STATUS.STARTING
+                || status == REFUEL_STATUS.STARTED
+                || status == REFUEL_STATUS.ENDING;
+    }
+
+    /**
+     * Nút Bắt đầu/Dừng chỉ có nghĩa trên dòng máy có lệnh điều khiển từ xa (LCR600). Cờ này
+     * do {@code initReader()} bật, thay cho việc đặt visibility một lần rồi bị ghi đè.
+     */
+    private boolean startButtonSupported = false;
+
+    /**
+     * Quyết định hiển thị DUY NHẤT của btnStart.
+     *
+     * <p>Trước đây dòng đầu hàm luôn {@code setVisibility(GONE)} và không nhánh nào bật lại,
+     * nên nút biến mất ngay sau lần đổi trạng thái đầu tiên — đường {@code stop()} vì thế
+     * không bao giờ chạy được. Nay nút hiện ở các trạng thái có nghĩa (NONE để bắt đầu,
+     * STARTED để dừng) và ẩn ở các trạng thái đang chuyển tiếp.
+     *
+     * <p>KHÔNG đụng {@code btnForceStop}: nút đó luôn hiện, luôn bấm được.
+     */
     private void setButtonText(REFUEL_STATUS status) {
         int btnText = R.string.start;
-        btnStart.setVisibility(View.GONE);
+        boolean visible = startButtonSupported
+                && (status == REFUEL_STATUS.NONE || status == REFUEL_STATUS.STARTED);
+        btnStart.setVisibility(visible ? View.VISIBLE : View.GONE);
         switch (status) {
             case NONE:
                 btnText = R.string.start;
@@ -1654,7 +1790,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     private void addListeners() {
 
         reader.setRefuel(true);
-        reader.setConnectionListener(new LCRReader.LCRConnectionListener() {
+        reader.setConnectionListener(lcrConnectionListener = new LCRReader.LCRConnectionListener() {
             @Override
             public void onConnected() {
                 Logger.appendLog(LOG_TAG, "connectionListener onConnected");
@@ -1719,7 +1855,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         });
 
-        reader.setFieldDataListener(new LCRReader.LCRDataListener() {
+        reader.setFieldDataListener(lcrDataListener = new LCRReader.LCRDataListener() {
             @Override
             public void onDataChanged(LCRDataModel dataModel, LCRReader.FIELD_CHANGE field_change) {
                 lastMeterDataAt = System.currentTimeMillis();
@@ -1732,7 +1868,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                                 setting.setDeviceSerial(dataModel.getSerialId());
                                 currentApp.saveSetting(setting, false);
                             } else {
-                                new AlertDialog.Builder(activity)
+                                track(new AlertDialog.Builder(activity)
                                         .setTitle(R.string.invalid_device)
                                         .setMessage(R.string.invalid_device_confirm)
                                         .setIcon(R.drawable.ic_error)
@@ -1749,8 +1885,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                                                 dialogInterface.dismiss();
                                             }
                                         })
-                                        .create()
-                                        .show();
+                                        .create()).show();
                             }
                         }
                         break;
@@ -1842,7 +1977,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             }
         });
 
-        reader.setStateListener(new LCRReader.LCRStateListener() {
+        reader.setStateListener(lcrStateListener = new LCRReader.LCRStateListener() {
             @Override
             public void onEndDelivery() {
                 Logger.appendLog("RFW", "  onEndDelivery");
@@ -1906,7 +2041,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private void showContinueConfirm() {
 
-        new AlertDialog.Builder(this)
+        track(new AlertDialog.Builder(this)
                 .setMessage(R.string.refuelling_status)
                 .setTitle(R.string.app_name)
                 /*.setNegativeButton(R.string.restart, new DialogInterface.OnClickListener() {
@@ -1921,8 +2056,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     Logger.appendLog("Confirm continue refuel");
                     continueRefuel();
                 })
-                .create()
-                .show();
+                .create()).show();
     }
 
     private REFUEL_STATUS refuel_status = REFUEL_STATUS.NONE;
@@ -1937,6 +2071,39 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
     private void showDataInput() {
         showDataInput(true);
+    }
+
+    /** Mã lỗi của hộp nhập tay — độc lập với chuỗi hiển thị để kiểm thử được. */
+    static final String PROBLEM_AMOUNT = "AMOUNT";
+    static final String PROBLEM_START_METER = "START_METER";
+    static final String PROBLEM_END_METER = "END_METER";
+
+    /**
+     * Liệt kê ĐÚNG những ô sai của hộp nhập tay sau Dừng khẩn.
+     *
+     * <p>Trước đây ba điều kiện gộp chung một câu "Số liệu nhập không hợp lệ", nên người
+     * dùng không biết phải sửa ô nào.
+     */
+    static java.util.List<String> manualInputProblems(double realAmount,
+                                                      double startNumber,
+                                                      double endNumber) {
+        java.util.List<String> problems = new java.util.ArrayList<>();
+        if (realAmount <= 0) problems.add(PROBLEM_AMOUNT);
+        if (startNumber <= 0) problems.add(PROBLEM_START_METER);
+        // Sản lượng không thể lớn hơn chính số đồng hồ kết thúc.
+        if (realAmount >= endNumber) problems.add(PROBLEM_END_METER);
+        return problems;
+    }
+
+    private static int manualInputProblemLabel(String problem) {
+        switch (problem) {
+            case PROBLEM_AMOUNT:
+                return R.string.real_amount;
+            case PROBLEM_START_METER:
+                return R.string.start_meter;
+            default:
+                return R.string.end_meter;
+        }
     }
 
     private EditRefuelDialogBinding dialogBinding;
@@ -1960,9 +2127,21 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     dialog.dismiss();
                 }
             });
+        else
+            // Hộp nhập tay bắt buộc (thiết bị không trả về giờ kết thúc) TRƯỚC ĐÂY không có
+            // lối ra nào: không nút Huỷ, không cho huỷ bằng chạm ngoài. Nhập sai một ô là
+            // kẹt hẳn. Nay luôn còn nút "Để sau": đóng hộp, GIỮ NGUYÊN số liệu đang có và
+            // trả màn hình về trạng thái đang tra nạp để còn Dừng khẩn / Huỷ / thử lại.
+            builder.setNegativeButton(R.string.input_later, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    Logger.appendLog("RFW", "Người dùng hoãn nhập tay, trở lại màn tra nạp");
+                    dialog.dismiss();
+                    setRefuelStatus(REFUEL_STATUS.STARTED);
+                }
+            });
 
         builder.setCancelable(false);
-        inputDlg = builder.create();
+        inputDlg = track(builder.create());
         inputDlg.setCanceledOnTouchOutside(false);
         inputDlg.setCancelable(false);
         inputDlg.show();
@@ -2002,12 +2181,20 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 } catch (Exception ex) {
                     Logger.appendLog("RFW", "Data input : " + ex.getLocalizedMessage());
                 }
-                if (mItem.getRealAmount() <= 0 || mItem.getRealAmount() >= mItem.getEndNumber() || mItem.getStartNumber() <= 0) {
-                    new AlertDialog.Builder(activity)
+                java.util.List<String> problems = manualInputProblems(
+                        mItem.getRealAmount(), mItem.getStartNumber(), mItem.getEndNumber());
+                if (!problems.isEmpty()) {
+                    // Hộp báo lỗi cũ KHÔNG có nút nào và không nói ô nào sai: người dùng chỉ
+                    // còn cách chạm ra ngoài để đoán. Nay có nút OK và chỉ đúng ô phải sửa.
+                    StringBuilder msg = new StringBuilder(getString(R.string.invalid_data_input));
+                    for (String p : problems)
+                        msg.append("\n• ").append(getString(manualInputProblemLabel(p)));
+                    track(new AlertDialog.Builder(activity)
                             .setTitle(R.string.validate)
-                            .setMessage(R.string.invalid_data_input)
+                            .setMessage(msg.toString())
                             .setIcon(R.drawable.ic_error)
-                            .create().show();
+                            .setPositiveButton("OK", (d, w) -> d.dismiss())
+                            .create()).show();
                 } else {
                     inputDlg.dismiss();
                     TruckModel settingModel = currentApp.getSetting();
@@ -2109,7 +2296,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         Logger.appendLog("RFW", "Meter started at " + eventTime.getTime()
                 + ", save local item immediately");
-        enqueueSave(false, this::warnIfNotSaved);
+        // Đây là CHUYỂN TRẠNG THÁI một lần, không phải số đo trung gian: nó ghi giờ bắt đầu
+        // và đóng dấu TruckId/TruckNo của xe này lên phiếu. Để nó rơi vào nhịp autosave thì
+        // một gói dữ liệu thiết bị đến trước đó dưới một giây sẽ nuốt mất cả hai.
+        enqueueSave(false, SaveKind.STATE_EVENT, this::warnIfNotSaved);
     }
 
     private void requestSaleNumberAndTicket() {
@@ -2182,12 +2372,30 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         });
 
         builder.setCancelable(false);
-        runOnUiThread(() -> builder.create().show());
+        runOnUiThread(() -> track(builder.create()).show());
     }
 
     private void finalizStop() {
         setRefuelStatus(REFUEL_STATUS.ENDED);
         started = false;
+
+        // Một dòng tổng kết sức khoẻ đọc trường, để đối soát sau ca: cặp số đồng hồ có thể
+        // trông hợp lệ mà vẫn sai nếu một trường đã chết giữa mẻ.
+        try {
+            long now = android.os.SystemClock.elapsedRealtime();
+            Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                    "event=METER_FIELD_SUMMARY uid=%s stale=%s held=%b health=%s"
+                            + " amount=%.0f start=%.0f end=%.0f",
+                    mItem == null ? "null" : mItem.getUniqueId(),
+                    MeterFieldHealth.shared().staleFields(now),
+                    startNumberHeld,
+                    MeterFieldHealth.shared().snapshotForLog(),
+                    mItem == null ? 0d : mItem.getRealAmount(),
+                    mItem == null ? 0d : mItem.getStartNumber(),
+                    mItem == null ? 0d : mItem.getEndNumber()));
+        } catch (Exception ignored) {
+            // Ghi vết không bao giờ được phép làm hỏng việc kết thúc mẻ.
+        }
 
         try {
             if (mItem != null) {
@@ -2250,7 +2458,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             TextView lblrefuelStatus = findViewById(R.id.lbl_refuel_status);
             refuel_status = status;
             setButtonText(status);
-            btnBack.setEnabled(refuel_status == REFUEL_STATUS.NONE);
+            // Chỉ khoá nút Trở lại khi mẻ ĐANG chạy. Ở ENDED mẻ đã kết thúc, người dùng phải
+            // còn đường rời màn hình — khoá cả ở đây từng làm màn hình chết khi lần chốt mẻ
+            // chưa ghi được.
+            btnBack.setEnabled(!isRefuelRunning(refuel_status));
 
             switch (status) {
 
@@ -2265,7 +2476,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     lblrefuelStatus.setText(R.string.refuel_ended);
                     lblrefuelStatus.setBackgroundColor(getResources().getColor(R.color.bgInfo, getTheme()));
                     //setEnableButton(false);
-                    btnForceStop.setEnabled(false);
+                    // KHÔNG disable btnForceStop: nút Dừng khẩn phải LUÔN hiện và LUÔN bấm
+                    // được ở mọi trạng thái. Trước đây tắt ở đây làm màn hình ENDED không
+                    // còn nút nào đi tiếp khi lần chốt mẻ chưa ghi được.
                     findViewById(R.id.btnCancel).setVisibility(View.INVISIBLE);
                     break;
 
@@ -2273,7 +2486,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                     started = true;
                     lblrefuelStatus.setText(R.string.refuel_processing);
                     lblrefuelStatus.setBackgroundColor(getResources().getColor(R.color.bgSuccess, getTheme()));
-                    btnStart.setVisibility(View.GONE);
+                    // Hiển thị btnStart do setButtonText() quyết định (nút "Dừng" ở trạng
+                    // thái STARTED); ẩn lại ở đây là thứ đã làm mất đường dừng bình thường.
                     findViewById(R.id.btnCancel).setVisibility(View.VISIBLE);
                     //setEnableButton(true);
                     break;
@@ -2303,7 +2517,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             //mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
             if (model.getEndMeterNumber() > 0) {
                 //mItem.setStartNumber(model.getStartMeterNumber());
-                mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
+                applyStartNumber(model.getEndMeterNumber(), model.getGrossQty());
                 mItem.setEndNumber(model.getEndMeterNumber());
                 mItem.setOriginalEndMeter(model.getEndMeterNumber());
             }
@@ -2329,6 +2543,41 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         }
         //Log.e("REFUEL", "Update refuel data");
     }
+
+    /**
+     * Ghi số đồng hồ đầu mẻ, nhưng KHÔNG để một giá trị hỏng đè lên giá trị còn dùng được.
+     *
+     * <p>{@code StartNumber = EndMeter − Gross} chỉ đúng khi cả hai trường cùng sống. Khi
+     * TOTALIZER đứng mà GROSSQTY vẫn tăng, hiệu này giảm dần và có thể ÂM rồi được ghi thẳng
+     * xuống Room. Ở đây chỉ giữ nguyên giá trị cũ trong đúng hai ca đó — vẫn hiển thị, vẫn
+     * lưu, vẫn cho kết thúc mẻ.
+     *
+     * <p>Việc này biến "số âm — sai rõ" thành "cặp số hợp lý nhưng có thể sai", nên bắt buộc
+     * phải để lại dấu vết: ghi anomaly ở lần CHUYỂN TRẠNG THÁI (không phải mỗi nhịp một
+     * giây) và một dòng tổng kết ở {@code finalizStop()}.
+     */
+    private void applyStartNumber(double endMeter, double gross) {
+        if (mItem == null) return;
+
+        boolean totalizerStale = MeterFieldHealth.shared().isStale(
+                MeterFieldHealth.Field.TOTALIZER, android.os.SystemClock.elapsedRealtime());
+        double previous = mItem.getStartNumber();
+        boolean held = MeterFieldHealth.startNumberHeld(previous, endMeter, gross, totalizerStale);
+
+        if (held != startNumberHeld) {
+            startNumberHeld = held;
+            Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                    "event=%s uid=%s totalizerStale=%b keptStart=%.0f end=%.0f gross=%.0f",
+                    held ? "START_NUMBER_HELD" : "START_NUMBER_RESUMED",
+                    mItem.getUniqueId(), totalizerStale, previous, endMeter, gross));
+        }
+
+        mItem.setStartNumber(MeterFieldHealth.resolveStartNumber(
+                previous, endMeter, gross, totalizerStale));
+    }
+
+    /** Lần tính số đồng hồ đầu gần nhất có bị bỏ qua hay không; chỉ để ghi vết chuyển trạng thái. */
+    private boolean startNumberHeld = false;
 
     private void safeSetText(int viewId, String text) {
         TextView tv = findViewById(viewId);
@@ -2356,7 +2605,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             //mItem.setStartNumber(model.getEndMeterNumber() - model.getGrossQty());
             if (tcsData.getGrossTotalRound() > 0) {
                 //mItem.setStartNumber(model.getStartMeterNumber());
-                mItem.setStartNumber(tcsData.getGrossTotalRound() - tcsData.getGrossQtyRound());
+                applyStartNumber(tcsData.getGrossTotalRound(), tcsData.getGrossQtyRound());
                 mItem.setEndNumber(tcsData.getGrossTotalRound());
                 mItem.setOriginalEndMeter(tcsData.getGrossTotalRound());
             }
@@ -2468,12 +2717,43 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
      */
     private static final long MIN_AUTOSAVE_INTERVAL_MS = 1000L;
 
+    /** Nguồn của một lần lưu. Ba nguồn này có ba luật khác nhau, không được gộp làm một. */
+    private enum SaveKind {
+        /**
+         * Số đo trung gian của LCR/TCS. Bóp theo {@link #MIN_AUTOSAVE_INTERVAL_MS}, và không
+         * phục hồi bằng patch: lần sau của thiết bị sẽ mang số mới hơn.
+         */
+        DEVICE_AUTOSAVE,
+        /**
+         * Người dùng vừa nhập trong hộp thoại và hộp thoại đã đóng. Không bao giờ bị bóp
+         * nhịp, và nếu bị chặn thì đắp lại đúng nhóm trường màn hình này cho nhập.
+         *
+         * <p>Nhịp autosave sinh ra để chặn TCS ghi vài lần mỗi giây, nhưng nó từng chặn
+         * chung cả đường nhập tay: mọi hộp thoại ở đây (nhiệt độ, tỉ trọng, số hoá nghiệm,
+         * bãi đỗ, tàu bay, chọn nhân viên) đều đi qua {@code updateBinding()}. Đồng hồ vừa
+         * autosave dưới một giây là giá trị vừa gõ bị bỏ, mà {@code onResult} cũng không
+         * được gọi nên màn hình không có gì để cảnh báo — hộp thoại đóng như đã lưu.
+         */
+        USER_EDIT,
+        /**
+         * Chuyển trạng thái một lần: bắt được sự kiện start của đồng hồ, bấm Tiếp cận.
+         * Không bị bóp nhịp, nhưng cũng KHÔNG đi đường patch — nó ghi những trường ngoài
+         * phạm vi nhập tay (giờ bắt đầu, TruckId/TruckNo, trạng thái).
+         */
+        STATE_EVENT
+    }
+
     private void enqueueSave(boolean finalize,
+                             java.util.function.Consumer<RefuelItemData> onResult) {
+        enqueueSave(finalize, SaveKind.DEVICE_AUTOSAVE, onResult);
+    }
+
+    private void enqueueSave(boolean finalize, SaveKind kind,
                              java.util.function.Consumer<RefuelItemData> onResult) {
         final RefuelItemData source = mItem;
         if (source == null) return;
 
-        if (!finalize) {
+        if (!finalize && kind == SaveKind.DEVICE_AUTOSAVE) {
             long now = android.os.SystemClock.elapsedRealtime();
             if (now - lastAutosaveAt < MIN_AUTOSAVE_INTERVAL_MS) return;
             lastAutosaveAt = now;
@@ -2484,6 +2764,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         if (!finalize && snapshot.getStatus() == REFUEL_ITEM_STATUS.DONE) {
             // Mẻ đã được End chốt; autosave không còn việc gì ở đây.
             Logger.appendLog("RFW", "Bỏ autosave trên mẻ đã DONE, để đường End tự lưu");
+            // Người dùng vừa nhập thì PHẢI biết là không lưu được. Trả kết quả rỗng để màn
+            // hình cảnh báo, thay vì đóng hộp thoại im lặng như thể đã ghi.
+            if (kind != SaveKind.DEVICE_AUTOSAVE && onResult != null) onResult.accept(null);
             return;
         }
 
@@ -2501,7 +2784,10 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 // cũ chụp cùng lúc với dữ liệu, End xếp sau autosave sẽ tự conflict vì
                 // autosave đã tăng clientSeq trong khi End còn nằm chờ trong hàng đợi.
                 snapshot.adoptSaveState(source);
-                result = DataHelper.postRefuel(snapshot, false);
+                // Màn hình này KHÔNG chặn mẻ của chuyến chưa phân công cho xe: người đang
+                // đứng tại tàu bay biết rõ nhất mẻ nào vừa bơm. Việc bất thường được ghi vào
+                // nhật ký để đối soát sau ca, nhưng dữ liệu luôn được nhận.
+                result = DataHelper.postRefuelFromRefuelScreen(snapshot, false);
 
                 // Lần chốt mẻ bị precondition chặn: thử lại theo kiểu PATCH — đọc row mới
                 // nhất dưới khoá ghi rồi chỉ đắp đúng nhóm trường của vòng đời mẻ. Không có
@@ -2509,8 +2795,22 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 // baseline cũ nên hỏng mãi, số liệu mẻ nằm lại trên màn hình cho tới khi mất.
                 if (finalize && result != null
                         && result.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                    // Nhịp hai PHẢI mang theo quyền tiếp quản như nhịp một: lời gọi này đến
+                    // từ chính người đang đứng bơm. Dùng đường fail-closed ở đây là không
+                    // nhất quán, và chính nó biến một xung đột tạm thời thành ngõ cụt cố
+                    // định cho mẻ tra nạp hộ (chuyến chưa phân công cho xe).
                     Logger.appendLog("RFW", "Chốt mẻ bị chặn, thử lại bằng EndFieldsPatch");
-                    result = DataHelper.saveEndFields(snapshot);
+                    result = DataHelper.saveEndFieldsFromRefuelScreen(snapshot);
+                }
+
+                // Đối xứng với đường End: người dùng vừa gõ mà baseline đã dịch (lượt pull
+                // nền, hoặc autosave thiết bị vừa tăng ClientSeq) thì gõ lại là việc của
+                // máy. Đo trên máy thật 27-08-2026 13:43:34: sửa bãi đỗ trên màn này trả
+                // CONFLICT và REBASE_SCREEN_REFUSED, giá trị mất hẳn.
+                if (!finalize && kind == SaveKind.USER_EDIT && result != null
+                        && result.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                    Logger.appendLog("RFW", "Sửa tay bị chặn, thử lại bằng DetailFieldsPatch");
+                    result = DataHelper.saveDetailFields(snapshot);
                 }
             } catch (Throwable ex) {
                 Logger.appendLog("RFW", "Lưu lỗi: " + ex);
@@ -2623,14 +2923,24 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     private void postRefuelCompleted(RefuelItemData itemData) {
         if (mItem == null) return;   // màn hình đã bị huỷ trong lúc ghi
 
-        // Kết thúc mẻ mà chưa ghi được xuống Room thì KHÔNG đi tiếp: mở màn hình xác nhận
-        // lúc này là đưa người dùng đi nhập tiếp lên một phiếu chưa hề tồn tại số liệu.
+        // Kết thúc mẻ mà chưa ghi được xuống Room thì PHẢI báo — nhưng KHÔNG chặn cứng.
+        //
+        // Bản chặn cứng trước đây chỉ có "Thử lại" và "Trở lại": khi nguyên nhân là một lỗi
+        // dai dẳng (guard sở hữu chặn đường patch, xem DataHelper.saveScopedFields), mọi lần
+        // Thử lại đều hỏng y hệt và người dùng đứng chết tại màn hình tra nạp — không sang
+        // được màn xác nhận, cũng không làm được gì khác. Đo trên xe thật 30-08-2026 09:08:
+        // ba lần bấm liên tiếp, cả ba đều FAILED.
+        //
+        // Người đứng tại tàu bay phải luôn còn đường đi tiếp. Cảnh báo rõ ràng để họ chủ động
+        // đối chiếu lại số liệu ở màn hình sau, còn dấu vết thì đã đủ trong nhật ký.
         if (!RefuelItemData.isCommitted(itemData)) {
-            Logger.appendLog("RFW", "Chưa lưu được mẻ ("
-                    + (itemData == null ? "FAILED" : itemData.getSaveOutcome())
-                    + "), ở lại màn hình để thử lại");
+            // KHÔNG hộp thoại, KHÔNG chặn: ghi đủ nguyên nhân vào fms.log rồi ĐI TIẾP ngay.
+            // Hộp thoại "Thử lại / Tiếp tục" trước đây vẫn là một lần chặn giữa lúc người
+            // dùng đứng cạnh tàu bay, mà "Thử lại" thì vô nghĩa khi nguyên nhân cố định.
+            // Màn hình Xác nhận có đường lưu riêng nên mẻ vẫn còn cơ hội được ghi ở đó.
+            logEndSaveFailureCause(itemData);
             setRefuelStatus(REFUEL_STATUS.ENDED);
-            showEndSaveFailed();
+            continueWithoutSavedEnd(itemData);
             return;
         }
 
@@ -2664,14 +2974,117 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 "Cập nhật tồn xe %+.0f sau khi mẻ đã ghi, uid=%s", delta, mItem.getUniqueId()));
     }
 
-    private void showEndSaveFailed() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.error)
-                .setMessage(R.string.error_refuel_end_save_failed)
-                .setPositiveButton(R.string.retry, (dialog, which) -> postData())
-                .setNegativeButton(R.string.back, (dialog, which) -> dialog.dismiss())
-                .setCancelable(false)
-                .show();
+    /**
+     * Báo mẻ chưa ghi được, KHÔNG chặn quy trình.
+     *
+     * <p>Ba lối ra, không lối nào là ngõ cụt: "Thử lại" ghi lại, "Tiếp tục" đi tiếp kèm cảnh
+     * báo phải đối chiếu số liệu, và huỷ hộp thoại thì ở lại màn hình tra nạp với đầy đủ thao
+     * tác. Hộp thoại cũ chỉ có hai lối đầu-hàng nên một lỗi dai dẳng là kẹt hẳn.
+     */
+    /**
+     * Ghi NGUYÊN NHÂN của lần chốt mẻ không vào được Room, vào {@code fms.log}.
+     *
+     * <p>Trước đây chỗ này chỉ ghi đúng mã kết quả ({@code CONFLICT} / {@code FAILED}) rồi bật
+     * hộp thoại. Đọc lại nhật ký sau ca thì không đủ để biết vì sao: không rõ mẻ có thuộc xe
+     * này không, bản gốc lệch bao nhiêu bậc, hay số liệu lúc đó là bao nhiêu. Ba câu hỏi đó
+     * mới là thứ phân biệt hai nguyên nhân hoàn toàn khác nhau:
+     *
+     * <ul>
+     *   <li><b>Chuyến chưa phân công cho xe</b> — mẻ mang dấu xe khác (hoặc chưa có dấu xe)
+     *       nên đường vá từ chối ghi. Lý do CỐ ĐỊNH: thử lại bao nhiêu lần cũng hỏng y hệt.</li>
+     *   <li><b>Bản gốc bị dịch</b> — một nguồn ghi khác vừa chạm vào đúng bản ghi này giữa lúc
+     *       lệnh chốt còn trên đường. Lý do NHẤT THỜI: lần sau thường qua.</li>
+     * </ul>
+     *
+     * <p>Ghi cả vào nhật ký chung lẫn nhật ký bất thường: cái trước để đọc theo dòng thời gian
+     * của mẻ, cái sau để lọc nhanh khi đối soát cuối ca.
+     */
+    private void logEndSaveFailureCause(RefuelItemData itemData) {
+        String outcome = itemData == null ? "FAILED" : String.valueOf(itemData.getSaveOutcome());
+        String uid = mItem == null ? "null" : mItem.getUniqueId();
+
+        int currentTruckId = 0;
+        try {
+            TruckModel setting = currentApp.getSetting();
+            if (setting != null) currentTruckId = setting.getId();
+        } catch (Exception ignored) {
+            // Đọc cấu hình hỏng thì vẫn phải ghi được phần còn lại của chẩn đoán.
+        }
+
+        int itemTruckId = mItem == null ? 0 : mItem.getTruckId();
+        String itemTruckNo = mItem == null ? "null" : mItem.getTruckNo();
+        boolean assignedToThisTruck = itemTruckId > 0 && itemTruckId == currentTruckId;
+        boolean unassigned = itemTruckId <= 0;
+
+        // Bản gốc mà lệnh chốt mang theo, so với bản đang nằm trong máy.
+        long baseSeq = mItem == null ? -1 : mItem.getBaseClientSeq();
+        long storedSeq = itemData == null ? -1 : itemData.getClientSeq();
+        boolean baselineMoved = baseSeq >= 0 && storedSeq >= 0 && storedSeq != baseSeq;
+
+        String likelyCause;
+        if (!assignedToThisTruck) {
+            likelyCause = unassigned
+                    ? "CHUYEN_CHUA_PHAN_CONG (mẻ chưa mang dấu xe nào)"
+                    : "ME_MANG_DAU_XE_KHAC (truckId=" + itemTruckId
+                            + " khác xe hiện tại " + currentTruckId + ")";
+        } else if (baselineMoved) {
+            likelyCause = "BAN_GOC_BI_DICH (nguồn ghi khác vừa chạm vào bản ghi này)";
+        } else {
+            likelyCause = "CHUA_XAC_DINH (xem dòng END_PATCH / PATCH_BLOCKED ngay trước dòng này)";
+        }
+
+        String detail = String.format(java.util.Locale.US,
+                "END_SAVE_FAILED uid=%s outcome=%s likelyCause=%s"
+                        + " assignedToThisTruck=%s itemTruckId=%d itemTruckNo=%s currentTruckId=%d"
+                        + " baseClientSeq=%d storedClientSeq=%d baselineMoved=%s"
+                        + " status=%s flight=%s amount=%.0f start=%.0f end=%.0f",
+                uid, outcome, likelyCause,
+                assignedToThisTruck, itemTruckId, itemTruckNo, currentTruckId,
+                baseSeq, storedSeq, baselineMoved,
+                mItem == null ? "null" : String.valueOf(mItem.getStatus()),
+                mItem == null ? "null" : mItem.getFlightCode(),
+                mItem == null ? 0d : mItem.getRealAmount(),
+                mItem == null ? 0d : mItem.getStartNumber(),
+                mItem == null ? 0d : mItem.getEndNumber());
+
+        Logger.appendLog("RFW", detail);
+        Logger.appendRefuelAnomaly("event=" + detail);
+    }
+
+    /**
+     * Đi tiếp dù mẻ chưa ghi được vào Room.
+     *
+     * <p>KHÔNG nhận id/localId/uniqueId từ kết quả bị chặn: nó là bản đọc lại của row đang có
+     * trong máy, không phải xác nhận rằng số liệu vừa bơm đã được ghi. Màn hình sau mở đúng
+     * phiếu mà màn hình này đang giữ, và tự lưu lại được bằng đường patch của nó.
+     *
+     * <p>Cũng KHÔNG trừ tồn xe: tồn chỉ đổi tại lần lưu thực sự chuyển mẻ sang {@code DONE}.
+     * Trừ ở đây thì lần lưu thành công sau đó sẽ trừ lần thứ hai.
+     */
+    private void continueWithoutSavedEnd(RefuelItemData itemData) {
+        Logger.appendLog("RFW", "Người dùng chọn đi tiếp khi mẻ chưa ghi được ("
+                + (itemData == null ? "FAILED" : itemData.getSaveOutcome())
+                + "), uid=" + (mItem == null ? "null" : mItem.getUniqueId()));
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=END_SAVE_FAILED_CONTINUED uid=%s outcome=%s flight=%s"
+                        + " amount=%.0f start=%.0f end=%.0f",
+                mItem == null ? "null" : mItem.getUniqueId(),
+                itemData == null ? "FAILED" : itemData.getSaveOutcome(),
+                mItem == null ? "null" : mItem.getFlightCode(),
+                mItem == null ? 0d : mItem.getRealAmount(),
+                mItem == null ? 0d : mItem.getStartNumber(),
+                mItem == null ? 0d : mItem.getEndNumber()));
+
+        if (mItem == null) return;
+
+        android.widget.Toast.makeText(this,
+                R.string.warn_refuel_end_save_failed_continued,
+                android.widget.Toast.LENGTH_LONG).show();
+
+        if (cancelled)
+            finish();
+        else
+            openConfirm();
     }
 
     private void showApproachConfirmIfNeeded() {
@@ -2681,7 +3094,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
 
         approachPopupShown = true;
 
-        new AlertDialog.Builder(this)
+        track(new AlertDialog.Builder(this)
                 .setTitle(R.string.app_name)
                 .setMessage("Chuyến này chưa ghi nhận tiếp cận. Bạn có muốn ghi nhận thời điểm tiếp cận lúc này không?")
                 .setPositiveButton("Có", (dialog, which) -> {
@@ -2690,7 +3103,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                 })
                 .setNegativeButton("Không", (dialog, which) -> dialog.dismiss())
                 .setCancelable(false)
-                .show();
+                .create()).show();
     }
 
     /**
@@ -2715,7 +3128,8 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
             btnApproach.setVisibility(View.GONE);
         }
 
-        enqueueSave(false, RefuelDetailActivity.this::warnIfNotSaved);
+        // Người dùng vừa bấm Tiếp cận: nút đã ẩn đi rồi nên lần lưu này không được phép rơi.
+        enqueueSave(false, SaveKind.STATE_EVENT, RefuelDetailActivity.this::warnIfNotSaved);
     }
 
     /**
@@ -2752,7 +3166,7 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
                         .setCancelable(false)
                         .create();
                 dialog.setOnShowListener(ignored -> highlightLeaveButton(dialog));
-                dialog.show();
+                track(dialog).show();
             });
         }).start();
     }
@@ -2802,6 +3216,12 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
         //Logger.appendLog("RFW", "Power on pause");
         super.onPause();
         //isActive = false;
+
+        // CHỈ khi màn hình đang kết thúc, không phải mọi lần tạm dừng. Đây là thời điểm sớm
+        // nhất biết chắc cửa sổ sắp biến mất; đóng hộp thoại ở đây thì không còn nút nào để
+        // bấm vào một Activity đã chết. Tắt màn hình hay chuyển app KHÔNG rơi vào nhánh này —
+        // hộp nhập tay đang giữ số đồng hồ người dùng vừa gõ, đóng nó là mất dữ liệu thật.
+        if (isFinishing()) dismissOpenDialogs();
     }
 
     @Override
@@ -2816,6 +3236,9 @@ public class RefuelDetailActivity extends UserBaseActivity implements View.OnCli
     protected void onDestroy() {
         super.onDestroy();
         isActive = false;
+        // Lưới cuối: có đường kết thúc không đi qua onPause với isFinishing() đã bật (bị hệ
+        // thống thu hồi, đổi cấu hình). Hộp thoại sót lại là một cửa sổ mồ côi.
+        dismissOpenDialogs();
         clearListeners();
         if (tmrCheckData != null) {
             tmrCheckData.cancel();

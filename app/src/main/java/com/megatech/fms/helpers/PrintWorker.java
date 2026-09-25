@@ -46,14 +46,38 @@ public class PrintWorker implements Observer {
         this.printStateListener = printStateListener;
     }
 
-    private void onError()
-    {
-        if (printStateListener !=null)
+    /** Địa chỉ máy in đang dùng, để mỗi bản ghi lỗi nói rõ hỏng với CHIẾC máy nào. */
+    private String printerAddress() {
+        try {
+            return FMSApplication.getApplication().getPrinterAddress() + ":" + PRINTER_PORT;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private void onError(PrintDiagnostics.Stage stage, String reason) {
+        onError(stage, reason, null);
+    }
+
+    /** Phiếu đang in — xem ghi chú cùng tên bên {@code ZebraWorker}. */
+    private String currentDocument;
+
+    private void onError(PrintDiagnostics.Stage stage, String reason, Throwable cause) {
+        PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                stage, printerAddress(), currentDocument, reason, cause);
+        if (printStateListener != null)
             printStateListener.onError();
     }
-    private void onConnectionError()
-    {
-        if (printStateListener !=null)
+
+    private void onConnectionError(PrintDiagnostics.Stage stage, String reason) {
+        onConnectionError(stage, reason, null);
+    }
+
+    private void onConnectionError(PrintDiagnostics.Stage stage, String reason,
+                                   Throwable cause) {
+        PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                stage, printerAddress(), currentDocument, reason, cause);
+        if (printStateListener != null)
             printStateListener.onConnectionError();
     }
     private Queue<String> dataToPrint;
@@ -73,6 +97,9 @@ public class PrintWorker implements Observer {
                 mTcpClient.destroy();
             }
         }.run();
+    
+        PrintDiagnostics.recordSuccess(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                printerAddress());
     }
     //RefuelItemData itemToPrint;
 
@@ -118,8 +145,10 @@ public class PrintWorker implements Observer {
                 }
             }
         }catch (Exception ex) {
-            Logger.appendLog("PRINTER", ex.getMessage());
-            //            return -1;
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.SEND, printerAddress(),
+                    "Gửi dữ liệu in thất bại, còn " + (dataToPrint == null ? -1
+                            : dataToPrint.size()) + " dòng chưa gửi", ex);
         }
         printed = dataToPrint.size() ==0;
         return  dataToPrint.size();
@@ -138,6 +167,7 @@ public class PrintWorker implements Observer {
     }
 
     public boolean printBill(InvoiceModel invoiceModel, boolean old) {
+        currentDocument = invoiceModel == null ? null : "Bill " + invoiceModel.getInvoiceNumber();
 
         dataToPrint = old ? invoiceModel.createBillTextOld() : invoiceModel.createBillText();
         if (dataToPrint == null)
@@ -150,7 +180,9 @@ public class PrintWorker implements Observer {
             this.mTcpClient.connect();
 
         } catch (Exception e) {
-            Log.e("ERROR", e.toString());
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.CONNECT, printerAddress(),
+                    "Không mở được kết nối tới máy in", e);
             return false;
         }
         return true;
@@ -164,6 +196,7 @@ public class PrintWorker implements Observer {
 
 
     public boolean printInvoice(InvoiceModel invoiceModel, boolean old) {
+        currentDocument = invoiceModel == null ? null : "Hoá đơn " + invoiceModel.getInvoiceNumber();
         dataToPrint = old ? invoiceModel.createInvoiceTextOld() : invoiceModel.createInvoiceText();
         if (dataToPrint == null)
             return false;
@@ -176,7 +209,9 @@ public class PrintWorker implements Observer {
         }
         catch (Exception e)
         {
-            Log.e("ERROR", e.toString());
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.CONNECT, printerAddress(),
+                    "Không mở được kết nối tới máy in", e);
             return false;
         }
         return true;
@@ -185,6 +220,7 @@ public class PrintWorker implements Observer {
     boolean printReceipt;
     public boolean printReceipt(ReceiptModel receiptModel)
     {
+        currentDocument = receiptModel == null ? null : "Phiếu " + receiptModel.getNumber();
        receitpData = receiptModel.createPrintText();
         printReceipt = true;
         try {
@@ -196,13 +232,17 @@ public class PrintWorker implements Observer {
         }
         catch (Exception e)
         {
-            Log.e("ERROR", e.toString());
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.CONNECT, printerAddress(),
+                    "Không mở được kết nối tới máy in", e);
             return false;
         }
         return  true;
     }
     public boolean printReturn(ReceiptModel receiptModel)
     {
+        currentDocument = receiptModel == null ? null
+                : "Phiếu hoàn " + receiptModel.getNumber();
         receitpData = receiptModel.createReturnText();
         printReceipt = true;
         try {
@@ -214,7 +254,9 @@ public class PrintWorker implements Observer {
         }
         catch (Exception e)
         {
-            Log.e("ERROR", e.toString());
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.CONNECT, printerAddress(),
+                    "Không mở được kết nối tới máy in", e);
             return false;
         }
         return  true;
@@ -267,7 +309,9 @@ public class PrintWorker implements Observer {
         }
         catch (Exception e)
         {
-            Log.e("ERROR", e.toString());
+            PrintDiagnostics.recordFailure(PrintDiagnostics.PrinterKind.DOT_MATRIX,
+                    PrintDiagnostics.Stage.CONNECT, printerAddress(),
+                    "Không mở được kết nối tới máy in", e);
             return false;
         }
         return  true;
@@ -283,8 +327,11 @@ public class PrintWorker implements Observer {
             payload = (char[])event.getPayload();
         switch (event.getTcpEventType()) {
             case CONNECTION_FAILED:
-
-                onConnectionError();
+                // Máy in kim nối bằng TCP: hỏng ở đây gần như luôn là máy tắt, rút dây, hoặc
+                // tablet đang ở một mạng Wi-Fi khác — ba việc hoàn toàn khác nhau mà trước
+                // đây gộp chung vào một câu "lỗi kết nối máy in".
+                onConnectionError(PrintDiagnostics.Stage.CONNECT,
+                        "TCP không mở được tới máy in (máy tắt, sai địa chỉ, hoặc khác mạng)");
                 break;
             case MESSAGE_RECEIVED:
                 if (payload!=null) {
@@ -294,7 +341,12 @@ public class PrintWorker implements Observer {
                         onlineStatus = true;
                         printReset();
                     } else if (checking)
-                        onConnectionError();
+                        // Máy in TRẢ LỜI nhưng không phải mã sẵn sàng (0x16): thường là hết
+                        // giấy, kẹt giấy, hoặc nắp mở. Ghi lại đúng byte nhận được — đó là
+                        // manh mối duy nhất phân biệt các ca này.
+                        onConnectionError(PrintDiagnostics.Stage.CHECK,
+                                "Máy in trả mã không sẵn sàng: 0x"
+                                        + Integer.toHexString(payload[0]));
                 }
                 break;
             case CONNECTION_ESTABLISHED:

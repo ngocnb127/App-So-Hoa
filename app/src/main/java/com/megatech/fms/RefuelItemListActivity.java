@@ -253,10 +253,9 @@ public class RefuelItemListActivity extends UserBaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (lcrReader !=null) {
-            lcrReader.destroy();
-            lcrReader = null;
-        }
+        // KHÔNG destroy(): đồng hồ là của chung cả ứng dụng (xem LCRReader.create), huỷ ở
+        // đây là cắt kết nối của màn tra nạp đang dùng nó.
+        lcrReader = null;
     }
 
 

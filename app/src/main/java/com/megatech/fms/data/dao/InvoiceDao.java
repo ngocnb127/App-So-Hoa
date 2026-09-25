@@ -15,11 +15,23 @@ public interface InvoiceDao {
     @Query("Select * from Invoice")
     List<Invoice> getAll();
 
+    /** Trả rowId Room vừa sinh để lớp gọi ghi ngược localId vào object (chống đẻ hàng thứ hai). */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(Invoice truck);
+    long insert(Invoice truck);
 
     @Query("Select * from Invoice where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
     Invoice get(int id, int localId);
+
+    /** Tra theo rowId Room — đường chắc chắn nhất khi object đã biết localId của mình. */
+    @Query("Select * from Invoice where localId = :localId")
+    Invoice getByLocalId(int localId);
+
+    /**
+     * Tra theo uniqueId (định danh HÀNG trong Room). Điều kiện NOT NULL/rỗng là bắt buộc:
+     * nếu thiếu, mọi hàng cũ có uniqueId rỗng sẽ gom về một nhóm và bị coi là cùng một hoá đơn.
+     */
+    @Query("Select * from Invoice where uniqueId IS NOT NULL AND uniqueId <> '' AND uniqueId = :uniqueId LIMIT 1")
+    Invoice getByUniqueId(String uniqueId);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(Invoice item);

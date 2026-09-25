@@ -35,6 +35,16 @@ public class BM7501Model extends BaseModel {
     /** Khóa của mẻ hút: {@code RefuelItem.uniqueId}. */
     private String refuelItemUniqueId;
 
+    /**
+     * Khoá liên kết để đọc được phiếu này thuộc mẻ nào, chuyến nào — <b>không in lên giấy</b>
+     * (biểu mẫu không có ô nào cho chúng) nhưng bắt buộc có trong dữ liệu, nếu không thì trên
+     * server phiếu chỉ là một mảnh rời.
+     */
+    private int refuelItemId;
+    private int flightId;
+    private String flightUniqueId;
+    private String flightCode;
+
     /** Số thứ tự revision của chứng từ cho cùng một mẻ (1, 2, 3...). */
     private int revisionNumber = 1;
 
@@ -103,18 +113,11 @@ public class BM7501Model extends BaseModel {
     private QcCheck cwd;
     private Double densityKgM3;
 
-    private boolean conductivityRequired;
+    /** Biểu mẫu ghi "nếu yêu cầu": có kết quả nghĩa là có đo. */
     private Double conductivityPsM;
-
-    /** Nghi ngờ nhiễm vi sinh — ô nhập riêng, không suy diễn từ VAC/CWD. */
-    private boolean contaminationSuspected;
-    /** Khách hàng yêu cầu kiểm tra vi sinh — ô nhập riêng. */
-    private boolean customerRequestedMicrobial;
 
     private MicrobialKit skypecMicrobialKit;
     private MicrobialResult skypecMicrobialResult;
-    /** Lý do phải kiểm tra vi sinh, bắt buộc khi {@link #isSkypecMicrobialRequired()}. */
-    private String microbialReason;
 
     // ------------------------------------------------------------------- MỤC C
 
@@ -124,8 +127,15 @@ public class BM7501Model extends BaseModel {
 
     private DefuelMethod method;
 
-    /** C4 — đã phổ biến/thống nhất hai tín hiệu chuẩn. */
+    /**
+     * C4 — đã thống nhất ít nhất một tín hiệu chuẩn. Giữ lại để đọc phiếu cũ; phiếu mới
+     * suy ra từ {@link #signalThumbUp} / {@link #signalCrossArms}.
+     */
     private boolean signalsBriefed;
+    /** C4 — ô 1 trên biểu mẫu: giơ ngón cái tay phải = sẵn sàng hút. */
+    private boolean signalThumbUp;
+    /** C4 — ô 2 trên biểu mẫu: giơ chéo hai tay = có bất thường. */
+    private boolean signalCrossArms;
     /** C4 — chỉ điền khi hai bên dùng phương thức tín hiệu khác. */
     private String otherSignal;
 
@@ -145,13 +155,10 @@ public class BM7501Model extends BaseModel {
     private Date storageTo;
     private String handlingNote;
 
-    private String customerRepFinalName;
     private String skypecRepName;
 
-    // ---------------------------------------------------------------- chữ ký (3)
+    // ---------------------------------------------------------------- chữ ký (2)
 
-    private String customerSectionASignaturePath;
-    private String customerSectionASignatureSha256;
     private String customerFinalSignaturePath;
     private String customerFinalSignatureSha256;
     private String skypecSignaturePath;
@@ -164,6 +171,10 @@ public class BM7501Model extends BaseModel {
     private int reprintCount;
     private String signedSnapshotHash;
 
+    /** Thời điểm nhân viên bấm "Xuất phiếu" — mốc chốt sổ, gửi lên server cho Omega. */
+    private Date exportedAt;
+    private int exportedByUserId;
+
     private Date cancelledAt;
     private String cancelReason;
 
@@ -174,16 +185,14 @@ public class BM7501Model extends BaseModel {
     // ==================================================== suy diễn nghiệp vụ
 
     /**
-     * Mục B — vi sinh bắt buộc khi VAC/CWD không đạt, HOẶC nghi ngờ nhiễm vi sinh,
-     * HOẶC khách hàng yêu cầu. Đúng ghi chú trang 2 của biểu mẫu.
+     * Mục B — vi sinh bắt buộc khi VAC/CWD không đạt. Biểu mẫu còn nêu hai trường hợp
+     * "nghi ngờ nhiễm vi sinh" và "khách hàng yêu cầu", nhưng KHÔNG có ô nào để khai hai
+     * điều đó, nên app không đoán hộ: nhân viên cứ khai thiết bị + kết quả là đủ.
      *
      * <p>Lưu ý: KHÔNG suy ra từ A10 — đó là lỗi của bản phương án v1.
      */
     public boolean isSkypecMicrobialRequired() {
-        return vac == QcCheck.NOT_SATISFY
-                || cwd == QcCheck.NOT_SATISFY
-                || contaminationSuspected
-                || customerRequestedMicrobial;
+        return vac == QcCheck.NOT_SATISFY || cwd == QcCheck.NOT_SATISFY;
     }
 
     /**
@@ -205,6 +214,11 @@ public class BM7501Model extends BaseModel {
         return Boolean.FALSE.equals(refuellableWithoutTest) || hasQualityIssue();
     }
 
+    /** Đã xuất phiếu: chốt sổ, chỉ còn in lại được. */
+    public boolean isExported() {
+        return businessStatus == BusinessStatus.EXPORTED;
+    }
+
     /** Phiếu còn sửa được (autosave chỉ ghi khi true). */
     public boolean isEditable() {
         return businessStatus != null && businessStatus.isEditable();
@@ -224,13 +238,23 @@ public class BM7501Model extends BaseModel {
         C_DONE,
         SIGNED,
         PRINTED,
+        /**
+         * Đã xuất phiếu: chốt sổ. Nội dung khoá vĩnh viễn, chỉ còn in lại được. Server dựa
+         * trạng thái này để đẩy phiếu sang Omega (chốt với chủ dự án 2026-09-23).
+         */
+        EXPORTED,
         /** Hủy TRƯỚC khi ký — không trở thành chứng từ hoàn tất. */
         CANCELLED,
         /** Vô hiệu hóa SAU khi đã ký/in — bắt buộc lý do, người thực hiện, thời gian. */
         VOIDED;
 
+        /**
+         * Phiếu còn sửa được. Chốt với chủ dự án ngày 2026-09-23: KHÔNG khoá sau khi in —
+         * sai thì sửa rồi in lại, giống hệt cách làm trên giấy. Chỉ phiếu đã huỷ hoặc đã
+         * vô hiệu hoá mới đóng.
+         */
         public boolean isEditable() {
-            return this == DRAFT || this == A_DONE || this == B_DONE || this == C_DONE;
+            return this != CANCELLED && this != VOIDED && this != EXPORTED;
         }
 
         /** Đã trở thành chứng từ pháp lý, không được sửa nội dung. */
@@ -320,6 +344,18 @@ public class BM7501Model extends BaseModel {
 
     public String getRefuelItemUniqueId() { return refuelItemUniqueId; }
     public void setRefuelItemUniqueId(String refuelItemUniqueId) { this.refuelItemUniqueId = refuelItemUniqueId; }
+
+    public int getRefuelItemId() { return refuelItemId; }
+    public void setRefuelItemId(int refuelItemId) { this.refuelItemId = refuelItemId; }
+
+    public int getFlightId() { return flightId; }
+    public void setFlightId(int flightId) { this.flightId = flightId; }
+
+    public String getFlightUniqueId() { return flightUniqueId; }
+    public void setFlightUniqueId(String flightUniqueId) { this.flightUniqueId = flightUniqueId; }
+
+    public String getFlightCode() { return flightCode; }
+    public void setFlightCode(String flightCode) { this.flightCode = flightCode; }
 
     public int getRevisionNumber() { return revisionNumber; }
     public void setRevisionNumber(int revisionNumber) { this.revisionNumber = revisionNumber; }
@@ -434,26 +470,14 @@ public class BM7501Model extends BaseModel {
     public Double getDensityKgM3() { return densityKgM3; }
     public void setDensityKgM3(Double densityKgM3) { this.densityKgM3 = densityKgM3; }
 
-    public boolean isConductivityRequired() { return conductivityRequired; }
-    public void setConductivityRequired(boolean conductivityRequired) { this.conductivityRequired = conductivityRequired; }
-
     public Double getConductivityPsM() { return conductivityPsM; }
     public void setConductivityPsM(Double conductivityPsM) { this.conductivityPsM = conductivityPsM; }
-
-    public boolean isContaminationSuspected() { return contaminationSuspected; }
-    public void setContaminationSuspected(boolean v) { this.contaminationSuspected = v; }
-
-    public boolean isCustomerRequestedMicrobial() { return customerRequestedMicrobial; }
-    public void setCustomerRequestedMicrobial(boolean v) { this.customerRequestedMicrobial = v; }
 
     public MicrobialKit getSkypecMicrobialKit() { return skypecMicrobialKit; }
     public void setSkypecMicrobialKit(MicrobialKit v) { this.skypecMicrobialKit = v; }
 
     public MicrobialResult getSkypecMicrobialResult() { return skypecMicrobialResult; }
     public void setSkypecMicrobialResult(MicrobialResult v) { this.skypecMicrobialResult = v; }
-
-    public String getMicrobialReason() { return microbialReason; }
-    public void setMicrobialReason(String microbialReason) { this.microbialReason = microbialReason; }
 
     public String getDefuellerTruckNo() { return defuellerTruckNo; }
     public void setDefuellerTruckNo(String defuellerTruckNo) { this.defuellerTruckNo = defuellerTruckNo; }
@@ -469,6 +493,12 @@ public class BM7501Model extends BaseModel {
 
     public boolean isSignalsBriefed() { return signalsBriefed; }
     public void setSignalsBriefed(boolean signalsBriefed) { this.signalsBriefed = signalsBriefed; }
+
+    public boolean isSignalThumbUp() { return signalThumbUp; }
+    public void setSignalThumbUp(boolean v) { this.signalThumbUp = v; }
+
+    public boolean isSignalCrossArms() { return signalCrossArms; }
+    public void setSignalCrossArms(boolean v) { this.signalCrossArms = v; }
 
     public String getOtherSignal() { return otherSignal; }
     public void setOtherSignal(String otherSignal) { this.otherSignal = otherSignal; }
@@ -506,17 +536,8 @@ public class BM7501Model extends BaseModel {
     public String getHandlingNote() { return handlingNote; }
     public void setHandlingNote(String handlingNote) { this.handlingNote = handlingNote; }
 
-    public String getCustomerRepFinalName() { return customerRepFinalName; }
-    public void setCustomerRepFinalName(String v) { this.customerRepFinalName = v; }
-
     public String getSkypecRepName() { return skypecRepName; }
     public void setSkypecRepName(String skypecRepName) { this.skypecRepName = skypecRepName; }
-
-    public String getCustomerSectionASignaturePath() { return customerSectionASignaturePath; }
-    public void setCustomerSectionASignaturePath(String v) { this.customerSectionASignaturePath = v; }
-
-    public String getCustomerSectionASignatureSha256() { return customerSectionASignatureSha256; }
-    public void setCustomerSectionASignatureSha256(String v) { this.customerSectionASignatureSha256 = v; }
 
     public String getCustomerFinalSignaturePath() { return customerFinalSignaturePath; }
     public void setCustomerFinalSignaturePath(String v) { this.customerFinalSignaturePath = v; }
@@ -541,6 +562,12 @@ public class BM7501Model extends BaseModel {
 
     public String getSignedSnapshotHash() { return signedSnapshotHash; }
     public void setSignedSnapshotHash(String signedSnapshotHash) { this.signedSnapshotHash = signedSnapshotHash; }
+
+    public Date getExportedAt() { return exportedAt; }
+    public void setExportedAt(Date exportedAt) { this.exportedAt = exportedAt; }
+
+    public int getExportedByUserId() { return exportedByUserId; }
+    public void setExportedByUserId(int exportedByUserId) { this.exportedByUserId = exportedByUserId; }
 
     public Date getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(Date cancelledAt) { this.cancelledAt = cancelledAt; }

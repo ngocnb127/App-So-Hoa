@@ -410,12 +410,15 @@ public class B2503NewItemFragment extends DialogFragment {
                 zebra.setStateListener(new ZebraWorker.ZebraStateListener() {
                     @Override
                     public void onConnectionError() {
+                        // Việc in nay chạy nền, nên nhánh lỗi cũng phải tự đóng hộp tiến
+                        // trình — không còn ai đóng hộ nữa.
+                        activity.closeProgressDialog();
                         activity.showErrorMessage(R.string.printer_error);
                     }
 
                     @Override
                     public void onError() {
-
+                        activity.closeProgressDialog();
                     }
 
                     @Override

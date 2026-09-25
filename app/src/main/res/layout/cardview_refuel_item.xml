@@ -254,6 +254,16 @@
                         android:textColor="@android:color/white"
                         android:visibility='@{mItem.approachTime != null &amp;&amp; mItem.leaveTime == null ? View.VISIBLE : View.GONE}' />
 
+                    <!-- Phiếu BM 75.01 đã xuất — chỉ có ở danh sách mẻ hút, adapter tự đặt chữ -->
+                    <TextView
+                        android:id="@+id/refuel_item_bm7501"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/colorPrimary"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+
                     <!-- 3. Label ĐÃ RỜI ĐI : leaveTime != null -->
                     <TextView
                         android:id="@+id/txtLeft"

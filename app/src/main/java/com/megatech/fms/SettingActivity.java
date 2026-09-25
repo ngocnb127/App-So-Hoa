@@ -124,9 +124,18 @@ public class SettingActivity extends UserBaseActivity {
             btnSave.setEnabled(false);
             btnTest.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
             String ip = txtIp.getText().toString();
-            reader =  new LCRReader(ctx, ip);
+            // Kiểm tra trên CHÍNH đồng hồ dùng chung của ứng dụng. Trước đây chỗ này dựng một
+            // SDK riêng rồi destroy() — mà SDK chạy trên service dùng chung, nên destroy() gỡ
+            // luôn thiết bị và toàn bộ listener màn tra nạp đang dùng: về lại màn đó là đồng
+            // hồ im cho tới khi khởi động lại app.
+            finishLcrTest(null);
+            reader = LCRReader.shared(ctx, ip, 10001);
+            lcrTestButtons = new Button[]{btnTest, btnSave};
+            lcrTestPreviousData = reader.getFieldDataListener();
+            lcrTestPreviousConnection = reader.getConnectionListener();
+            lcrTestHandler.postDelayed(lcrTestTimeout, LCR_TEST_TIMEOUT_MS);
 
-            reader.setConnectionListener(new LCRReader.LCRConnectionListener() {
+            reader.setConnectionListener(lcrTestConnection = new LCRReader.LCRConnectionListener() {
                 @Override
                 public void onConnected() {
 
@@ -136,10 +145,7 @@ public class SettingActivity extends UserBaseActivity {
 
                 @Override
                 public void onError() {
-                    v.setEnabled(true);
-                    btnSave.setEnabled(true);
-                    btnTest.setCompoundDrawablesWithIntrinsicBounds(getResources().getDrawable(R.drawable.ic_error, getTheme()), null, null, null);
-                    reader.destroy();
+                    finishLcrTest(false);
                 }
 
                 @Override
@@ -163,15 +169,12 @@ public class SettingActivity extends UserBaseActivity {
                 }
             });
 
-            reader.setFieldDataListener(new LCRReader.LCRDataListener() {
+            reader.setFieldDataListener(lcrTestData = new LCRReader.LCRDataListener() {
                 @Override
                 public void onDataChanged(LCRDataModel dataModel, LCRReader.FIELD_CHANGE field_change) {
-                    v.setEnabled(true);
-                    btnSave.setEnabled(true);
                     if (field_change == LCRReader.FIELD_CHANGE.SERIAL) {
                         settingModel.setDeviceSerial(dataModel.getSerialId());
-                        reader.destroy();
-                        btnTest.setCompoundDrawablesWithIntrinsicBounds(getResources().getDrawable(R.drawable.ic_check, getTheme()), null, null, null);
+                        finishLcrTest(true);
                     }
                 }
 
@@ -186,7 +189,9 @@ public class SettingActivity extends UserBaseActivity {
                 }
             });
 
-            reader.doConnectDevice();
+            // Đồng hồ dùng chung có thể ĐÃ nối sẵn — khi đó onConnected không phát lại nữa.
+            if (reader.getConnected()) reader.requestSerial();
+            else reader.doConnectDevice();
         });
         ProgressBar loading_bar = findViewById(R.id.loading_bar);
 
@@ -372,7 +377,49 @@ public class SettingActivity extends UserBaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Rời màn hình giữa lúc đang kiểm tra: vẫn phải trả listener cho màn bên dưới.
+        finishLcrTest(null);
+    }
 
+    /**
+     * Hạn chờ nút Kiểm tra. IP sai thì SDK cứ tự thử nối lại, không báo lỗi thiết bị nào —
+     * thiếu hạn chờ là hai nút Kiểm tra / Lưu nằm tắt mãi.
+     */
+    private static final long LCR_TEST_TIMEOUT_MS = 30_000L;
+
+    private final android.os.Handler lcrTestHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable lcrTestTimeout = () -> finishLcrTest(false);
+
+    /** Listener nút Kiểm tra MƯỢN của đồng hồ dùng chung, và listener phải trả lại. */
+    private LCRReader.LCRDataListener lcrTestData;
+    private LCRReader.LCRConnectionListener lcrTestConnection;
+    private LCRReader.LCRDataListener lcrTestPreviousData;
+    private LCRReader.LCRConnectionListener lcrTestPreviousConnection;
+    private Button[] lcrTestButtons;
+
+    /**
+     * Kết thúc một lượt Kiểm tra: trả listener đã mượn, rồi báo kết quả lên nút.
+     *
+     * @param ok true/false để hiện kết quả; null chỉ dọn dẹp (bắt đầu lượt mới, rời màn hình).
+     */
+    private void finishLcrTest(Boolean ok) {
+        lcrTestHandler.removeCallbacks(lcrTestTimeout);
+        if (reader != null && (lcrTestData != null || lcrTestConnection != null))
+            reader.restoreListeners(lcrTestData, lcrTestPreviousData,
+                    lcrTestConnection, lcrTestPreviousConnection);
+        lcrTestData = null;
+        lcrTestConnection = null;
+        lcrTestPreviousData = null;
+        lcrTestPreviousConnection = null;
+
+        if (ok == null || lcrTestButtons == null) return;
+        Button btnTest = lcrTestButtons[0];
+        btnTest.setEnabled(true);
+        lcrTestButtons[1].setEnabled(true);
+        btnTest.setCompoundDrawablesWithIntrinsicBounds(getResources().getDrawable(
+                ok ? R.drawable.ic_check : R.drawable.ic_error, getTheme()), null, null, null);
+        lcrTestButtons = null;
     }
 
     public static class LoadTrucksAsync extends AsyncTask<Void, Void, List<TruckModel>>

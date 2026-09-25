@@ -3,6 +3,8 @@ package com.megatech.fms.helpers;
 import android.util.Log;
 
 import com.google.gson.FieldNamingPolicy;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.megatech.fms.BuildConfig;
@@ -15,6 +17,8 @@ import com.megatech.fms.model.BM2504Model;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
 import com.megatech.fms.model.BM2508Model;
+import com.megatech.fms.model.BM7501Model;
+import com.megatech.fms.model.BM7501PostResult;
 import com.megatech.fms.model.CheckTrucksModel;
 import com.megatech.fms.model.FlightData;
 import com.megatech.fms.model.InvoiceFormModel;
@@ -56,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import okhttp3.OkHttpClient;
 import okhttp3.MultipartBody;
@@ -157,11 +162,7 @@ public class HttpClient {
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 String data = response.getData();
                 try {
-                    //JSONObject json = new JSONObject(data);
-
-                    RefuelItemData item = gson.fromJson(data, RefuelItemData.class);
-                    item.setRawJson(data);
-                    return item;
+                    return parseRefuelItemResponse(data);
                 } catch (Exception e) {
                     return null;
 
@@ -291,6 +292,17 @@ public class HttpClient {
     }
 
     public HttpResponse sendPOST(String url, String params, String contentType) throws IOException {
+        return sendPOST(url, params, contentType, false);
+    }
+
+    /**
+     * @param readErrorBody khi true, thân lỗi của các mã khác 200 được đọc và đặt vào
+     *                      {@code data}. Mặc định là false vì nhiều lời gọi cũ coi
+     *                      {@code data != null} là "thành công"; chỉ đường phiếu tra nạp bật
+     *                      cờ này để còn biết server từ chối vì lý do gì.
+     */
+    public HttpResponse sendPOST(String url, String params, String contentType,
+                                 boolean readErrorBody) throws IOException {
         try {
 
             HttpURLConnection con = createConnection(url, "POST", contentType);
@@ -325,10 +337,36 @@ public class HttpClient {
                 // print result
                 return new HttpResponse(responseCode, response.toString());
             } else {
-                return new HttpResponse(responseCode, null);
+                String errorBody = readErrorBody ? readErrorStream(con) : null;
+                con.disconnect();
+                return new HttpResponse(responseCode, errorBody);
             }
         } catch (SocketTimeoutException ex) {
             return new HttpResponse(HttpURLConnection.HTTP_GATEWAY_TIMEOUT, null);
+        }
+    }
+
+    /** Giới hạn độ dài để một trang lỗi HTML của gateway không nuốt hết bộ nhớ/log. */
+    private static final int MAX_ERROR_BODY_CHARS = 1024;
+
+    /**
+     * Đọc {@code getErrorStream()} — trước đây mọi mã khác 200 chỉ trả về mã trần nên không
+     * ai biết server từ chối vì lý do gì. Mọi lỗi ở đây đều bị nuốt: không đọc được thân lỗi
+     * thì cũng không được làm hỏng lời gọi.
+     */
+    private static String readErrorStream(HttpURLConnection con) {
+        try (InputStream err = con.getErrorStream()) {
+            if (err == null) return null;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(err));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null && sb.length() < MAX_ERROR_BODY_CHARS)
+                sb.append(line);
+            if (sb.length() > MAX_ERROR_BODY_CHARS)
+                sb.setLength(MAX_ERROR_BODY_CHARS);
+            return sb.length() == 0 ? null : sb.toString();
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
@@ -507,13 +545,10 @@ public class HttpClient {
                 String data = response.getData();
 
                 JSONArray arr = new JSONArray(data);
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
                 if (arr.length() > 0) {
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject o = arr.getJSONObject(i);
-                        RefuelItemData item;
-
-                        item = gson.fromJson(o.toString(), RefuelItemData.class);
+                        RefuelItemData item = parseRefuelItemResponse(o.toString());
                         lst.add(item);
                     }
                 }
@@ -529,7 +564,8 @@ public class HttpClient {
     public List<RefuelItemData> getModifiedRefuels(Integer t, Date lastModified) {
 
         String url = API_BASE_URL + "api/refuels/modified?type=" + t.toString();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ss.SSS");
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
         if (lastModified != null)
             url += "&lastModified=" + dateFormat.format(lastModified);
 
@@ -544,12 +580,10 @@ public class HttpClient {
                 if (arr.length() > 0) {
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject o = arr.getJSONObject(i);
-                        RefuelItemData item;
-
-                        item = gson.fromJson(o.toString(), RefuelItemData.class);
-                        // Giữ chuỗi gốc: bước trộn theo quyền sở hữu trường cần biết khoá nào
-                        // server THỰC SỰ gửi, phân biệt với khoá vắng mặt (model điền mặc định).
-                        item.setRawJson(o.toString());
+                        // Cùng parser với GET chi tiết: giữ raw JSON và biến khoá giờ vắng
+                        // mặt thành null. Nếu parse riêng bằng Gson, model tự khởi tạo Date()
+                        // và một lượt pull xe khác sẽ lưu nhầm chính thời điểm đồng bộ.
+                        RefuelItemData item = parseRefuelItemResponse(o.toString());
                         lst.add(item);
                     }
                 }
@@ -566,6 +600,56 @@ public class HttpClient {
 
         return getRefuelList(true, 1);
 
+    }
+
+    /**
+     * Kết quả POST phiếu kèm MÃ HTTP. Trước đây {@code postRefuel} chỉ trả về item hoặc null
+     * nên mọi mã lỗi đều trông giống nhau và row cứ POST lại mãi mà không ai biết vì sao.
+     */
+    public static class RefuelPostResult {
+        /** 0 nghĩa là không có phản hồi (không nối được, exception…). */
+        public final int responseCode;
+        public final RefuelItemData item;
+        public final String errorBody;
+
+        public RefuelPostResult(int responseCode, RefuelItemData item, String errorBody) {
+            this.responseCode = responseCode;
+            this.item = item;
+            this.errorBody = errorBody;
+        }
+    }
+
+    /** Mã HTTP của lượt POST phiếu gần nhất TRÊN CHÍNH LUỒNG ĐANG CHẠY. */
+    private static final ThreadLocal<RefuelPostResult> LAST_REFUEL_POST_STATUS =
+            new ThreadLocal<>();
+
+    /**
+     * Ghi nhận mã HTTP để {@link #postRefuelWithStatus} đọc lại.
+     * Để {@code protected} nhằm cho test double khai báo mã trả về mà không phải dựng cả
+     * tầng mạng — {@code postRefuel} vẫn là điểm ghi đè duy nhất như trước.
+     */
+    protected static void noteRefuelPostStatus(int responseCode, String errorBody) {
+        LAST_REFUEL_POST_STATUS.set(new RefuelPostResult(responseCode, null, errorBody));
+    }
+
+    /**
+     * Bản bọc quanh {@link #postRefuel} có kèm MÃ HTTP.
+     *
+     * <p>Cố ý gọi xuyên qua {@code postRefuel} thay vì tự đi mạng: {@code postRefuel} là điểm
+     * ghi đè của mọi test double sẵn có, đi vòng qua nó sẽ làm các test đó gọi mạng thật.
+     * Test double không khai báo mã thì mã bằng 0 (không kết luận) và các nhánh xử lý xung
+     * đột không kích hoạt — hành vi y hệt trước đây.
+     */
+    public RefuelPostResult postRefuelWithStatus(RefuelItemData refuelData) {
+        LAST_REFUEL_POST_STATUS.remove();
+        RefuelItemData item = postRefuel(refuelData);
+        RefuelPostResult noted = LAST_REFUEL_POST_STATUS.get();
+        LAST_REFUEL_POST_STATUS.remove();
+        if (item != null)
+            return new RefuelPostResult(HttpURLConnection.HTTP_OK, item, null);
+        return noted == null
+                ? new RefuelPostResult(0, null, null)
+                : new RefuelPostResult(noted.responseCode, null, noted.errorBody);
     }
 
     public RefuelItemData postRefuel(RefuelItemData refuelData) {
@@ -588,8 +672,11 @@ public class HttpClient {
                         refuelData.getUniqueId(), refuelData.getClientSeq(),
                         refuelData.getStatus(), volumeFix));
 
-            String parm = gson.toJson(refuelData);
-            HttpResponse response = sendPOST(url, parm);
+            // Others là collection response-only để ghép phiếu. Không bao giờ gửi các bản
+            // sao xe khác lồng trong POST của xe hiện tại, dù object Preview đang giữ chúng.
+            String parm = buildRefuelPostPayload(refuelData);
+            // Bật đọc thân lỗi: mã 409/412/423 cần lý do từ chối để còn ghi vết.
+            HttpResponse response = sendPOST(url, parm, "application/json; utf-8", true);
             long elapsed = System.currentTimeMillis() - start;
 
             if (response == null) {
@@ -601,21 +688,23 @@ public class HttpClient {
             if (response.getResponseCode() == HttpURLConnection.HTTP_GATEWAY_TIMEOUT) {
                 Logger.appendLog("HTTP_REFUEL", "!! TIMEOUT (HUỶ) uid=" + refuelData.getUniqueId()
                         + " sau " + elapsed + "ms — readTimeout đã kích hoạt, request bị huỷ");
+                noteRefuelPostStatus(HttpURLConnection.HTTP_GATEWAY_TIMEOUT, null);
                 return null;
             }
 
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                RefuelItemData newItem = gson.fromJson(response.getData(), RefuelItemData.class);
-                if (newItem != null)
-                    newItem.setRawJson(response.getData());
+                RefuelItemData newItem = parseRefuelItemResponse(response.getData());
                 Logger.appendLog("HTTP_REFUEL", "<< SUCCESS uid=" + refuelData.getUniqueId()
                         + " sau " + elapsed + "ms — serverId=" + (newItem != null ? newItem.getId() : "null"));
-                if (newItem != null && refuelData.getId() == 0)
-                    refuelData.setId(newItem.getId());
+                // Không mutate request bằng identity từ response. Tầng DataHelper chỉ nhận
+                // Id/UID sau khi đã xác minh ACK thuộc đúng request; mutate ở đây từng làm
+                // response nhầm lái lookup sang row khác trước khi guard có cơ hội chạy.
                 return newItem;
             } else {
                 Logger.appendLog("HTTP_REFUEL", "!! HTTP " + response.getResponseCode()
-                        + " uid=" + refuelData.getUniqueId() + " sau " + elapsed + "ms");
+                        + " uid=" + refuelData.getUniqueId() + " sau " + elapsed + "ms"
+                        + (response.getData() == null ? "" : " body=" + response.getData()));
+                noteRefuelPostStatus(response.getResponseCode(), response.getData());
             }
 
         } catch (Exception e) {
@@ -624,6 +713,13 @@ public class HttpClient {
                     + " sau " + elapsed + "ms: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
         return null;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    String buildRefuelPostPayload(RefuelItemData refuelData) throws JSONException {
+        JSONObject payload = new JSONObject(gson.toJson(refuelData));
+        payload.remove("Others");
+        return payload.toString();
     }
 
     public void updateTruckAmount(String truckNo, double currentAmount) {
@@ -1079,6 +1175,81 @@ public class HttpClient {
         return null;
     }
 
+    /**
+     * Gửi/cập nhật phiếu BM 75.01 — `POST api/bm7501/post2`.
+     *
+     * <p>Đi theo đúng đường của {@link #postBM2508Post2}: multipart có Bearer token. KHÔNG dùng
+     * lối tải file khác vì không gửi kèm được header Authorization (đội API dặn rõ).
+     *
+     * <p>Luôn gửi <b>trọn phiếu</b>: server ghi đè mọi trường theo JSON nhận được. Ảnh chữ ký
+     * gửi kèm mỗi lần có ảnh — ảnh chỉ 5–15 KB nên không đáng để giữ thêm trạng thái
+     * "checksum đã gửi" chỉ để tiết kiệm vài KB.
+     *
+     * @return kết quả kèm mã HTTP; không bao giờ null
+     */
+    public BM7501PostResult postBM7501Post2(BM7501Model model) {
+        String url = API_BASE_URL + "api/bm7501/post2";
+        try {
+            String json = gson.toJson(model);
+
+            MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("model", null,
+                            RequestBody.create(json, MediaType.parse("application/json; charset=utf-8")));
+
+            addSignaturePart(bodyBuilder, "signSkypec", model.getSkypecSignaturePath());
+            addSignaturePart(bodyBuilder, "signCustomer", model.getCustomerFinalSignaturePath());
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer " + currentToken())
+                    .post(bodyBuilder.build())
+                    .build();
+
+            Response response = new OkHttpClient().newCall(request).execute();
+            int code = response.code();
+            String body = response.body() != null ? response.body().string() : "";
+            Logger.appendLog("BM7501_POST", "code=" + code + " body=" + body);
+
+            BM7501PostResult parsed = parseBM7501Response(code, body);
+            if (parsed != null) return parsed;
+            return new BM7501PostResult(code, false, body, 0, null);
+        } catch (Exception ex) {
+            // Mất mạng/timeout: mã 0 để outbox biết là lỗi tạm, giữ phiếu thử lại sau.
+            Logger.appendLog("BM7501_POST", "loi goi API: " + ex.getMessage());
+            return BM7501PostResult.noNetwork(ex.getMessage());
+        }
+    }
+
+    private BM7501PostResult parseBM7501Response(int code, String body) {
+        if (body == null || body.trim().isEmpty()) return null;
+        try {
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            return new BM7501PostResult(
+                    code,
+                    json.has("Success") && !json.get("Success").isJsonNull()
+                            && json.get("Success").getAsBoolean(),
+                    json.has("Message") && !json.get("Message").isJsonNull()
+                            ? json.get("Message").getAsString() : null,
+                    json.has("Id") && !json.get("Id").isJsonNull() ? json.get("Id").getAsInt() : 0,
+                    json.has("ServerNumber") && !json.get("ServerNumber").isJsonNull()
+                            ? json.get("ServerNumber").getAsString() : null);
+        } catch (Exception ex) {
+            // Thân phản hồi không phải JSON như thoả thuận: coi như lỗi, giữ nguyên mã HTTP.
+            Logger.appendLog("BM7501_POST", "khong doc duoc phan hoi: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    private void addSignaturePart(MultipartBody.Builder builder, String partName, String path) {
+        if (path == null || path.trim().isEmpty()) return;
+        File file = new File(path);
+        // Ảnh đã bị xoá (gỡ app, dọn dữ liệu): vẫn gửi phần JSON, server giữ ảnh cũ của slot đó.
+        if (!file.exists()) return;
+        builder.addFormDataPart(partName, file.getName(),
+                RequestBody.create(file, MediaType.parse(getImageMimeType(file.getName()))));
+    }
+
     public List<BM2508Model> getBM2508List2() {
 
         String url = API_BASE_URL + "api/bm2508/get2/" + setting.getTruckId();
@@ -1277,11 +1448,7 @@ public class HttpClient {
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 String data = response.getData();
                 try {
-
-
-                    RefuelItemData item = gson.fromJson(data, RefuelItemData.class);
-                    item.setRawJson(data);
-                    return item;
+                    return parseRefuelItemResponse(data);
                 } catch (Exception e) {
                     return null;
 
@@ -1292,6 +1459,64 @@ public class HttpClient {
 
         }
         return null;
+    }
+
+    /**
+     * Giải mã một phiếu cùng các mẻ {@code Others} mà vẫn giữ JSON nguyên bản của TỪNG mẻ.
+     *
+     * <p>Chỉ gắn raw JSON cho object cha là chưa đủ: Gson bỏ mọi khoá server biết nhưng model
+     * app chưa biết trong từng phần tử {@code Others}. Các mẻ xe khác là server replica nên
+     * tầng lưu Room cần chính chuỗi con nguyên bản để sao chép toàn vẹn, không được serialize
+     * ngược lại từ model đã bị rút gọn.
+     */
+    @androidx.annotation.VisibleForTesting
+    RefuelItemData parseRefuelItemResponse(String data) throws JSONException {
+        RefuelItemData item = gson.fromJson(data, RefuelItemData.class);
+        if (item == null) return null;
+
+        item.setRawJson(data);
+        JSONObject root = new JSONObject(data);
+        normalizeMissingMeasuredTimes(root, item);
+        if (!root.has("Others")) return item;
+
+        JSONArray rawOthers = root.optJSONArray("Others");
+        if (rawOthers == null) {
+            Logger.appendLog("SYNC", "OTHER_SNAPSHOT_INVALID: Others không phải JSON array");
+            return item;
+        }
+
+        List<RefuelItemData> others = item.getOthers();
+        if (others == null || rawOthers.length() != others.size()) {
+            Logger.appendLog("SYNC", "OTHER_SNAPSHOT_INVALID: Others parse không đủ phần tử");
+            return item;
+        }
+
+        for (int i = 0; i < rawOthers.length(); i++) {
+            JSONObject rawOther = rawOthers.optJSONObject(i);
+            RefuelItemData other = others.get(i);
+            if (rawOther == null || other == null) {
+                Logger.appendLog("SYNC", "OTHER_SNAPSHOT_INVALID: phần tử " + i + " không hợp lệ");
+                return item;
+            }
+            normalizeMissingMeasuredTimes(rawOther, other);
+            if (other.getUniqueId() == null || other.getUniqueId().trim().isEmpty()) {
+                Logger.appendLog("SYNC", "OTHER_SNAPSHOT_INVALID: phần tử " + i
+                        + " thiếu UniqueId");
+                return item;
+            }
+            other.setRawJson(rawOther.toString());
+        }
+        item.setCompleteOthersSnapshot(true);
+        return item;
+    }
+
+    /** Khoá vắng mặt không được biến thành {@code new Date()} do giá trị mặc định của model. */
+    private static void normalizeMissingMeasuredTimes(JSONObject raw, RefuelItemData item) {
+        if (!raw.has("UniqueId") || raw.isNull("UniqueId")
+                || raw.optString("UniqueId", "").trim().isEmpty())
+            item.setUniqueId(null);
+        if (!raw.has("StartTime")) item.setStartTime(null);
+        if (!raw.has("EndTime")) item.setEndTime(null);
     }
 
     //2503

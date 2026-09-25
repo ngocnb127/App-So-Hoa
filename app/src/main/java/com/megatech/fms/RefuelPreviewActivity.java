@@ -14,6 +14,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
 import android.view.Gravity;
@@ -65,6 +66,8 @@ import com.megatech.fms.helpers.BM2505Factory;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.helpers.OthersFreshness;
+import com.megatech.fms.helpers.RefuelFieldPatch;
 import com.megatech.fms.helpers.RefuelTimeValidator;
 import com.megatech.fms.helpers.PrintWorker;
 import com.megatech.fms.model.AirlineModel;
@@ -149,8 +152,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
             @Override
             public void onError() {
-                if (refuelData != null)
-                    refuelData.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
+                setCurrentPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -172,8 +174,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             public void onSuccess() {
 
                 if (!printTest) {
-                    if (refuelData != null)
-                        refuelData.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
+                    setCurrentPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.SUCCESS);
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -197,15 +198,19 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     /** Kết quả lượt kéo lại mẻ của xe khác lúc mở màn hình; null khi chưa chạy xong. */
     private DataHelper.RefreshResult othersRefresh;
+    private int loadGeneration;
 
     //AlertDialog progressDialog;
     @SuppressLint("StaticFieldLeak")
     private void loadData() {
 
+        final int requestGeneration = ++loadGeneration;
         setProgressDialog();
-        new AsyncTask<Void, Void, RefuelItemData>() {
+        new AsyncTask<Void, Void, DataHelper.PreviewLoadResult>() {
+            private boolean loadedHasReview;
+
             @Override
-            protected RefuelItemData doInBackground(Void... voids) {
+            protected DataHelper.PreviewLoadResult doInBackground(Void... voids) {
                 Logger.appendLog("PRW", "Start loading");
 
                 airlines = DataHelper.getAirlines();
@@ -215,24 +220,32 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     userList = DataHelper.getUsers();
                 productList = DataHelper.getProducts();
 
-                // Kéo lại mẻ của xe khác TRƯỚC khi dựng model: getRefuelItem đọc danh sách
-                // others thẳng từ Room, nên nếu không làm mới ở đây thì màn hình đứng trên
-                // bản đã tải từ lần đồng bộ trước, và hoá đơn gộp MIN/MAX trên dữ liệu cũ đó.
-                othersRefresh = DataHelper.refreshOthers(uniqueId);
-
-                //refuelData = DataHelper.getRefuelItem(remoteId, localId);
-                refuelData = DataHelper.getRefuelItem(uniqueId);
-                if (refuelData!=null)
-                hasReview =  DataHelper.checkReview(refuelData.getFlightId(), refuelData.getFlightUniqueId());
-                return refuelData;
+                // Một root GET vừa dựng phiếu hiện tại vừa nhận collection Others. Không gọi
+                // endpoint hai lần: response thứ hai lỗi/cũ từng có thể thay membership chính
+                // xác vừa nhận bằng cache Room và làm hoá đơn gộp thêm một mẻ đã stale.
+                DataHelper.PreviewLoadResult loaded =
+                        DataHelper.loadRefuelForPreview(uniqueId);
+                if (loaded.item != null)
+                    loadedHasReview = DataHelper.checkReview(
+                            loaded.item.getFlightId(), loaded.item.getFlightUniqueId());
+                return loaded;
             }
 
             @Override
-            protected void onPostExecute(RefuelItemData itemData) {
-                refuelData = itemData;
+            protected void onPostExecute(DataHelper.PreviewLoadResult loaded) {
+                // Người dùng có thể bấm CẬP NHẬT liên tiếp. Kết quả cũ không được phép
+                // phủ UI/membership mới hơn dù HTTP của nó về sau.
+                if (requestGeneration != loadGeneration || loaded == null
+                        || loaded.superseded) {
+                    if (requestGeneration == loadGeneration) closeProgressDialog();
+                    return;
+                }
+                refuelData = loaded.item;
+                othersRefresh = loaded.others;
+                hasReview = loadedHasReview;
                 bindData();
                 warnStaleOthers();
-                super.onPostExecute(itemData);
+                super.onPostExecute(loaded);
 
             }
         }.execute();
@@ -250,14 +263,422 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void warnStaleOthers() {
         if (othersRefresh == null || !othersRefresh.hasFailure()) return;
 
-        String message = "Chưa cập nhật được " + othersRefresh.failed + "/"
-                + othersRefresh.total + " mẻ của xe khác. Vui lòng kiểm tra lại dữ liệu"
-                + " các mẻ trước khi xuất hoá đơn.";
+        String message;
+        if (!othersRefresh.collectionComplete && othersRefresh.failed == 0) {
+            message = "Server chưa xác nhận danh sách đầy đủ các mẻ của xe khác. "
+                    + "Dữ liệu đang hiển thị là bản đã lưu trên xe; vui lòng kiểm tra trước "
+                    + "khi xuất hoá đơn.";
+        } else if (!othersRefresh.collectionComplete) {
+            message = "Server chưa xác nhận danh sách đầy đủ và chưa cập nhật được "
+                    + othersRefresh.failed + "/" + othersRefresh.total
+                    + " mẻ đã biết của xe khác. Vui lòng kiểm tra trước khi xuất hoá đơn.";
+        } else {
+            message = "Chưa cập nhật được " + othersRefresh.failed + "/"
+                    + othersRefresh.total + " mẻ của xe khác. Vui lòng kiểm tra lại dữ liệu"
+                    + " các mẻ trước khi xuất hoá đơn.";
+        }
 
         Logger.appendLog(LOG_TAG, "Cảnh báo dữ liệu mẻ xe khác chưa cập nhật: "
-                + othersRefresh.failed + "/" + othersRefresh.total);
+                + othersRefresh.failed + "/" + othersRefresh.total
+                + " collectionComplete=" + othersRefresh.collectionComplete);
 
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Mốc lần làm mới dữ liệu mẻ xe khác gần nhất, theo {@code SystemClock.elapsedRealtime()}.
+     * Dùng đồng hồ trôi chứ không phải {@code System.currentTimeMillis()}: một lần đồng bộ NTP
+     * nhảy tiến sẽ làm mọi phép tính "đã bao lâu" mất tác dụng.
+     */
+    private long othersRefreshedAt = 0L;
+
+    /**
+     * MỤC 9 — kéo lại dữ liệu mẻ của xe khác NGAY TRƯỚC khi dựng chứng từ gộp, rồi chạy tiếp.
+     *
+     * <p>Xe chốt là xe cuối cùng xuất hàng, nên số liệu gộp trên phiếu/hoá đơn phải đứng trên
+     * bản mới nhất của các xe khác. Màn hình này khoá đồng bộ nền từ lúc {@code bindData()} nên
+     * nếu không kéo lại ở đây, dữ liệu xe khác đứng yên từ lúc mở màn hình.
+     *
+     * <p><b>Không bao giờ chặn.</b> Refresh lỗi (mất sóng) chỉ hiện cảnh báo rồi đi tiếp bằng
+     * dữ liệu đang có; trạng thái Others cũ KHÔNG bị hạ cấp nên các đường kiểm tra sẵn có
+     * không kích hoạt thêm.
+     *
+     * <p>Hai điểm dễ sai, đã xử lý:
+     * <ul>
+     *   <li>BARRIER: rút cạn hàng đợi ghi của màn hình TRƯỚC khi gọi server. {@code
+     *       loadRefuelForPreview} chỉ đẩy được thứ đã nằm trong Room; lần ghi còn trong hàng
+     *       đợi sẽ bị bản server đè mất — giá, tỉ trọng, giờ vừa gõ biến khỏi chứng từ sắp in.</li>
+     *   <li>TÍNH LẠI {@code printItems} SAU {@code bindData()}: bindData dựng lại adapter với
+     *       toàn bộ checkbox về false, giữ danh sách cũ là in đúng các object đã lỗi thời.</li>
+     * </ul>
+     */
+    private void refreshOthersBeforeDocument(Runnable onContinue) {
+        if (onContinue == null) return;
+        if (uniqueId == null || uniqueId.isEmpty() || !isCombinedDocument()
+                || !OthersFreshness.needsRefresh(
+                        othersRefreshedAt, SystemClock.elapsedRealtime())) {
+            onContinue.run();
+            return;
+        }
+
+        final List<String> checkedUidsBefore = uniqueIdsOf(printItems);
+        final List<String> knownUidsBefore = uniqueIdsOf(allItems);
+        final boolean previousHasFailure = othersRefresh == null || othersRefresh.hasFailure();
+
+        setProgressDialog();
+        new Thread(() -> {
+            DataHelper.PreviewLoadResult loaded = null;
+            String failure = null;
+            try {
+                drainPreviewSaveQueue();
+                loaded = DataHelper.loadRefuelForPreview(uniqueId);
+            } catch (Throwable ex) {
+                failure = ex.getMessage();
+            }
+            final DataHelper.PreviewLoadResult result = loaded;
+            final String error = failure;
+            runOnUiThread(() -> {
+                closeProgressDialog();
+                if (isFinishing()) return;
+                applyOthersRefresh(result, error, previousHasFailure,
+                        checkedUidsBefore, knownUidsBefore, onContinue);
+            });
+        }).start();
+    }
+
+    /**
+     * Rút cạn hàng đợi ghi một-luồng của màn hình. Hàng đợi là FIFO nên một tác vụ rỗng nộp
+     * bây giờ chỉ xong sau khi mọi lần lưu đang chờ đã xong.
+     *
+     * <p>Mọi lỗi ở đây đều chỉ ghi log: không rút cạn được thì vẫn phải cho người dùng in.
+     */
+    private void drainPreviewSaveQueue() {
+        if (previewSaveExecutor.isShutdown()) return;
+        try {
+            previewSaveExecutor.submit(() -> {
+            }).get(30, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Throwable ex) {
+            Logger.appendLog(LOG_TAG, "Không rút cạn được hàng đợi ghi trước khi làm mới: "
+                    + ex.getMessage());
+        }
+    }
+
+    private List<String> uniqueIdsOf(List<RefuelItemData> items) {
+        List<String> result = new ArrayList<>();
+        if (items == null) return result;
+        for (RefuelItemData item : items) {
+            String uid = item == null ? null : item.getUniqueId();
+            if (uid != null && !uid.trim().isEmpty() && !result.contains(uid))
+                result.add(uid);
+        }
+        return result;
+    }
+
+    /** Nhận kết quả làm mới rồi chạy tiếp — mọi nhánh đều kết thúc bằng {@code onContinue}. */
+    private void applyOthersRefresh(DataHelper.PreviewLoadResult result, String error,
+                                    boolean previousHasFailure,
+                                    List<String> checkedUidsBefore,
+                                    List<String> knownUidsBefore,
+                                    Runnable onContinue) {
+        if (result == null || result.item == null || result.superseded) {
+            Logger.appendLog(LOG_TAG, "Làm mới mẻ xe khác KHÔNG thành công ("
+                    + (error == null ? "không có dữ liệu" : error)
+                    + "); vẫn cho in bằng dữ liệu đang có");
+            Toast.makeText(this, R.string.warn_others_refresh_failed, Toast.LENGTH_LONG).show();
+            onContinue.run();
+            return;
+        }
+
+        boolean newHasFailure = result.others == null || result.others.hasFailure();
+        if (!OthersFreshness.adoptRefreshResult(previousHasFailure, true, newHasFailure)) {
+            // Kết quả mới xấu hơn trạng thái đang có. Nhận vào là biến một màn hình đang in
+            // được thành không in được — đúng cái đường chặn mới mà bản vá này phải tránh.
+            //
+            // Và PHẢI bỏ luôn cả result.item, không chỉ giữ cờ othersRefresh cũ: bindData()
+            // dựng lại allItems từ chính payload xấu đó, nên mẻ xe khác bị thiếu sẽ rụng khỏi
+            // printItems trong khi cờ cũ vẫn nói "đủ dữ liệu" — không đường chặn nào kêu, và
+            // phiếu/hoá đơn gộp in ra THIẾU MẺ, tổng nhỏ hơn thực tế. Giữ nguyên dữ liệu đang
+            // có là lựa chọn an toàn duy nhất; vẫn cho in như trước lượt làm mới.
+            Logger.appendLog(LOG_TAG, "Giữ nguyên dữ liệu Others cũ: lượt làm mới cho kết"
+                    + " quả xấu hơn (failed=" + (result.others == null ? -1 : result.others.failed)
+                    + ")");
+            Toast.makeText(this, R.string.warn_others_refresh_failed, Toast.LENGTH_LONG).show();
+            onContinue.run();
+            return;
+        }
+        othersRefresh = result.others;
+
+        refuelData = result.item;
+        bindData();
+        othersRefreshedAt = SystemClock.elapsedRealtime();
+
+        // Tính lại danh sách in trên chính các object VỪA nạp.
+        int restored = truckArrayAdapter == null
+                ? 0 : truckArrayAdapter.restoreChecked(checkedUidsBefore);
+        printItems = truckArrayAdapter == null
+                ? new ArrayList<>() : truckArrayAdapter.getCheckedItems();
+        if (restored < checkedUidsBefore.size()) {
+            Logger.appendLog(LOG_TAG, "Sau khi làm mới chỉ khôi phục được " + restored + "/"
+                    + checkedUidsBefore.size() + " mẻ đã tích");
+            Toast.makeText(this, R.string.warn_others_refresh_selection_changed,
+                    Toast.LENGTH_LONG).show();
+        }
+
+        List<String> appeared = OthersFreshness.newlyAppearedUniqueIds(
+                knownUidsBefore, uniqueIdsOf(allItems));
+        if (appeared.isEmpty()) {
+            onContinue.run();
+            return;
+        }
+
+        // Mẻ mới xuất hiện thì HỎI, không tự tích: tích thêm một mẻ là đổi số liệu sẽ in ra
+        // giấy. Cả hai nút đều đi tiếp, không nút nào chặn.
+        Logger.appendLog(LOG_TAG, "Sau khi làm mới có " + appeared.size() + " mẻ mới");
+        new AlertDialog.Builder(this)
+                .setTitle("Có mẻ mới của xe khác")
+                .setMessage("Server vừa trả thêm " + appeared.size()
+                        + " mẻ chưa có trên màn hình. Bạn có muốn đưa các mẻ này vào chứng"
+                        + " từ không?")
+                .setPositiveButton("Thêm vào", (dialog, which) -> {
+                    truckArrayAdapter.restoreChecked(appeared);
+                    printItems = truckArrayAdapter.getCheckedItems();
+                    onContinue.run();
+                })
+                .setNegativeButton("Bỏ qua", (dialog, which) -> onContinue.run())
+                .setCancelable(false)
+                .show();
+    }
+
+    /**
+     * Chứng từ sắp dựng có gộp nhiều mẻ hay không.
+     *
+     * <p>Quyết định theo DỮ LIỆU sắp in, không theo enum của nút đã bấm: nút "IN PHIẾU" vẫn
+     * có thể đang tích nhiều dòng.
+     */
+    private boolean isCombinedDocument() {
+        // FB-1: bỏ vế `printMode == ALL_ITEM`. Nút XUẤT HOÁ ĐƠN đặt ALL_ITEM vô điều kiện
+        // (:1614) nên vế đó làm MỌI hoá đơn bị coi là chứng từ gộp, kể cả hoá đơn đúng một
+        // mẻ của chính xe mình — lúc đó dữ liệu xe khác không tham gia vào chứng từ, không
+        // có gì để mà thiếu. Nay hàm khớp lại với chính javadoc của nó: quyết định theo
+        // DỮ LIỆU sắp in.
+        return printItems != null && printItems.size() > 1;
+    }
+
+    /**
+     * Kiểm tra dữ liệu sẽ đưa vào chứng từ (nhóm C — GIỮ NGUYÊN mức chặn).
+     *
+     * <p>FB-1: nhánh "chưa nhận đủ dữ liệu xe khác" trước đây CHẶN CỨNG ở đây, nghĩa là mất
+     * mạng thì không xuất được phiếu/hoá đơn — sai với yêu cầu nghiệp vụ. Nhánh đó đã chuyển
+     * thành {@link #warnIncompleteOthersThen(Runnable)}: cảnh báo hai nút, không chặn.
+     */
+    private boolean blockIncompleteOthersIfCombined() {
+        return blockInvalidSelectedDocumentItems();
+    }
+
+    /**
+     * FB-1 — MẤT MẠNG CHỈ CẢNH BÁO, KHÔNG CHẶN XUẤT CHỨNG TỪ.
+     *
+     * <p>Trước bản vá này, dữ liệu mẻ xe khác chưa toàn vẹn ⇒ chặn cứng một nút. Ngoài hiện
+     * trường mất sóng là chuyện thường, và chặn không làm dữ liệu đúng hơn: người dùng vẫn
+     * phải giao hàng, chỉ là không có chứng từ. Nay hai nút, theo đúng khuôn
+     * {@link #warnReversedTimeThen(List, Runnable)}: "Vẫn xuất" / "Kiểm tra lại".
+     *
+     * <p>Hộp thoại phải nói bằng CON SỐ — số mẻ và tổng lít/kg sẽ lên chứng từ — vì đó là thứ
+     * duy nhất người dùng đối chiếu được với thực tế chuyến. Bấm "Vẫn xuất" ghi anomaly để
+     * sau ca còn đối chiếu được.
+     *
+     * <p>Gọi SAU {@link #blockInvalidSelectedDocumentItems()} để tổng in ra là tổng cuối cùng:
+     * bước đó có thể vừa loại bớt mẻ xe khác chưa đủ điều kiện khỏi {@link #printItems}.
+     */
+    private void warnIncompleteOthersThen(Runnable onContinue) {
+        if (onContinue == null) return;
+        OthersFreshness.IncompleteOthersGate gate = OthersFreshness.gateForIncompleteOthers(
+                othersRefresh != null, othersRefresh != null && othersRefresh.hasFailure());
+        if (gate == OthersFreshness.IncompleteOthersGate.CONTINUE) {
+            onContinue.run();
+            return;
+        }
+
+        int failed = othersRefresh == null ? 0 : othersRefresh.failed;
+        int total = othersRefresh == null ? 0 : othersRefresh.total;
+        OthersFreshness.DocumentTotals totals = OthersFreshness.documentTotals(printItems);
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo (KHÔNG chặn) xuất chứng từ khi dữ liệu xe khác"
+                + " chưa toàn vẹn " + failed + "/" + total + "; sẽ dựng trên "
+                + totals.count + " mẻ");
+
+        String message = String.format(locale,
+                "Đang ở trạng thái không có mạng hoặc chưa nhận đủ dữ liệu mẻ của xe khác"
+                        + " (%d/%d mẻ chưa cập nhật được).\n\n"
+                        + "Chứng từ sẽ dựng trên %d mẻ đang có, tổng %,.0f lít / %,.0f kg.\n\n"
+                        + "Lưu ý kiểm tra dữ liệu trước khi xuất: nếu chuyến còn mẻ của xe"
+                        + " khác chưa về máy thì chứng từ sẽ thiếu.",
+                failed, total, totals.count, totals.litres, totals.kilos);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Có thể chưa nhận đủ dữ liệu xe khác")
+                .setMessage(message)
+                .setPositiveButton("Vẫn xuất", (dialog, which) -> {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=DOCUMENT_INCOMPLETE_OTHERS_ACCEPTED items=%d litres=%.0f"
+                                    + " kilos=%.0f failed=%d total=%d",
+                            totals.count, totals.litres, totals.kilos, failed, total));
+                    onContinue.run();
+                })
+                .setNegativeButton("Kiểm tra lại", null)
+                .show();
+    }
+
+    /**
+     * HỎI trước khi bỏ các mẻ của XE KHÁC chưa đủ điều kiện ra khỏi {@link #printItems}.
+     *
+     * <p>Trước đây máy tự loại rồi chỉ hiện một Toast. Chủ dự án bác cách đó ngày 06-09-2026:
+     * chứng từ in ra khi ấy KHÁC với những gì người dùng đã tích chọn, mà Toast thì trôi mất
+     * trong vài giây và không ai phải trả lời nó. Đây là lựa chọn làm ĐỔI SỐ TIỀN trên chứng
+     * từ, nên phải là một câu hỏi có người trả lời.
+     *
+     * <p>Hộp thoại nói bằng CHỮ ĐỎ IN ĐẬM, kể rõ từng mẻ: xe nào, bao nhiêu Kg, thiếu đúng
+     * trường gì — vì đó là thứ người dùng cần để quyết nên gọi xe kia bổ sung hay chấp nhận
+     * xuất thiếu. "Kiểm tra lại" KHÔNG loại mẻ nào và dừng ở màn hình này.
+     *
+     * <p>Vẫn KHÔNG chặn: người dùng bấm đồng ý là đi tiếp ngay. Không đụng mẻ của chính xe
+     * này (người dùng sửa được chúng, các đường kiểm tra sẵn có phải tiếp tục báo lỗi), không
+     * làm gì khi chỉ có một mẻ, và không làm gì khi loại xong sẽ không còn gì để in.
+     */
+    private void confirmExcludedForeignPrintItemsThen(Runnable onContinue) {
+        if (onContinue == null) return;
+        if (printItems == null || printItems.size() <= 1) {
+            onContinue.run();
+            return;
+        }
+
+        List<Boolean> foreign = new ArrayList<>(printItems.size());
+        for (RefuelItemData item : printItems) foreign.add(!isCurrentTruckItem(item));
+
+        OthersFreshness.Partition partition =
+                OthersFreshness.excludeIneligibleForeignItems(printItems, foreign);
+        if (!partition.hasExclusion()) {
+            onContinue.run();
+            return;
+        }
+
+        String trucks = android.text.TextUtils.join(", ", partition.excludedTruckNumbers());
+        Logger.appendLog(LOG_TAG, "Hỏi trước khi loại " + partition.excluded.size()
+                + " mẻ xe khác chưa đủ điều kiện khỏi chứng từ gộp: " + trucks);
+
+        StringBuilder html = new StringBuilder();
+        html.append("<b><font color=\"#D32F2F\">")
+                .append(getString(R.string.warn_excluded_items_headline))
+                .append("</font></b><br/><br/>");
+        for (String line : partition.describeExcluded())
+            html.append("<b><font color=\"#D32F2F\">• ")
+                    .append(android.text.TextUtils.htmlEncode(line))
+                    .append("</font></b><br/>");
+        html.append("<br/>")
+                .append(getString(R.string.warn_excluded_items_total,
+                        partition.excludedVolume()))
+                .append("<br/><br/>")
+                .append(getString(R.string.warn_excluded_items_question));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.warn_excluded_items_title)
+                .setMessage(android.text.Html.fromHtml(html.toString()))
+                // KHÔNG huỷ bằng cách bấm ra ngoài: đây là lựa chọn làm đổi số tiền trên
+                // chứng từ, phải là một cái bấm có ý thức.
+                .setCancelable(false)
+                .setPositiveButton(R.string.warn_excluded_items_accept, (dialog, which) -> {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=COMBINED_DOCUMENT_EXCLUDED_FOREIGN_ACCEPTED count=%d"
+                                    + " trucks=%s litres=%.0f",
+                            partition.excluded.size(), trucks, partition.excludedVolume()));
+                    printItems = new ArrayList<>(partition.kept);
+                    onContinue.run();
+                })
+                .setNegativeButton(R.string.warn_excluded_items_recheck, (dialog, which) ->
+                        Logger.appendLog(LOG_TAG, "Người dùng chọn kiểm tra lại,"
+                                + " KHÔNG loại mẻ nào khỏi chứng từ"))
+                .show();
+    }
+
+    /**
+     * Cảnh báo khi lượt thử lại bằng patch sẽ BỎ IM LẶNG một số trường người dùng vừa sửa.
+     *
+     * <p>Lưu cả gói bị chặn thì máy tự thử lại bằng patch theo {@code Scope.PREVIEW}. Patch
+     * báo thành công, nhưng trường nào không nằm trong scope thì không hề được ghi. Bốn ô
+     * kiểm tra thiết bị của BM2508 và mã sản phẩm đang rơi vào đúng ca này — người dùng tích
+     * xong, máy báo lưu xong, mở lại thấy trống.
+     *
+     * <p>CHỈ CẢNH BÁO, không chặn (chủ dự án chốt 06-09-2026): thời gian trên sân rất gấp,
+     * chặn cả nghiệp vụ vì một trường phụ là tệ hơn nhiều so với để người dùng chủ động nhập
+     * lại. Cũng không tự thêm khoá vào scope — thêm nhầm khoá làm patch chặn MỌI lần sửa,
+     * đã đo trên máy thật (xem ghi chú ở {@code RefuelFieldPatch.Scope.PREVIEW}).
+     */
+    private void warnFieldsDroppedByPatch(RefuelItemData item) {
+        if (item == null) return;
+        List<String> dropped = RefuelFieldPatch.droppedKeysOutsideScope(
+                RefuelFieldPatch.Scope.PREVIEW, item.getBaseJson(), item);
+        if (dropped.isEmpty()) return;
+
+        String fields = android.text.TextUtils.join(", ", dropped);
+        Logger.appendLog(LOG_TAG, "Patch bỏ qua trường ngoài scope uid="
+                + item.getUniqueId() + " fields=" + fields);
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=PREVIEW_PATCH_DROPPED_FIELDS uid=%s fields=%s",
+                item.getUniqueId(), fields));
+
+        runOnUiThread(() -> {
+            if (isFinishing()) return;
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.warn_fields_not_saved_title)
+                    .setMessage(getString(R.string.warn_fields_not_saved, fields))
+                    .setPositiveButton(R.string.accept, null)
+                    .show();
+        });
+    }
+
+    /** Kiểm tra dữ liệu thực sự sẽ đưa vào chứng từ, áp dụng cả phiếu đơn và phiếu gộp. */
+    private boolean blockInvalidSelectedDocumentItems() {
+        RefuelItemData header = documentHeader();
+        if (header != null && header.getAirlineModel() == null) {
+            Logger.appendLog(LOG_TAG, "CHẶN xuất chứng từ: thiếu lookup hãng bay của xe hiện tại"
+                    + " uid=" + header.getUniqueId());
+            showBusinessError("Chưa có đủ thông tin hãng bay để tạo chứng từ. "
+                    + "Hãy bấm CẬP NHẬT rồi thử lại.");
+            return true;
+        }
+
+        // MỤC 9: mẻ của XE KHÁC chưa đủ điều kiện — kể cả thiếu tỉ trọng / nhiệt độ đo tay /
+        // số QC, vốn đang bị validate() CHẶN CỨNG — thì loại khỏi chứng từ gộp thay vì chặn
+        // nút. Máy này chỉ đọc mẻ của xe khác nên chặn ở đó là bắt người dùng chờ vô hạn một
+        // thứ họ không sửa được — và lượt làm mới vừa chạy có thể vừa kéo về đúng một mẻ như
+        // vậy, biến "hôm nay in được" thành "mai không in được".
+        //
+        // Lượt loại đó KHÔNG còn nằm ở đây: nó đã được hỏi và người dùng đã trả lời ở
+        // confirmExcludedForeignPrintItemsThen(), chạy TRƯỚC hàm này. Đừng gọi lại ở đây,
+        // nếu không mẻ sẽ bị loại lần hai mà không ai được hỏi.
+
+        // Collection đầy đủ chỉ chứng minh không thiếu UID. Từng mẻ vẫn có thể đang
+        // PROCESSING hoặc payload server thiếu trường bắt buộc; không tự suy dữ liệu.
+        if (printItems != null) {
+            for (RefuelItemData item : printItems) {
+                if (item == null || item.getStartTime() == null || item.getEndTime() == null
+                        || item.getStatus() != REFUEL_ITEM_STATUS.DONE
+                        || item.getRealAmount() <= 0
+                        || (header != null && header.getAirlineId() > 0
+                        && item != null && item.getAirlineId() != header.getAirlineId())) {
+                    String truckNo = item == null || item.getTruckNo() == null
+                            ? "(chưa rõ xe)" : item.getTruckNo();
+                    Logger.appendLog(LOG_TAG, "CHẶN xuất phiếu gộp: mẻ thiếu trường bắt buộc xe="
+                            + truckNo + " uid="
+                            + (item == null ? "null" : item.getUniqueId()));
+                    showBusinessError("Mẻ của xe " + truckNo
+                            + " chưa hoàn tất hoặc thiếu giờ, sản lượng hay thông tin chuyến bay. "
+                            + "Hãy bấm CẬP NHẬT rồi thử lại.");
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     boolean isEditable = true;
@@ -285,52 +706,42 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             return false;
         }
 
-        if (printMode == PRINT_MODE.ONE_ITEM) {
-            boolean valid = refuelData.getManualTemperature() > 0 && refuelData.getDensity() > 0;
-            boolean validQC = refuelData.getQualityNo() != null && !refuelData.getQualityNo().isEmpty();
-            if (!valid) {
-                showErrorMessage(R.string.invalid_density_temperature);
-            } else if (!validQC) {
-                showErrorMessage(R.string.invalid_qc_no);
-            }
+        // Luôn kiểm chính các checkbox sẽ in. `refuelData` chỉ là dòng đang xem và có thể
+        // là một replica không nằm trong tập được chọn, kể cả khi nút đang ở ONE_ITEM.
+        //
+        // MỨC CHẶN Ở ĐÂY GIỮ NGUYÊN — nó nhắm vào mẻ của CHÍNH xe này, thứ người dùng gõ
+        // được ngay tại chỗ. Mẻ của XE KHÁC thiếu tỉ trọng / QC đã bị
+        // excludeIneligibleForeignPrintItems() loại khỏi chứng từ gộp kèm cảnh báo TRƯỚC khi
+        // vào đây (mọi đường in đều gọi blockIncompleteOthersIfCombined trước validate),
+        // nên vòng lặp này không còn chặn vì một thứ người dùng không sửa được.
+        boolean valid = true;
+        boolean validQC = true;
+        boolean hasReturn = false;
+        for (RefuelItemData item : printItems) {
+            valid = item != null
+                    && item.getManualTemperature() > 0 && item.getDensity() > 0;
+            validQC = item != null && item.getQualityNo() != null
+                    && !item.getQualityNo().isEmpty();
+            hasReturn |= item != null && item.getReturnAmount() > 0;
 
-            return valid && validQC;
-        } else {
-
-            boolean valid = true;
-            boolean validQC = true;
-            boolean hasReturn = false;
-            for (int i = 0; i < printItems.size(); i++) {
-                RefuelItemData item = printItems.get(i);
-                valid = (item.getManualTemperature() > 0 && item.getDensity() > 0);
-
-                validQC = item.getQualityNo() != null && !item.getQualityNo().isEmpty();
-
-                hasReturn |= item.getReturnAmount() > 0;
-
-                if (!valid || !validQC) {
+            if (!valid || !validQC) {
+                if (item != null) {
                     truckArrayAdapter.setSelectedObject(item);
-                    //ListView lv = findViewById(R.id.refuel_preview_truck_list);
-                    //lv.setSelection(i);
                     refuelData = item;
                     binding.setMItem(refuelData);
-                    isEditable = refuelData != null && refuelData.getTruckNo().equals(currentApp.getTruckNo()) && !refuelData.isExported();
-
-                    break;
+                    isEditable = isCurrentTruckItem(refuelData) && !refuelData.isExported();
                 }
-
+                break;
             }
-            if (!valid || !validQC) {
-                showErrorMessage(!valid ? R.string.invalid_density_temperature : R.string.invalid_qc_no);
-            }
-
-            if (isReturn && !hasReturn) {
-                showErrorMessage(R.string.no_return_amount);
-                return false;
-            }
-            return valid && validQC;
         }
+        if (!valid || !validQC)
+            showErrorMessage(!valid ? R.string.invalid_density_temperature : R.string.invalid_qc_no);
 
+        if (isReturn && !hasReturn) {
+            showErrorMessage(R.string.no_return_amount);
+            return false;
+        }
+        return valid && validQC;
     }
 
     private boolean hasDensityWarning(List<RefuelItemData> items) {
@@ -477,7 +888,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             return;
         }
         Logger.appendLog("PRW","flight code : " + refuelData.getFlightCode());
-        isEditable = BuildConfig.FHS || (!refuelData.isExported() && refuelData.getTruckNo().equals(currentApp.getTruckNo()));
+        isEditable = isCurrentTruckItem(refuelData) && !refuelData.isExported();
         if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL)
             setContentView(R.layout.activity_refuel_preview);
         else
@@ -508,7 +919,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             });
         } else {
 
-            if (refuelData.getProductId() > 0 && productList != null) {
+            if (isCurrentTruckItem(refuelData)
+                    && refuelData.getProductId() > 0 && productList != null) {
                 for (ProductModel product : productList) {
                     if (product.getId() == refuelData.getProductId()) {
                         refuelData.setPCode(product.getCode());
@@ -547,15 +959,24 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 if (refuelData.getAirlineId() == item.getId()) {
                     airline_spinner.setSelection(i);
                     ((TextView) findViewById(R.id.refuel_preview_airline)).setText(item.getName());
-                    setAirline(refuelData, item);
+                    if (isCurrentTruckItem(refuelData)) setAirline(refuelData, item);
                     break;
                 }
             }
 
+            final boolean[] initialAirlineCallback = {true};
             airline_spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     AirlineModel selected = (AirlineModel) parent.getItemAtPosition(position);
+                    if (!isCurrentTruckItem(refuelData)) return;
+                    // Spinner có thể tự phát callback sau bind. Nếu vẫn đúng hãng đang có,
+                    // đó không phải thao tác người dùng và không được xoá tên/đổi giá.
+                    if (initialAirlineCallback[0]) {
+                        initialAirlineCallback[0] = false;
+                        if (selected != null
+                                && selected.getId() == refuelData.getAirlineId()) return;
+                    }
                     refuelData.setInvoiceNameCharter(null);
                     setAirline(selected);
 
@@ -567,12 +988,27 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 }
             });
 
-            if (refuelData.getOthers().size() > 0) {
-                for (int i = 0; i < refuelData.getOthers().size(); i++)
-                    refuelData.getOthers().get(i).setAirlineModel(refuelData.getAirlineModel());
+            // Mẻ xe khác giữ nguyên snapshot trong RAM. Chỉ enrich một mẻ khác nhưng vẫn
+            // thuộc CHÍNH xe này (tách mẻ/nạp thêm), để nó có thể làm header khi người dùng
+            // chỉ chọn mẻ đó. Replica xe khác tuyệt đối không bị mutate.
+            if (refuelData.getOthers() != null) {
+                for (RefuelItemData other : refuelData.getOthers()) {
+                    if (!isCurrentTruckItem(other) || other.getAirlineModel() != null) continue;
+                    AirlineModel lookup = null;
+                    if (airlines != null) {
+                        for (AirlineModel airline : airlines) {
+                            if (airline != null && airline.getId() == other.getAirlineId()) {
+                                lookup = airline;
+                                break;
+                            }
+                        }
+                    }
+                    if (lookup != null) other.setAirlineModel(lookup);
+                }
             }
         }
-        if (refuelData.getProductId() > 0 && productList != null) {
+        if (isCurrentTruckItem(refuelData)
+                && refuelData.getProductId() > 0 && productList != null) {
             for (ProductModel product : productList) {
                 if (product.getId() == refuelData.getProductId()) {
                     refuelData.setPCode(product.getCode());
@@ -594,7 +1030,12 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             allItems.sort(new Comparator<RefuelItemData>() {
                 @Override
                 public int compare(RefuelItemData o1, RefuelItemData o2) {
-                    return o1.getEndTime().compareTo(o2.getEndTime());
+                    Date left = o1 == null ? null : o1.getEndTime();
+                    Date right = o2 == null ? null : o2.getEndTime();
+                    if (left == right) return 0;
+                    if (left == null) return 1;
+                    if (right == null) return -1;
+                    return left.compareTo(right);
                 }
             });
             int selectedPos = 0;
@@ -612,7 +1053,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     refuelData = (RefuelItemData) parent.getItemAtPosition(position);
                     binding.setMItem(refuelData);
-                    isEditable = BuildConfig.FHS || (refuelData.getTruckNo().equals(currentApp.getTruckNo()) && !refuelData.isExported());
+                    isEditable = isCurrentTruckItem(refuelData) && !refuelData.isExported();
 
                     truckArrayAdapter.setSelectedObject(refuelData);
 
@@ -660,6 +1101,26 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         ListView lv = findViewById(R.id.refuel_preview_truck_list);
         printItems = ((TruckArrayAdapter) lv.getAdapter()).getCheckedItems();
 
+        if (blockDocumentWithoutCurrentTruck()) return;
+        // Mục 9: kéo lại mẻ xe khác NGAY TRƯỚC khi dựng chứng từ gộp; lỗi refresh chỉ cảnh
+        // báo, không chặn. Phần còn lại của hàm chạy tiếp trong callback.
+        refreshOthersBeforeDocument(() -> continueOpenReceipt(isReturn));
+    }
+
+    private void continueOpenReceipt(boolean isReturn) {
+
+        // Nút "IN PHIẾU" vẫn có thể mang nhiều checkbox. Quyết định theo
+        // dữ liệu thực sự sẽ in, không chỉ theo enum của nút đã bấm.
+        confirmExcludedForeignPrintItemsThen(() -> {
+            if (blockIncompleteOthersIfCombined()) return;
+
+            // FB-1: mất mạng chỉ CẢNH BÁO. Áp cho cả phiếu thường và phiếu hoàn.
+            warnIncompleteOthersThen(() -> continueOpenReceiptChecked(isReturn));
+        });
+    }
+
+    private void continueOpenReceiptChecked(boolean isReturn) {
+
         if (!isReturn) {
 
             if (validate() && blockReversedRefuelTime(printItems)) {
@@ -696,7 +1157,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 Runnable continueAction = () -> {
                     try {
                         ReceiptModel model = ReceiptModel.createReceipt(
-                                printItems, null, true, null, true
+                                documentItemsCurrentFirst(), null, true, null, true
                         );
                         Intent intent = new Intent(this, PrintReceiptActivity.class);
                         intent.putExtra("RECEIPT", model.toJson());
@@ -784,7 +1245,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         if (BuildConfig.THERMAL_PRINTER)
-                            reprintReceipt();
+                            reprintReceipt(resolveReceiptForReprint(printedItems));
                         dialogInterface.dismiss();
                     }
                 })
@@ -808,8 +1269,9 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void showReceiptPreview(String oldNumber, String[] replacedReceipts, boolean createNew) {
         //ReceiptModel model = ReceiptModel.createReceipt(printItems,oldNumber, createNew);
         try {
+            if (blockDocumentWithoutCurrentTruck()) return;
             ReceiptModel model = ReceiptModel.createReceipt(
-                    printItems, replacedReceipts, false, oldNumber, createNew
+                    documentItemsCurrentFirst(), replacedReceipts, false, oldNumber, createNew
             );
             Intent intent = new Intent(this, PrintReceiptActivity.class);
             intent.putExtra("RECEIPT", model.toJson());
@@ -820,10 +1282,28 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         }
     }
 
-    private void reprintReceipt() {
+    private String resolveReceiptForReprint(String[] printedItems) {
+        RefuelItemData current = documentHeader();
+        String preferred = current == null ? null : current.getReceiptUniqueId();
+        if (printedItems != null && preferred != null) {
+            for (String receiptUid : printedItems)
+                if (preferred.equals(receiptUid)) return preferred;
+        }
+        if (printedItems != null) {
+            for (String receiptUid : printedItems)
+                if (receiptUid != null && !receiptUid.isEmpty()) return receiptUid;
+        }
+        return null;
+    }
+
+    private void reprintReceipt(String receiptUniqueId) {
         //ReceiptModel model = ReceiptModel.createReceipt(printItems,oldNumber, createNew);
+        if (receiptUniqueId == null || receiptUniqueId.isEmpty()) {
+            showBusinessError("Không xác định được phiếu cần in lại");
+            return;
+        }
         Intent intent = new Intent(this, PrintReceiptActivity.class);
-        intent.putExtra("RECEIPT_ID", refuelData.getReceiptUniqueId());
+        intent.putExtra("RECEIPT_ID", receiptUniqueId);
         startActivityForResult(intent, RECEIPT_WINDOW);
     }
     private String oldNumber;
@@ -866,20 +1346,36 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private void preview() {
+        ListView lv = findViewById(R.id.refuel_preview_truck_list);
+        printItems = ((TruckArrayAdapter) lv.getAdapter()).getCheckedItems();
+        if (blockDocumentWithoutCurrentTruck()) return;
+        // Mục 9: đường xem trước cũng dựng chứng từ gộp nên cũng phải đứng trên dữ liệu mới
+        // nhất của xe khác. Lỗi refresh chỉ cảnh báo, không chặn.
+        refreshOthersBeforeDocument(this::continuePreview);
+    }
+
+    private void continuePreview() {
+        confirmExcludedForeignPrintItemsThen(() -> {
+            if (blockIncompleteOthersIfCombined()) return;
+            // FB-1: mất mạng chỉ CẢNH BÁO, không chặn đường xem trước chứng từ.
+            warnIncompleteOthersThen(this::continuePreviewChecked);
+        });
+    }
+
+    private void continuePreviewChecked() {
         try {
             SharedPreferences preferences = getSharedPreferences("FMS", MODE_PRIVATE);
             oldTemplate = preferences.getBoolean("OLD_TEMPLATE", true);
 
-            ListView lv = findViewById(R.id.refuel_preview_truck_list);
-            printItems = ((TruckArrayAdapter) lv.getAdapter()).getCheckedItems();
-
-
-            if (refuelData.getAirlineId() <= 0 || refuelData.getAirlineModel() == null) {
+            RefuelItemData documentHeader = documentHeader();
+            if (documentHeader == null) return;
+            if (documentHeader.getAirlineId() <= 0
+                    || documentHeader.getAirlineModel() == null) {
                 showErrorMessage(R.string.invalid_airline_model);
 
                 return;
             }
-            if (refuelData.getDriverId() == 0 || refuelData.getOperatorId() == 0) {
+            if (documentHeader.getDriverId() == 0 || documentHeader.getOperatorId() == 0) {
                 showErrorMessage(R.string.invalid_user);
                 return;
             }
@@ -891,7 +1387,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
             defaultModel = null;
 
-            invoiceModel = InvoiceModel.fromRefuel(refuelData, printItems);
+            invoiceModel = InvoiceModel.fromRefuel(
+                    documentHeader(), new ArrayList<>(printItems));
             setDefaultForm();
 
             printDialog = new BaseDialog(this);
@@ -908,7 +1405,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 previewBinding.invalidateAll();
 
             });
-            int selectedIndex = !refuelData.isInternational() && !refuelData.getAirlineModel().isInternational() ? 1 : 0;
+            int selectedIndex = !documentHeader.isInternational()
+                    && !documentHeader.getAirlineModel().isInternational() ? 1 : 0;
 
 
             ((RadioButton) radioGroup.getChildAt(selectedIndex)).setChecked(true);
@@ -968,16 +1466,70 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void openPrintInvoice() {
         ListView lv = findViewById(R.id.refuel_preview_truck_list);
         printItems = ((TruckArrayAdapter) lv.getAdapter()).getCheckedItems();
+        if (blockDocumentWithoutCurrentTruck()) return;
+        // Mục 9: kéo lại mẻ xe khác NGAY TRƯỚC khi dựng chứng từ gộp. Lỗi refresh không
+        // chặn — chỉ cảnh báo rồi đi tiếp bằng dữ liệu đang có.
+        refreshOthersBeforeDocument(this::continueOpenPrintInvoice);
+    }
+
+    private void continueOpenPrintInvoice() {
+        confirmExcludedForeignPrintItemsThen(() -> {
+            if (blockIncompleteOthersIfCombined()) return;
+            // FB-1: mất mạng chỉ CẢNH BÁO, không chặn xuất hoá đơn.
+            warnIncompleteOthersThen(this::continueOpenPrintInvoiceChecked);
+        });
+    }
+
+    private void continueOpenPrintInvoiceChecked() {
         invoiceForms = FMSApplication.getApplication().getInvoiceForms();
 
         defaultModel = null;
 
         if (validate()) {
 
-            warnInvoiceTimeThen(printItems, this::showInvoicePreview);
+            // Giờ đảo ngược: CẢNH BÁO hai nút, không chặn cứng như đường phiếu. Đường phiếu
+            // giữ nguyên blockReversedRefuelTime, không đụng.
+            warnReversedTimeThen(printItems,
+                    () -> warnInvoiceTimeThen(printItems, this::showInvoicePreview));
 
         }
 
+    }
+
+    /**
+     * Cảnh báo mẻ có giờ kết thúc sớm hơn giờ bắt đầu trước khi XUẤT HOÁ ĐƠN.
+     *
+     * <p>Khác đường tạo phiếu (chặn cứng, không có nút đi tiếp): hoá đơn điện tử có ca ngoại
+     * lệ thật ngoài hiện trường và mẻ sai giờ có thể thuộc XE KHÁC — máy này chỉ đọc, người
+     * dùng không sửa được, chặn cứng ở đây là khoá luôn việc xuất hoá đơn của cả chuyến.
+     * Vì vậy hai nút: "Vẫn xuất" và "Kiểm tra lại", mặc định không tự đi tiếp.
+     */
+    private void warnReversedTimeThen(List<RefuelItemData> items, Runnable onContinue) {
+        List<String> issues = RefuelTimeValidator.reversedTimeItems(items);
+        if (issues.isEmpty()) {
+            if (onContinue != null) onContinue.run();
+            return;
+        }
+
+        StringBuilder detail = new StringBuilder();
+        for (String issue : issues) detail.append("\n• ").append(issue);
+        String flat = detail.toString().replace('\n', ' ');
+
+        Logger.appendLog(LOG_TAG, "Cảnh báo giờ đảo ngược trước khi xuất HĐĐT:" + flat);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Giờ kết thúc sớm hơn giờ bắt đầu")
+                .setMessage("Các mẻ sau có giờ kết thúc sớm hơn giờ bắt đầu:" + detail
+                        + "\n\nHoá đơn sẽ mang giờ này. Nếu mẻ thuộc xe khác, hãy báo xe đó"
+                        + " sửa lại trước khi xuất.")
+                .setPositiveButton("Vẫn xuất", (dialog, which) -> {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=INVOICE_REVERSED_TIME_ACCEPTED items=%d detail=%s",
+                            issues.size(), flat));
+                    if (onContinue != null) onContinue.run();
+                })
+                .setNegativeButton("Kiểm tra lại", null)
+                .show();
     }
 
     /**
@@ -1058,11 +1610,16 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private void showInvoicePreview() {
-        InvoiceModel model = InvoiceModel.fromRefuel(refuelData, printItems);
-        setDefaultForm(model);
-        Intent intent = new Intent(this, PrintInvoiceActivity.class);
-        intent.putExtra("INVOICE", model.toJson());
-        startActivityForResult(intent, INVOICE_WINDOW);
+        try {
+            InvoiceModel model = InvoiceModel.fromRefuel(
+                    documentHeader(), new ArrayList<>(printItems));
+            setDefaultForm(model);
+            Intent intent = new Intent(this, PrintInvoiceActivity.class);
+            intent.putExtra("INVOICE", model.toJson());
+            startActivityForResult(intent, INVOICE_WINDOW);
+        } catch (IllegalArgumentException ex) {
+            showBusinessError(ex.getMessage());
+        }
 
     }
 
@@ -1108,7 +1665,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         }
         */
         if (!printWorker.printBill(invoiceModel, old)) {
-            refuelData.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
+            setCurrentPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
         }
 
 //        setResult(RESULT_OK);
@@ -1122,7 +1679,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         boolean isOK = printWorker.printInvoice(invoiceModel, old);
 
         if (!isOK) {
-            refuelData.setPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
+            setCurrentPrintStatus(RefuelItemData.ITEM_PRINT_STATUS.ERROR);
         } else {
 
             //showEditDialog(R.id.refuel_preview_invoice_number, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
@@ -1346,7 +1903,22 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
                 break;
 
+            case R.id.lblLeaveTime:
+                // Sửa lại mốc giờ đã ghi. Cùng ranh giới quyền ghi như nút Rời đi.
+                if (!isCurrentTruckItem(refuelData)) {
+                    Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+                    break;
+                }
+                showApproachLeaveDialog();
+                break;
+
             case R.id.btnLeave:
+                // LeaveTime thuộc chính mẻ của xe thực hiện. Vẫn cho xe hiện tại ghi sau khi
+                // đã phát hành chứng từ, nhưng tuyệt đối không patch mẻ replica của xe khác.
+                if (!isCurrentTruckItem(refuelData)) {
+                    Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+                    break;
+                }
                 Button btnLeave = (Button) v;
                 // Chỉ khoá nút trong lúc chờ; ẩn nút và hiện nhãn sau khi biết đã lưu được.
                 btnLeave.setEnabled(false);
@@ -1391,6 +1963,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         // Thông báo kết quả lưu đã do fragment đảm nhiệm.
     }
     private void showSplit() {
+        if (blockEditIfLocked()) return;
         isSplit = true;
         m_Title = getString(R.string.input_split_amount);
         m_Text = "0";
@@ -1402,6 +1975,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     boolean isNew = false;
 
     private void openCheckForm() {
+        if (blockEditIfLocked()) return;
 
         Dialog checkFormDlg = new BaseDialog(this);
 
@@ -1510,6 +2084,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void setInvoiceForm(InvoiceFormModel checkedItem) {
         if (printItems != null && printItems.size() > 0) {
             for (RefuelItemData item : printItems) {
+                if (!isCurrentTruckItem(item)) continue;
                 item.setInvoiceFormId(checkedItem.getId());
                 item.setFormNo(checkedItem.getFormNo());
                 item.setSign(checkedItem.getSign());
@@ -1521,6 +2096,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
 
     private void updatePrice() {
+        if (blockEditIfLocked()) return;
 
         if (refuelData.getAirlineModel() != null) {
             if (refuelData.getAirlineModel().isInternational() && refuelData.isInternational()) {
@@ -1536,6 +2112,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         updateBinding();
     }
     private void updateProduct() {
+        if (!isCurrentTruckItem(refuelData)) return;
         if (refuelData.getProductId() > 0 && productList != null) {
             for (ProductModel product : productList) {
                 if (product.getId() == refuelData.getProductId()) {
@@ -1554,6 +2131,9 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
 
     private void doRefuel() {
+        // Màn hình chi tiết có thể thay đổi số đồng hồ/thời gian tra nạp. Replica của xe
+        // khác chỉ được tải về để ghép chứng từ, nên không được chuyển sang luồng sửa này.
+        if (blockEditIfLocked()) return;
         if (refuelData != null) {
             Intent intent = new Intent(this, RefuelDetailActivity.class);
             com.megatech.fms.helpers.RefuelIntent.putRefuel(intent, refuelData);
@@ -1588,6 +2168,117 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         return value == null || value.trim().isEmpty();
     }
 
+    /** Xe khác luôn read-only, kể cả bản FHS/debug. */
+    private boolean isCurrentTruckItem(RefuelItemData item) {
+        if (item == null || currentApp == null) return false;
+
+        String ownNo = currentApp.getTruckNo() == null ? "" : currentApp.getTruckNo().trim();
+        String itemNo = item.getTruckNo() == null ? "" : item.getTruckNo().trim();
+        Boolean numberMatches = !ownNo.isEmpty() && !itemNo.isEmpty()
+                ? ownNo.equalsIgnoreCase(itemNo) : null;
+
+        int ownId = currentApp.getTruckId();
+        Boolean idMatches = ownId > 0 && item.getTruckId() > 0
+                ? ownId == item.getTruckId() : null;
+
+        if (numberMatches != null && idMatches != null
+                && !numberMatches.equals(idMatches)) return false;
+        Boolean match = numberMatches != null ? numberMatches : idMatches;
+        return match != null && match;
+    }
+
+    /** Mẻ của xe hiện tại là nguồn metadata/identity của chứng từ. */
+    private RefuelItemData currentTruckPrintTarget() {
+        if (printItems == null) return null;
+        RefuelItemData fallback = null;
+        for (RefuelItemData item : printItems) {
+            if (!isCurrentTruckItem(item)) continue;
+            if (uniqueId != null && uniqueId.equals(item.getUniqueId())) return item;
+            if (fallback == null) fallback = item;
+        }
+        return fallback;
+    }
+
+    /**
+     * Lọc ngay tại biên UI trước khi gọi tầng ghi. DataHelper vẫn kiểm tra lại ownership,
+     * nhưng Activity cũng không nên chuyển replica xe khác vào một API có khả năng ghi.
+     */
+    private ArrayList<RefuelItemData> writableCurrentItems(List<RefuelItemData> source) {
+        ArrayList<RefuelItemData> result = new ArrayList<>();
+        if (source == null) return result;
+        for (RefuelItemData item : source) {
+            if (isCurrentTruckItem(item)) result.add(item);
+        }
+        return result;
+    }
+
+    private void setCurrentPrintStatus(RefuelItemData.ITEM_PRINT_STATUS status) {
+        RefuelItemData target = documentHeader();
+        if (target == null) target = refuelData;
+        if (target != null) target.setPrintStatus(status);
+    }
+
+    /** Giữ nguyên tập dòng in nhưng đặt nguồn header của xe hiện tại ở vị trí đầu. */
+    private ArrayList<RefuelItemData> documentItemsCurrentFirst() {
+        ArrayList<RefuelItemData> result = printItems == null
+                ? new ArrayList<>() : new ArrayList<>(printItems);
+        RefuelItemData source = currentTruckPrintTarget();
+        if (source != null) {
+            result.remove(source);
+            result.add(0, source);
+        }
+        return result;
+    }
+
+    private boolean hasCurrentTruckPrintTarget() {
+        return currentTruckPrintTarget() != null;
+    }
+
+    /**
+     * Nguồn header của chứng từ: mẻ của xe này nếu có, nếu không thì mẻ đầu tiên được chọn.
+     *
+     * <p>Fallback chính là chỗ cho phép IN HỘ: máy in của xe kia hỏng, xe này in giúp phiếu
+     * cho mẻ của họ. Khi đó header (hãng bay, giá, tài xế) phải lấy từ chính mẻ được in, chứ
+     * không có mẻ nào của xe này để mà lấy.
+     */
+    private RefuelItemData documentHeader() {
+        RefuelItemData own = currentTruckPrintTarget();
+        if (own != null) return own;
+        if (printItems == null) return null;
+        for (RefuelItemData item : printItems)
+            if (item != null) return item;
+        return null;
+    }
+
+    /**
+     * In hộ xe khác: CẢNH BÁO một lần, không chặn.
+     *
+     * <p>Trước đây đây là chặn cứng "phải chọn ít nhất một mẻ của xe hiện tại". Nghiệp vụ có
+     * thật là máy in của một xe hỏng và xe bên cạnh in hộ; chặn ở đây nghĩa là chuyến đó
+     * không có phiếu. Số phiếu vẫn theo đúng luật cũ: giữ số mà mẻ đang mang, chỉ sinh số mới
+     * khi mẻ chưa có số hoặc số đó đã tồn tại trong máy này.
+     *
+     * @return luôn false — không có lối chặn nào ở đây nữa.
+     */
+    private boolean blockDocumentWithoutCurrentTruck() {
+        if (printItems == null || printItems.isEmpty() || hasCurrentTruckPrintTarget())
+            return false;
+
+        RefuelItemData header = documentHeader();
+        Logger.appendLog(LOG_TAG, "IN HỘ: danh sách chỉ có mẻ xe khác, truck="
+                + (header == null ? "null" : header.getTruckNo())
+                + " uid=" + (header == null ? "null" : header.getUniqueId()));
+        Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                "event=DOCUMENT_PRINTED_FOR_OTHER_TRUCK ownTruck=%s headerTruck=%s uid=%s items=%d",
+                currentApp == null ? "null" : currentApp.getTruckNo(),
+                header == null ? "null" : header.getTruckNo(),
+                header == null ? "null" : header.getUniqueId(),
+                printItems.size()));
+
+        Toast.makeText(this, R.string.warn_print_for_other_truck, Toast.LENGTH_LONG).show();
+        return false;
+    }
+
     /**
      * @return true nếu thao tác sửa bị chặn (đã hiện thông báo tương ứng cho người dùng).
      */
@@ -1611,7 +2302,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             showErrorMessage(R.string.edit_locked_after_print);
             return;
         }
-        if (!isEditable && !BuildConfig.FHS) {
+        if (!isEditable) {
             Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
             return;
         }
@@ -1665,6 +2356,14 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                         return;
                     }
 
+                    Logger.appendLog(LOG_TAG, "Cập nhật nhân viên");
+                    Logger.appendLog(LOG_TAG, "Old value: "
+                            + refuelData.getDriverName() + " / "
+                            + refuelData.getOperatorName());
+                    Logger.appendLog(LOG_TAG, "New value: "
+                            + (driver == null ? "" : driver.getName()) + " / "
+                            + (operator == null ? "" : operator.getName()));
+
                     if (driver != null) {
                         refuelData.setDriverId(driver.getId());
                         refuelData.setDriverName(driver.getName());
@@ -1700,6 +2399,167 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private final String LOG_TAG = "PRW";
+
+    /**
+     * Sửa lại GIỜ TIẾP CẬN và GIỜ RỜI ĐI của mẻ này.
+     *
+     * <p>Vì sao cần: nút "Rời đi" ghi mốc giờ ngay khi bấm, và trước đây không có đường nào
+     * sửa lại. Bấm nhầm — hoặc bấm muộn vì còn dở tay ở tàu bay — là hỏng mốc giờ của mẻ
+     * vĩnh viễn. Đây là hai mốc thời gian tác nghiệp, không phải số liệu chốt của mẻ.
+     *
+     * <p>KHÔNG khoá theo "đã xuất hoá đơn" như giờ tra nạp: chính nút Rời đi cũng cho ghi sau
+     * khi đã phát hành chứng từ (xem nhánh {@code R.id.btnLeave}), nên khoá ở đây là không
+     * nhất quán. Ranh giới duy nhất vẫn là quyền ghi theo xe — mẻ của xe khác chỉ đọc.
+     *
+     * <p>Ghi bằng {@code patchRefuel}: nó đọc bản mới nhất dưới khoá rồi chỉ đắp hai trường
+     * này, nên không kéo theo snapshot cũ của màn hình. Hai trường này KHÔNG nằm trong
+     * {@code Scope.PREVIEW}, nên tuyệt đối không được lưu qua đường {@code updateBinding()} —
+     * patch theo scope sẽ bỏ im lặng cả hai.
+     */
+    private void showApproachLeaveDialog() {
+        if (refuelData == null) return;
+
+        final Date[] approach = {refuelData.getApproachTime()};
+        final Date[] leave = {refuelData.getLeaveTime()};
+
+        final LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+
+        final TextView approachView = addTimeRow(layout, getString(R.string.approach_time));
+        final TextView leaveView = addTimeRow(layout, getString(R.string.leave_time));
+        renderTimeRow(approachView, approach[0]);
+        renderTimeRow(leaveView, leave[0]);
+
+        approachView.setOnClickListener(v -> pickDateTime(approach[0], picked -> {
+            approach[0] = picked;
+            renderTimeRow(approachView, picked);
+        }));
+        leaveView.setOnClickListener(v -> pickDateTime(leave[0], picked -> {
+            leave[0] = picked;
+            renderTimeRow(leaveView, picked);
+        }));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.edit_approach_leave_title)
+                .setView(layout)
+                .setPositiveButton(R.string.save, (dialog, which) ->
+                        confirmThenSaveApproachLeave(approach[0], leave[0]))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    /** Một dòng "nhãn — giá trị bấm được" trong hộp thoại sửa giờ. */
+    private TextView addTimeRow(LinearLayout parent, String label) {
+        TextView title = new TextView(this);
+        title.setText(label);
+        parent.addView(title);
+
+        TextView value = new TextView(this);
+        value.setTextSize(18);
+        int pad = (int) (8 * getResources().getDisplayMetrics().density);
+        value.setPadding(0, pad, 0, pad * 2);
+        value.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_edit, 0, 0, 0);
+        parent.addView(value);
+        return value;
+    }
+
+    private void renderTimeRow(TextView view, Date value) {
+        view.setText(value == null
+                ? getString(R.string.not_recorded_touch_to_set)
+                : DateUtils.formatDate(value, "dd/MM/yyyy HH:mm"));
+    }
+
+    /** Chọn ngày rồi chọn giờ, trả về mốc đã chọn. {@code initial} null thì lấy giờ hiện tại. */
+    private void pickDateTime(Date initial, androidx.core.util.Consumer<Date> onPicked) {
+        final Calendar c = Calendar.getInstance();
+        if (initial != null) c.setTime(initial);
+
+        new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            c.set(year, month, dayOfMonth);
+            new TimePickerDialog(context, (timeView, hourOfDay, minute) -> {
+                c.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                c.set(Calendar.MINUTE, minute);
+                c.set(Calendar.SECOND, 0);
+                onPicked.accept(c.getTime());
+            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show();
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    /**
+     * Rời đi sớm hơn tiếp cận là vô lý — nhưng CHỈ CẢNH BÁO, không chặn.
+     *
+     * <p>Người dùng đang đứng ngoài sân, và một cặp giờ ngược vẫn tốt hơn là không sửa được
+     * gì. Cho họ nhận sai một cách có ý thức, và ghi anomaly để đối soát sau ca.
+     */
+    private void confirmThenSaveApproachLeave(Date approach, Date leave) {
+        boolean reversed = approach != null && leave != null && leave.before(approach);
+        if (!reversed) {
+            saveApproachLeave(approach, leave);
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage(R.string.warn_leave_before_approach)
+                .setPositiveButton(R.string.save, (dialog, which) -> {
+                    Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                            "event=APPROACH_LEAVE_REVERSED_ACCEPTED uid=%s approach=%s leave=%s",
+                            refuelData == null ? "null" : refuelData.getUniqueId(),
+                            DateUtils.formatDate(approach, "dd/MM HH:mm"),
+                            DateUtils.formatDate(leave, "dd/MM HH:mm")));
+                    saveApproachLeave(approach, leave);
+                })
+                .setNegativeButton(R.string.back, null)
+                .show();
+    }
+
+    /** Ghi hai mốc giờ tác nghiệp, không đụng business payload của phiếu. */
+    private void saveApproachLeave(final Date approach, final Date leave) {
+        final String uniqueId = refuelData != null ? refuelData.getUniqueId() : null;
+        if (uniqueId == null || uniqueId.isEmpty()) return;
+
+        final Date oldApproach = refuelData.getApproachTime();
+        final Date oldLeave = refuelData.getLeaveTime();
+
+        new Thread(() -> {
+            final DataHelper.PatchResult result = DataHelper.patchRefuel(uniqueId, latest -> {
+                latest.setApproachTime(approach);
+                latest.setLeaveTime(leave);
+            });
+
+            Logger.appendLog(LOG_TAG, String.format(java.util.Locale.US,
+                    "Sửa tay mốc giờ uid=%s: tiếp cận %s -> %s, rời đi %s -> %s, applied=%s%s",
+                    uniqueId,
+                    DateUtils.formatDate(oldApproach, "dd/MM HH:mm"),
+                    DateUtils.formatDate(approach, "dd/MM HH:mm"),
+                    DateUtils.formatDate(oldLeave, "dd/MM HH:mm"),
+                    DateUtils.formatDate(leave, "dd/MM HH:mm"),
+                    result.applied, result.applied ? "" : " reason=" + result.reason));
+
+            // Cùng lý do như saveLeaveTime(): màn hình này giữ khoá sync nên lượt
+            // Synchronize() bên trong patchRefuel bị nuốt tới lúc rời màn hình.
+            if (result.applied) DataHelper.pushPendingInBackground();
+
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (!result.applied) {
+                    showErrorMessage(R.string.save_leave_time_failed);
+                    return;
+                }
+                if (result.data != null) refuelData = result.data;
+                if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
+                    binding.setMItem(refuelData);
+                    binding.invalidateAll();
+                    truckArrayAdapter.notifyDataSetChanged();
+                } else {
+                    extractBinding.setMItem(refuelData);
+                    extractBinding.invalidateAll();
+                }
+            });
+        }).start();
+    }
 
     /**
      * Lưu giờ rời đi mà không đụng tới business payload của phiếu.
@@ -1758,18 +2618,80 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         }).start();
     }
 
+    /**
+     * Hàng đợi ghi của màn hình xem trước: MỘT luồng, đúng thứ tự người dùng thao tác.
+     *
+     * <p>Trước đây mỗi lần sửa spawn một {@code Thread} riêng, nên hai hộp thoại liên tiếp
+     * chạy song song trên cùng baseline và lần sau tự chuốc CONFLICT.
+     */
+    private final java.util.concurrent.ExecutorService previewSaveExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+
     private void updateBinding() {
         updateBinding(true);
     }
 
     private void updateBinding(boolean updateAll) {
-        new Thread(new Runnable() {
+        if (!updateAll && !isCurrentTruckItem(refuelData)) {
+            Logger.appendRefuelAnomaly(String.format(java.util.Locale.US,
+                    "event=PREVIEW_WRITE_REJECTED uid=%s reason=FOREIGN_OR_UNKNOWN",
+                    refuelData == null ? "null" : refuelData.getUniqueId()));
+            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final ArrayList<RefuelItemData> writableItems = updateAll
+                ? writableCurrentItems(allItems) : null;
+        // Đối tượng của màn hình có thể bị onDestroy đặt null trong lúc tác vụ còn chạy.
+        final RefuelItemData target = refuelData;
+        // Mỗi hộp thoại TRƯỚC ĐÂY spawn một Thread riêng gửi full snapshot. Sửa nhiệt độ rồi
+        // tỉ trọng liên tiếp là hai luồng cùng đứng trên một baseline, luồng sau chắc chắn
+        // bị CONFLICT. Xếp hàng một luồng thì lần sau luôn thấy ClientSeq của lần trước.
+        if (previewSaveExecutor.isShutdown()) {
+            Logger.appendLog(LOG_TAG, "Bỏ lần lưu vì hàng đợi xem trước đã đóng");
+            return;
+        }
+        previewSaveExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 Logger.appendLog(LOG_TAG, "post all refuels");
-                boolean committed = updateAll
-                        ? DataHelper.postRefuels(allItems, true)
-                        : RefuelItemData.isCommitted(DataHelper.postRefuel(refuelData, true));
+                boolean committed;
+                if (updateAll) {
+                    committed = DataHelper.postRefuels(writableItems, true);
+
+                    // Cùng lý do như nhánh một phiếu bên dưới, và đây mới là nhánh hay gặp:
+                    // số hiệu tàu bay, loại tàu bay, đường bay, bãi đỗ, tên charter, đơn giá
+                    // đều đi qua setAll() nên luôn rơi vào đây. Đường in vừa chạy xong đã đắp
+                    // metadata phiếu lên row và làm ClientSeq tiến lên, trong khi các đối
+                    // tượng của màn hình vẫn giữ baseline từ trước lúc in — sửa ngay sau khi
+                    // in là chắc chắn bị chặn.
+                    if (!committed && writableItems != null) {
+                        Logger.appendLog(LOG_TAG,
+                                "Sửa hàng loạt bị chặn, thử lại bằng PreviewFieldsPatch");
+                        boolean recovered = true;
+                        for (RefuelItemData item : writableItems) {
+                            warnFieldsDroppedByPatch(item);
+                            if (!RefuelItemData.isCommitted(
+                                    DataHelper.savePreviewFields(item)))
+                                recovered = false;
+                        }
+                        committed = recovered;
+                    }
+                } else {
+                    RefuelItemData result = DataHelper.postRefuel(target, true);
+                    committed = RefuelItemData.isCommitted(result);
+
+                    // Baseline dịch vì lượt pull nền hoặc một hộp thoại khác vừa ghi. Gõ lại
+                    // là việc của máy, không phải của người dùng: đắp đúng nhóm trường màn
+                    // hình này được phép nhập lên row mới nhất.
+                    if (!committed && result != null
+                            && result.getSaveOutcome() == RefuelItemData.SAVE_OUTCOME.CONFLICT) {
+                        Logger.appendLog(LOG_TAG,
+                                "Sửa phiếu bị chặn, thử lại bằng PreviewFieldsPatch");
+                        warnFieldsDroppedByPatch(target);
+                        committed = RefuelItemData.isCommitted(
+                                DataHelper.savePreviewFields(target));
+                    }
+                }
 
                 // Lưu bị chặn mà màn hình vẫn vẽ lại như cũ thì người dùng tin là đã sửa
                 // xong, trong khi Room giữ nguyên giá trị cũ.
@@ -1781,7 +2703,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                     });
                 }
             }
-        }).start();
+        });
         if (refuelData.getRefuelItemType() == RefuelItemData.REFUEL_ITEM_TYPE.REFUEL) {
             binding.invalidateAll();
             truckArrayAdapter.notifyDataSetChanged();
@@ -1803,9 +2725,14 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         AlertDialog.Builder b = new AlertDialog.Builder(this);
         b.setTitle(R.string.update_tax_rate);
 
+        final String oldVat = String.format(java.util.Locale.US, "%.0f%%",
+                refuelData.getTaxRate() * 100);
         b.setSingleChoiceItems(R.array.vat_array, pos, (dialog, which) -> {
             NumberFormat format = NumberFormat.getPercentInstance();
             try {
+                Logger.appendLog(LOG_TAG, "Cập nhật thuế suất");
+                Logger.appendLog(LOG_TAG, "Old value: " + oldVat);
+                Logger.appendLog(LOG_TAG, "New value: " + vat_array[which]);
                 setAll(R.id.refuel_preview_vat, format.parse(vat_array[which]).doubleValue());
                 dialog.dismiss();
                 updateBinding();
@@ -1855,6 +2782,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
 
     private void openAirlineDialog() {
+        if (blockEditIfLocked()) return;
         Dialog airlineDlg = new Dialog(this);
         airlineDlg.setTitle(R.string.app_name);
         airlineDlg.setContentView(R.layout.airline_select_dialog);
@@ -1933,7 +2861,8 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         item.setUnit(selected.getUnit());
         item.setProductName(selected.getProductName());
         //if (selected.getId() != item.getAirlineId())
-        item.setTaxRate(!refuelData.isInternational() && selected.isInternational() ? BuildConfig.TAX_RATE : 0);
+        item.setTaxRate(!item.isInternational() && selected.isInternational()
+                ? BuildConfig.TAX_RATE : 0);
 
         item.setAirlineModel(selected);
 
@@ -1956,9 +2885,17 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private void setAirline(AirlineModel selected) {
+        Logger.appendLog(LOG_TAG, "Cập nhật hãng bay");
+        Logger.appendLog(LOG_TAG, "Old value: "
+                + (refuelData == null || refuelData.getAirlineModel() == null
+                ? "" : refuelData.getAirlineModel().getCode()));
+        Logger.appendLog(LOG_TAG, "New value: "
+                + (selected == null ? "" : selected.getCode()));
 
-        for (RefuelItemData itemData : allItems)
-            setAirline(itemData, selected, true);
+        for (RefuelItemData itemData : allItems) {
+            if (isCurrentTruckItem(itemData))
+                setAirline(itemData, selected, true);
+        }
 
 
         updateBinding();
@@ -1970,6 +2907,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void setAll(ArrayList<RefuelItemData> items, int id, String text) {
         for (RefuelItemData item : items) {
+            if (!isCurrentTruckItem(item)) continue;
             switch (id) {
                 case R.id.refuel_preview_aircraftCode:
                     item.setAircraftCode(text);
@@ -2001,6 +2939,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void setAll(ArrayList<RefuelItemData> items, int id, double val) {
         for (RefuelItemData item : items) {
+            if (!isCurrentTruckItem(item)) continue;
             switch (id) {
                 case R.id.refuel_preview_price:
                     item.setPrice(val);
@@ -2020,6 +2959,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void setAll(ArrayList<RefuelItemData> items, int id, boolean val) {
         for (RefuelItemData item : items) {
+            if (!isCurrentTruckItem(item)) continue;
             switch (id) {
                 case R.id.refuel_preview_international:
                     item.setInternational(val);
@@ -2047,8 +2987,16 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void showEditDialog(final int id, int inputType, String pattern, boolean required) {
 
-        // Tách phiếu tạo ra mẻ mới nên vẫn cho nhập; các trường hợp còn lại theo khoá chung.
-        if (!isSplit && blockEditIfLocked()) return;
+        // Số hoá đơn được nhập sau callback in nên vẫn phải cho xe hiện tại ghi khi chứng từ
+        // vừa phát hành. Với phiếu gộp, quyền nằm ở printItems chứ không phải dòng đang chọn.
+        if (id == R.id.refuel_preview_invoice_number) {
+            if (printItems == null || printItems.isEmpty()) {
+                Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+                return;
+            }
+        } else if (blockEditIfLocked()) {
+            return;
+        }
 
         Context context = this;
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -2266,12 +3214,13 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void updateAllReview()
     {
         for (RefuelItemData item : allItems) {
-            item.setHasReview(true);
+            if (isCurrentTruckItem(item)) item.setHasReview(true);
 
 
         }
+        final ArrayList<RefuelItemData> writableItems = writableCurrentItems(printItems);
         new Thread(() -> {
-            if (!DataHelper.postRefuels(printItems, false)) {
+            if (!DataHelper.postRefuels(writableItems, false)) {
                 Logger.appendLog(LOG_TAG, "Ghi nhận đánh giá chưa lưu được");
                 runOnUiThread(() -> {
                     if (!isFinishing())
@@ -2282,6 +3231,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         binding.invalidateAll();
     }
     private boolean calculateReturnAmount(double returnAmount, RETURN_UNIT unit) {
+        if (blockEditIfLocked()) return false;
 
         if (refuelData.getDensity() > 0) {
             double vol = unit == RETURN_UNIT.KG ? Math.round(returnAmount / refuelData.getDensity()) : Math.round(returnAmount * GALLON_TO_LITTER);
@@ -2312,6 +3262,12 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
             }
         }*/
 
+        if (printItems == null || printItems.isEmpty()) {
+            Logger.appendLog(LOG_TAG, "Không cập nhật phiếu: danh sách in rỗng");
+            showErrorMessage(R.string.save_print_info_failed);
+            return false;
+        }
+
         // CHỈ ghi các trường của receipt lên bản ghi MỚI NHẤT trong Room.
         // Trước đây chỗ này POST lại toàn bộ snapshot đang giữ trên màn hình: nếu snapshot
         // đã cũ (ví dụ bản server kéo về lúc mở Preview) thì số đồng hồ vừa chốt bị ghi đè —
@@ -2339,9 +3295,13 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private void patchAllPrintItems(String what, DataHelper.RefuelPatch patch) {
         for (RefuelItemData item : printItems) {
             String uniqueId = item.getUniqueId();
-            DataHelper.PatchResult result = DataHelper.patchRefuel(uniqueId, patch);
+            // Mẻ của xe khác cũng phải nhận dấu đã in — nếu không, xe kia và chính máy này
+            // đều thấy mẻ là chưa in và in lần hai bằng một số phiếu khác. Cửa
+            // patchRefuelDocument chỉ cho đúng nhóm trường chứng từ đi qua.
+            DataHelper.PatchResult result = DataHelper.patchRefuelDocument(uniqueId, patch);
 
             Logger.appendLog(LOG_TAG, "patch " + what + " uid=" + uniqueId
+                    + " own=" + isCurrentTruckItem(item)
                     + " applied=" + result.applied
                     + (result.applied ? "" : " reason=" + result.reason));
 
@@ -2380,14 +3340,25 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private boolean updateAllInvoice(String invoiceNumber, int formId, INVOICE_TYPE printTemplate,double techlog) {
+        // onActivityResult có thể gọi thẳng vào đây, không đi qua dialog guard. Danh sách
+        // rỗng thì không có gì để ghi; danh sách chỉ có mẻ xe khác VẪN ghi được — đó là ca
+        // in hộ, và số hoá đơn phải bám vào đúng những mẻ vừa in.
+        if (printItems == null || printItems.isEmpty()) {
+            Logger.appendLog(LOG_TAG, "Không cập nhật hoá đơn: danh sách in rỗng");
+            return false;
+        }
         for (RefuelItemData item : printItems) {
             if (item.getInvoiceNumber() != null && item.getInvoiceNumber().equals(invoiceNumber)) {
                 return false;
             }
         }
 
-        final double price = refuelData.getPrice();
-        final double taxRate = refuelData.getTaxRate();
+        RefuelItemData documentSource = documentHeader();
+        if (documentSource == null) return false;
+        // Dòng đang được chọn trên UI có thể không phải nguồn header. Giá/thuế phải lấy đúng
+        // từ mẻ đã dùng làm header của chứng từ, không phải từ dòng đang xem.
+        final double price = documentSource.getPrice();
+        final double taxRate = documentSource.getTaxRate();
 
         // Cùng lý do với receipt: chỉ ghi các trường của hoá đơn lên bản ghi mới nhất.
         new Thread(() -> patchAllPrintItems("invoice", latest -> {
@@ -2413,16 +3384,22 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private int mDay;
 
     private void showTimeDialog(int id) {
-        if (!isEditable) {
+        if (blockEditIfLocked()) return;
 
-            Toast.makeText(this, R.string.edit_not_allow, Toast.LENGTH_LONG).show();
+        // Giờ tra nạp chỉ bị khoá khi ĐÃ XUẤT HOÁ ĐƠN. Trước mốc đó vẫn phải cho sửa: mẻ
+        // vừa bấm kết thúc đã là DONE, nhưng chưa chốt sổ.
+        if (refuelData != null && refuelData.isMeasuredTimeLockedOnServer()) {
+            Logger.appendLog(LOG_TAG, "CHẶN sửa giờ: phiếu đã xuất hoá đơn uid="
+                    + refuelData.getUniqueId()
+                    + " invoiceNumber=" + refuelData.getInvoiceNumber());
+            showBusinessError("Phiếu đã xuất hoá đơn " + refuelData.getInvoiceNumber()
+                    + " nên giờ tra nạp không sửa được nữa.");
             return;
         }
         final Date date = new Date();
-        if (id == R.id.refuel_preview_starttime)
-            date.setTime(refuelData.getStartTime().getTime());
-        else
-            date.setTime(refuelData.getEndTime().getTime());
+        Date savedTime = id == R.id.refuel_preview_starttime
+                ? refuelData.getStartTime() : refuelData.getEndTime();
+        if (savedTime != null) date.setTime(savedTime.getTime());
 
         final Calendar c = Calendar.getInstance();
         c.setTime(date);
@@ -2476,6 +3453,7 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     }
 
     private void showReturnInput(double amount, RETURN_UNIT unit) {
+        if (blockEditIfLocked()) return;
         final LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(20, 5, 0, 5);
@@ -2541,12 +3519,28 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
     private final boolean isEditing = false;
 
     @SuppressLint("StaticFieldLeak")
+    /**
+     * "Nạp thêm": tạo một MẺ MỚI CỦA XE NÀY trên cùng chuyến với dòng đang xem.
+     *
+     * <p>Được phép cả khi dòng đang xem là của XE KHÁC — đó là nghiệp vụ có thật: nhìn thấy
+     * xe bạn đã nạp cho chuyến này, xe mình nạp tiếp phần còn lại. Bản vá trước chặn bằng
+     * {@code blockEditIfLocked()} nên đã làm chết tính năng; cái cần chặn không phải thao tác
+     * mà là việc bản sao mang theo định danh của phiếu nguồn.
+     *
+     * <p>{@link RefuelItemData#copy()} đã cấp UniqueId mới và xoá Id/LocalId/số đồng hồ/số
+     * chứng từ. Nhưng nó {@code clone()} nên các trường KHÔNG thuộc nghiệp vụ vẫn còn nguyên:
+     * {@code rawJson} vẫn là JSON server của phiếu nguồn (kèm UniqueId, Id, TruckNo của xe
+     * kia), và {@code baseJson}/{@code baseClientSeq} vẫn là baseline của row kia. Để nguyên
+     * thì đúng như lo ngại cũ: dữ liệu replica có đường lên server dưới danh nghĩa xe này.
+     */
     private void createNewItem() {
-
         try {
-            final RefuelItemData itemData = refuelData.copy();
-            itemData.setTruckId(currentApp.getSetting().getTruckId());
-            itemData.setTruckNo(currentApp.getTruckNo());
+            final RefuelItemData itemData = refuelData.copyForNewBatch(
+                    currentApp.getSetting().getTruckId(), currentApp.getTruckNo());
+            if (itemData == null) {
+                Toast.makeText(this, R.string.error_refuel_save_failed, Toast.LENGTH_LONG).show();
+                return;
+            }
 
             new AsyncTask<Void, Void, RefuelItemData>() {
                 @Override
@@ -2582,6 +3576,9 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         // lại và TOÀN BỘ đồng bộ chết tới khi khởi động lại app — dữ liệu vẫn vào Room đủ
         // nhưng không bao giờ lên tới server.
         DataHelper.unlockSync();
+        // shutdown() chứ KHÔNG phải shutdownNow(): các lần sửa đã xếp hàng vẫn phải được ghi
+        // xuống Room. Huỷ chúng ở đây là làm mất đúng thao tác người dùng vừa thực hiện.
+        previewSaveExecutor.shutdown();
         super.onDestroy();
         refuelData = null;
         Runtime.getRuntime().gc();

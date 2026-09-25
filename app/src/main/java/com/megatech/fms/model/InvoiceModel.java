@@ -433,30 +433,57 @@ public class InvoiceModel extends BaseModel {
     }
 
     public static InvoiceModel fromRefuel(RefuelItemData refuel, ArrayList<RefuelItemData> allItems) {
+        if (refuel == null)
+            throw new IllegalArgumentException("Thiếu mẻ xe hiện tại để tạo hoá đơn");
+
         @SuppressWarnings("UnusedAssignment") InvoiceModel model = new InvoiceModel();
-        if (allItems != null) {
-            allItems.removeIf(itemData -> itemData.getRealAmount()<=0);
-            Collections.sort(allItems, new Comparator<RefuelItemData>() {
+        // Danh sách chỉ cung cấp các dòng hàng và MIN/MAX thời gian. Header/khách hàng/giá
+        // phải luôn lấy từ `refuel` mà Activity đã xác định là mẻ của xe hiện tại.
+        // Không filter/sort ngay trên printItems vì callback sau in còn dùng đúng tập đó để
+        // patch metadata vào Room.
+        ArrayList<RefuelItemData> documentItems = allItems == null
+                ? null : new ArrayList<>(allItems);
+        if (documentItems != null) {
+            documentItems.removeIf(itemData -> itemData == null || itemData.getRealAmount() <= 0);
+            Collections.sort(documentItems, new Comparator<RefuelItemData>() {
                 @Override
                 public int compare(RefuelItemData o1, RefuelItemData o2) {
-                    return o2.getEndTime().compareTo(o1.getEndTime());
+                    Date left = o1 == null ? null : o1.getEndTime();
+                    Date right = o2 == null ? null : o2.getEndTime();
+                    if (left == right) return 0;
+                    if (left == null) return 1;
+                    if (right == null) return -1;
+                    return right.compareTo(left);
                 }
             });
-            refuel = allItems.get(0);
+            if (documentItems.isEmpty())
+                throw new IllegalArgumentException("Không có mẻ có sản lượng để tạo hoá đơn");
+            for (RefuelItemData item : documentItems) {
+                if (item.getStartTime() == null || item.getEndTime() == null)
+                    throw new IllegalArgumentException("Mẻ " + item.getUniqueId()
+                            + " thiếu giờ bắt đầu hoặc giờ kết thúc");
+            }
         }
+
+        if (refuel.getStartTime() == null || refuel.getEndTime() == null)
+            throw new IllegalArgumentException(
+                    "Mẻ xe hiện tại thiếu giờ bắt đầu hoặc giờ kết thúc");
 
 
         String data = gson.toJson(refuel);
         model = gson.fromJson(data, InvoiceModel.class);
         model.printed = false;
         model.customerId = refuel.getAirlineId();
-        model.customerName = refuel.getInvoiceNameCharter().trim();
+        AirlineModel airline = refuel.getAirlineModel();
+        if (airline == null)
+            throw new IllegalArgumentException("Thiếu thông tin hãng bay để tạo hoá đơn");
+        model.customerName = trimToEmpty(refuel.getInvoiceNameCharter());
         if (model.customerName.isEmpty())
-            model.customerName = refuel.getAirlineModel().getName().trim();
-        model.customerAddress = refuel.getAirlineModel().getAddress().trim();
-        model.customerCode = refuel.getAirlineModel().getCode();
-        model.taxCode = refuel.getAirlineModel().getTaxCode().trim();
-        model.productName = refuel.getAirlineModel().getProductName();
+            model.customerName = trimToEmpty(airline.getName());
+        model.customerAddress = trimToEmpty(airline.getAddress());
+        model.customerCode = trimToEmpty(airline.getCode());
+        model.taxCode = trimToEmpty(airline.getTaxCode());
+        model.productName = trimToEmpty(airline.getProductName());
         model.flightType = refuel.isInternational()?1:0;
 
         model.temperature = refuel.getManualTemperature();
@@ -465,8 +492,8 @@ public class InvoiceModel extends BaseModel {
 
         model.date = refuel.getEndTime();
 
-        model.invoiceType = !refuel.isInternational() && !refuel.getAirlineModel().isInternational() ? INVOICE_TYPE.BILL : INVOICE_TYPE.INVOICE;
-        model.isVNA = refuel.getAirlineModel().getCode().equals("VN");
+        model.invoiceType = !refuel.isInternational() && !airline.isInternational() ? INVOICE_TYPE.BILL : INVOICE_TYPE.INVOICE;
+        model.isVNA = "VN".equals(model.customerCode);
         // create invoice item list
         //addInvoiceItem(model, refuel);
 
@@ -474,11 +501,18 @@ public class InvoiceModel extends BaseModel {
         double totalV = 0;//model.getVolume();
         int largestItemIdx = 0;
         double largestAmount = 0;
-        if (allItems != null) {
+        if (refuel.getWeightNote() != null && !refuel.getWeightNote().isEmpty()) {
+            try {
+                model.techLog = Double.parseDouble(refuel.getWeightNote());
+            } catch (NumberFormatException ex) {
+                Logger.appendLog("INVOICE", "Bỏ qua TechLog không phải số uid="
+                        + refuel.getUniqueId());
+            }
+        }
+        if (documentItems != null) {
 
-            for (int i = 0; i < allItems.size(); i++) {
-                RefuelItemData item = allItems.get(i);
-                String itemData = gson.toJson(item);
+            for (int i = 0; i < documentItems.size(); i++) {
+                RefuelItemData item = documentItems.get(i);
                 addInvoiceItem(model, item);
 
                 //totalW += item.getWeight();
@@ -488,9 +522,11 @@ public class InvoiceModel extends BaseModel {
                     model.setStartTime(item.getStartTime());
                 if (model.endTime.compareTo(item.getEndTime())<0)
                     model.setEndTime(item.getEndTime());
-                if (item.getWeightNote()!=null && !item.getWeightNote().isEmpty())
-                    model.techLog = Double.parseDouble(item.getWeightNote());
             }
+
+            // Ngày hoá đơn theo mẻ kết thúc muộn nhất, giữ đúng hành vi cũ dù header giờ
+            // luôn cố định ở xe hiện tại.
+            model.date = model.endTime;
 
             for (InvoiceItemModel item: model.items)
             {
@@ -547,6 +583,10 @@ public class InvoiceModel extends BaseModel {
         model.inWords = NumberConvert.NumberToSentence(model.currency == RefuelItemData.CURRENCY.USD ? model.getTotalAmount() : Math.round(model.getTotalAmount()), false, model.currency == RefuelItemData.CURRENCY.USD ? "USD" : "VND");
 
         return model;
+    }
+
+    private static String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
     private static void addItem(InvoiceModel model,InvoiceItemModel invItem){
         if (model.items == null) {

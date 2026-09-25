@@ -362,6 +362,12 @@ public final class DefaultRutRepository implements RutRepository {
         safely(() -> readSignal(api, model));
         safely(() -> readSim(api, model, extras));
 
+        // Ghi cả hai chỉ số kèm hạng: khi người dùng báo "ngoài xe sóng yếu mà app hiện đủ
+        // vạch", đây là thứ duy nhất nói được app đã đọc con số nào của router.
+        Logger.appendLog(LOG_TAG, "Sóng: RSRP=" + model.rsrpDbm + ", RSSI=" + model.rssiDbm
+                + ", RSRQ=" + model.rsrqDb + ", SINR=" + model.sinrDb
+                + " → " + model.signalRating() + " (" + model.signalRating().bars() + " vạch)");
+
         // Ba ca SIM khác nhau cần ba cách xử lý khác nhau ngoài hiện trường; gộp chúng vào
         // một cờ là bắt người dùng đoán xem có nên rút SIM ra cắm lại hay không.
         RutSimState simState = RutSimState.classify(
@@ -737,16 +743,35 @@ public final class DefaultRutRepository implements RutRepository {
 
     /** Chỉ điền chỗ còn trống: nguồn đọc được trước không bị nguồn sau ghi đè bằng null. */
     private void readSignalInto(JsonObject source, RutStatusUiModel model) {
-        if (model.rssiDbm == null)
-            model.rssiDbm = RutJson.integer(source, "rssi", "signal", "signal_strength");
-        if (model.rsrpDbm == null)
-            model.rsrpDbm = RutJson.integer(source, "rsrp", "lte_rsrp");
+        if (model.rssiDbm == null) {
+            Integer raw = RutJson.integer(source, "rssi", "signal", "signal_strength");
+            model.rssiDbm = keepDbm(raw, SignalRating.plausibleRssi(raw), "RSSI");
+        }
+        if (model.rsrpDbm == null) {
+            Integer raw = RutJson.integer(source, "rsrp", "lte_rsrp");
+            model.rsrpDbm = keepDbm(raw, SignalRating.plausibleRsrp(raw), "RSRP");
+        }
         if (model.rsrqDb == null)
             model.rsrqDb = RutJson.integer(source, "rsrq", "lte_rsrq");
         if (model.sinrDb == null)
             model.sinrDb = RutJson.integer(source, "sinr", "lte_sinr", "snr");
         if (model.networkType == null)
             model.networkType = RutJson.string(source, "network_type", "net_type", "technology");
+    }
+
+    /**
+     * Giữ số đo, và GHI LẠI số bị loại.
+     *
+     * <p>Không ghi thì một chiếc router trả số vô lý sẽ biểu hiện y hệt một chiếc router
+     * không trả gì: cả hai đều ra "Chưa bắt được sóng", và không ai biết đường nào hỏng.
+     */
+    @Nullable
+    private static Integer keepDbm(@Nullable Integer raw, @Nullable Integer plausible,
+                                   String what) {
+        if (raw != null && plausible == null)
+            Logger.appendLog(LOG_TAG, "Sóng: bỏ " + what + " ngoài dải dBm = " + raw
+                    + " (router không đo được, không phải sóng khoẻ)");
+        return plausible;
     }
 
     private void readSim(RutApiClient api, RutStatusUiModel model, Extras extras) {

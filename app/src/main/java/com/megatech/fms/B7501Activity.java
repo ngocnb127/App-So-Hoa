@@ -1,14 +1,19 @@
 package com.megatech.fms;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RadioGroup;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.megatech.fms.data.AppDatabase;
@@ -36,6 +41,7 @@ import com.megatech.fms.model.TruckModel;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +52,11 @@ import java.util.Locale;
  * <p>Mở theo MỘT mẻ hút (intent {@code REFUEL_UNIQUE_ID}), vì quan hệ đã chốt là
  * một phiếu ↔ một mẻ. Nút in nằm trong màn hình này chứ không nằm ở danh sách, để luôn
  * biết đang in cho chuyến nào.
+ *
+ * <p>Màn hình chỉ có đúng các ô của biểu mẫu giấy, theo đúng thứ tự A → B → C. Những gì app
+ * đã biết (số phiếu, ngày giờ, hãng, sân bay, tàu bay, phương tiện, giờ hút, số lượng, nhiệt độ,
+ * tỷ trọng, đại diện SKYPEC) được điền sẵn qua
+ * {@link BM7501Prefill}; nhân viên chỉ nhập phần khách hàng khai và kết quả KTCL.
  *
  * <p>Nút in chỉ hiện khi {@code BuildConfig.THERMAL_PRINTER} — nhập/lưu thì bản nào cũng làm được.
  */
@@ -77,12 +88,52 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
             return;
         }
 
-        setupSpinners();
+        setupConditionalRows();
 
         Button btnPrint = findViewById(R.id.btnPrint7501);
         btnPrint.setVisibility(BuildConfig.THERMAL_PRINTER ? View.VISIBLE : View.GONE);
 
         loadOrCreate();
+    }
+
+    /**
+     * Ô phụ chỉ hiện khi lựa chọn đòi hỏi, để phiếu không dài vô ích:
+     * "ghi rõ" của lý do khác, "ghi rõ" của thiết bị khác, thời hạn lưu trữ, ghi chú vấn đề.
+     * Các ô phụ gia loại trừ nhau đúng như biểu mẫu (có phụ gia ≠ không dùng ≠ không xác định).
+     */
+    private void setupConditionalRows() {
+        ((RadioGroup) findViewById(R.id.f_reason)).setOnCheckedChangeListener((g, id) ->
+                showRow(R.id.row_reasonOther, id == R.id.f_reason_other));
+        ((RadioGroup) findViewById(R.id.f_custMicroKit)).setOnCheckedChangeListener((g, id) ->
+                showRow(R.id.row_custKitOther, id == R.id.f_custKit_other));
+        ((RadioGroup) findViewById(R.id.f_handling)).setOnCheckedChangeListener((g, id) -> {
+            showRow(R.id.row_storage, id == R.id.f_handling_storage);
+            showRow(R.id.row_handlingNote, id == R.id.f_handling_despite);
+        });
+
+        exclusiveAdditive(R.id.f_add_none, R.id.f_add_undet);
+        exclusiveAdditive(R.id.f_add_undet, R.id.f_add_none);
+        for (int id : new int[]{R.id.f_add_fsii, R.id.f_add_biocide, R.id.f_add_aquarius}) {
+            ((CheckBox) findViewById(id)).setOnCheckedChangeListener((v, checked) -> {
+                if (!checked) return;
+                setChecked(R.id.f_add_none, false);
+                setChecked(R.id.f_add_undet, false);
+            });
+        }
+    }
+
+    private void exclusiveAdditive(int id, int otherId) {
+        ((CheckBox) findViewById(id)).setOnCheckedChangeListener((CompoundButton v, boolean checked) -> {
+            if (!checked) return;
+            setChecked(otherId, false);
+            setChecked(R.id.f_add_fsii, false);
+            setChecked(R.id.f_add_biocide, false);
+            setChecked(R.id.f_add_aquarius, false);
+        });
+    }
+
+    private void showRow(int id, boolean visible) {
+        findViewById(id).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     // ------------------------------------------------------------------ nạp dữ liệu
@@ -96,13 +147,25 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
                 duplicated = repository.hasMultipleActive(refuelUniqueId);
                 loaded = repository.getActive(refuelUniqueId);
 
+                RefuelItemData item = DataHelper.getRefuelItem(refuelUniqueId);
                 if (loaded == null) {
-                    RefuelItemData item = DataHelper.getRefuelItem(refuelUniqueId);
                     BM7501Model created = BM7501Prefill.fromRefuelItem(item);
                     created.setRefuelItemUniqueId(refuelUniqueId);
                     created.setEnteredByUserId(currentUser == null ? 0 : currentUser.getUserId());
+                    created.setEnteredByUserName(currentUser == null ? null : currentUser.getUserName());
                     created.setTruckId(currentApp.getTruckId());
                     loaded = repository.createOrGetActive(created);
+                    inherit(loaded, item);
+                    repository.savePayload(loaded);
+                } else if (loaded.isEditable() && inherit(loaded, item)) {
+                    // Phiếu lập trước khi mẻ hút kết thúc: điền bù giờ, số lượng, tỷ trọng
+                    // vừa có, thay vì bắt nhân viên gõ lại.
+                    repository.savePayload(loaded);
+                }
+
+                // Số phiếu của mẻ hút có thể được cấp sau lúc lập phiếu.
+                if (loaded != null && item != null) {
+                    repository.fillLocalNumber(loaded, item.getReceiptNumber());
                 }
             } catch (Exception ex) {
                 Logger.appendLog(LOG_TAG, "loadOrCreate: " + ex.getMessage());
@@ -131,49 +194,14 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         }, "BM7501-Load").start();
     }
 
-    private void setupSpinners() {
-        setSpinner(R.id.f_custMicroKit, kitLabels());
-        setSpinner(R.id.f_skypecMicroKit, kitLabels());
-        setSpinner(R.id.f_custMicroResult, resultLabels());
-        setSpinner(R.id.f_skypecMicroResult, resultLabels());
-        setSpinner(R.id.f_handling, handlingLabels());
-    }
-
-    private void setSpinner(int id, List<String> labels) {
-        Spinner spinner = findViewById(id);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, labels);
-        spinner.setAdapter(adapter);
-    }
-
-    private static List<String> kitLabels() {
-        List<String> l = new ArrayList<>();
-        l.add("-- chưa chọn --");
-        l.add("Hy-lite");
-        l.add("Microb monitor2");
-        l.add("Fuelstat");
-        l.add("Khác");
-        return l;
-    }
-
-    private static List<String> resultLabels() {
-        List<String> l = new ArrayList<>();
-        l.add("-- chưa chọn --");
-        l.add("Được chấp nhận / Normal");
-        l.add("Cảnh báo / Warning");
-        l.add("Mức độ nặng / Action");
-        return l;
-    }
-
-    private static List<String> handlingLabels() {
-        List<String> l = new ArrayList<>();
-        l.add("-- chưa chọn --");
-        l.add("Yêu cầu lưu trữ");
-        l.add("Nạp lại cho chính tàu bay đã hút");
-        l.add("Nạp lại cho tàu bay khác của hãng");
-        l.add("Không nạp lại, ủy quyền SKYPEC xử lý");
-        l.add("Vẫn nạp lại dù nhiên liệu có vấn đề");
-        return l;
+    /** Kế thừa từ mẻ hút, phiên đăng nhập và phiếu trước của cùng hãng. */
+    private boolean inherit(BM7501Model m, RefuelItemData item) {
+        boolean changed = BM7501Prefill.fillMissing(m, item);
+        changed |= BM7501Prefill.fillSession(m,
+                currentUser == null ? 0 : currentUser.getAirportId(),
+                currentUser == null ? null : currentUser.getAirport(),
+                currentUser == null ? null : currentUser.getUserName());
+        return changed;
     }
 
     // ------------------------------------------------------------------ model -> form
@@ -186,80 +214,68 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         setText(R.id.f_aircraftType, model.getAircraftType());
         setText(R.id.f_aircraftReg, model.getAircraftReg());
 
-        if (model.getReason() != null) {
-            checkRadio(R.id.f_reason, model.getReason() == DefuelReason.LOAD_ADJUSTMENT ? R.id.f_reason_load
-                    : model.getReason() == DefuelReason.MAINTENANCE ? R.id.f_reason_maint : R.id.f_reason_other);
-        }
+        checkRadio(R.id.f_reason, model.getReason() == DefuelReason.LOAD_ADJUSTMENT ? R.id.f_reason_load
+                : model.getReason() == DefuelReason.MAINTENANCE ? R.id.f_reason_maint
+                : model.getReason() == DefuelReason.OTHER ? R.id.f_reason_other : -1);
         setText(R.id.f_reasonOther, model.getReasonOther());
 
-        if (model.getTankDrainSampled() != null) {
-            checkRadio(R.id.f_tankDrain, model.getTankDrainSampled() ? R.id.f_tankDrain_yes : R.id.f_tankDrain_no);
-        }
-        if (model.getCustomerMicrobialTestPerformed() != null) {
-            checkRadio(R.id.f_custMicro,
-                    model.getCustomerMicrobialTestPerformed() == TriState.YES ? R.id.f_custMicro_yes
-                            : model.getCustomerMicrobialTestPerformed() == TriState.NO ? R.id.f_custMicro_no
-                            : R.id.f_custMicro_unk);
-        }
-        setSpinnerValue(R.id.f_custMicroKit, kitIndex(model.getCustomerMicrobialKit()));
-        setText(R.id.f_custMicroKitOther, model.getCustomerMicrobialKitOther());
-        setSpinnerValue(R.id.f_custMicroResult, resultIndex(model.getCustomerMicrobialResult()));
+        checkRadio(R.id.f_tankDrain, Boolean.TRUE.equals(model.getTankDrainSampled()) ? R.id.f_tankDrain_yes
+                : Boolean.FALSE.equals(model.getTankDrainSampled()) ? R.id.f_tankDrain_no : -1);
 
-        if (model.getAdditivePresence() != null) {
-            checkRadio(R.id.f_additivePresence,
-                    model.getAdditivePresence() == AdditivePresence.PRESENT ? R.id.f_add_present
-                            : model.getAdditivePresence() == AdditivePresence.NONE ? R.id.f_add_none
-                            : R.id.f_add_undet);
-        }
+        checkRadio(R.id.f_custMicroKit, kitId(model.getCustomerMicrobialKit(), true));
+        setText(R.id.f_custMicroKitOther, model.getCustomerMicrobialKitOther());
+        checkRadio(R.id.f_custMicroResult, resultId(model.getCustomerMicrobialResult(), true));
+
         List<Additive> additives = model.getAdditives();
-        setChecked(R.id.f_add_fsii, additives != null && additives.contains(Additive.FSII));
-        setChecked(R.id.f_add_biocide, additives != null && additives.contains(Additive.BIOCIDE));
-        setChecked(R.id.f_add_aquarius, additives != null && additives.contains(Additive.AQUARIUS_WMA));
+        boolean present = model.getAdditivePresence() == AdditivePresence.PRESENT;
+        setChecked(R.id.f_add_fsii, present && additives != null && additives.contains(Additive.FSII));
+        setChecked(R.id.f_add_biocide, present && additives != null && additives.contains(Additive.BIOCIDE));
+        setChecked(R.id.f_add_aquarius, present && additives != null && additives.contains(Additive.AQUARIUS_WMA));
+        setChecked(R.id.f_add_none, model.getAdditivePresence() == AdditivePresence.NONE);
+        setChecked(R.id.f_add_undet, model.getAdditivePresence() == AdditivePresence.UNDETERMINED);
 
         setText(R.id.f_prevLocation1, model.getPrevLocation1());
         setText(R.id.f_prevGrade1, model.getPrevGrade1());
         setText(R.id.f_prevLocation2, model.getPrevLocation2());
         setText(R.id.f_prevGrade2, model.getPrevGrade2());
 
-        if (model.getVac() != null) {
-            checkRadio(R.id.f_vac, model.getVac() == QcCheck.SATISFY ? R.id.f_vac_ok : R.id.f_vac_no);
-        }
-        if (model.getCwd() != null) {
-            checkRadio(R.id.f_cwd, model.getCwd() == QcCheck.SATISFY ? R.id.f_cwd_ok : R.id.f_cwd_no);
-        }
+        checkRadio(R.id.f_vac, model.getVac() == QcCheck.SATISFY ? R.id.f_vac_ok
+                : model.getVac() == QcCheck.NOT_SATISFY ? R.id.f_vac_no : -1);
+        checkRadio(R.id.f_cwd, model.getCwd() == QcCheck.SATISFY ? R.id.f_cwd_ok
+                : model.getCwd() == QcCheck.NOT_SATISFY ? R.id.f_cwd_no : -1);
         setNumber(R.id.f_densityKgM3, model.getDensityKgM3());
-        setChecked(R.id.f_conductivityRequired, model.isConductivityRequired());
         setNumber(R.id.f_conductivityPsM, model.getConductivityPsM());
-        setChecked(R.id.f_contaminationSuspected, model.isContaminationSuspected());
-        setChecked(R.id.f_customerRequestedMicrobial, model.isCustomerRequestedMicrobial());
-        setSpinnerValue(R.id.f_skypecMicroKit, kitIndex(model.getSkypecMicrobialKit()));
-        setSpinnerValue(R.id.f_skypecMicroResult, resultIndex(model.getSkypecMicrobialResult()));
-        setText(R.id.f_microbialReason, model.getMicrobialReason());
+        checkRadio(R.id.f_skypecMicroKit, kitId(model.getSkypecMicrobialKit(), false));
+        checkRadio(R.id.f_skypecMicroResult, resultId(model.getSkypecMicrobialResult(), false));
 
         setText(R.id.f_defuellerTruckNo, model.getDefuellerTruckNo());
         setText(R.id.f_startTime, formatDate(model.getStartTime()));
         setText(R.id.f_endTime, formatDate(model.getEndTime()));
-        if (model.getMethod() != null) {
-            checkRadio(R.id.f_method, model.getMethod() == DefuelMethod.AIRCRAFT_PUMP ? R.id.f_method_ac
-                    : model.getMethod() == DefuelMethod.REFUELLER_PUMP ? R.id.f_method_ref : R.id.f_method_both);
-        }
-        setChecked(R.id.f_signalsBriefed, model.isSignalsBriefed());
+        checkRadio(R.id.f_method, model.getMethod() == DefuelMethod.AIRCRAFT_PUMP ? R.id.f_method_ac
+                : model.getMethod() == DefuelMethod.REFUELLER_PUMP ? R.id.f_method_ref
+                : model.getMethod() == DefuelMethod.BOTH ? R.id.f_method_both : -1);
+
+        // Phiếu cũ chỉ có một cờ chung: coi như đã thống nhất cả hai tín hiệu chuẩn.
+        boolean legacy = model.isSignalsBriefed()
+                && !model.isSignalThumbUp() && !model.isSignalCrossArms();
+        setChecked(R.id.f_signalThumb, model.isSignalThumbUp() || legacy);
+        setChecked(R.id.f_signalCross, model.isSignalCrossArms() || legacy);
         setText(R.id.f_otherSignal, model.getOtherSignal());
+
         setNumber(R.id.f_expectedKg, model.getExpectedKg());
         setNumber(R.id.f_actualKg, model.getActualKg());
         setNumber(R.id.f_actualTempC, model.getActualTempC());
         setNumber(R.id.f_actualDensityKgM3, model.getActualDensityKgM3());
         setNumber(R.id.f_gallon, model.getGallon());
         setNumber(R.id.f_liter, model.getLiter());
-        if (model.getRefuellableWithoutTest() != null) {
-            checkRadio(R.id.f_refuellable, model.getRefuellableWithoutTest()
-                    ? R.id.f_refuellable_yes : R.id.f_refuellable_no);
-        }
-        setSpinnerValue(R.id.f_handling, handlingIndex(model.getHandling()));
+
+        checkRadio(R.id.f_refuellable, Boolean.TRUE.equals(model.getRefuellableWithoutTest())
+                ? R.id.f_refuellable_yes
+                : Boolean.FALSE.equals(model.getRefuellableWithoutTest()) ? R.id.f_refuellable_no : -1);
+        checkRadio(R.id.f_handling, handlingId(model.getHandling()));
         setText(R.id.f_storageFrom, formatDate(model.getStorageFrom()));
         setText(R.id.f_storageTo, formatDate(model.getStorageTo()));
         setText(R.id.f_handlingNote, model.getHandlingNote());
-        setText(R.id.f_customerRepFinalName, model.getCustomerRepFinalName());
         setText(R.id.f_skypecRepName, model.getSkypecRepName());
 
         updateSignatureLabels();
@@ -268,11 +284,16 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
     }
 
     private void updateStatusLine() {
-        TextView status = findViewById(R.id.bm7501_status);
-        String number = model.getLocalNumber() == null || model.getLocalNumber().isEmpty()
-                ? "(chưa có số phiếu)" : model.getLocalNumber();
-        status.setText(getString(R.string.bm7501_status_line, number,
-                String.valueOf(model.getBusinessStatus())));
+        String number = isBlank(model.getLocalNumber())
+                ? getString(R.string.bm7501_no_number_yet) : model.getLocalNumber();
+        ((TextView) findViewById(R.id.bm7501_status)).setText(getString(
+                model.isExported() ? R.string.bm7501_status_exported : R.string.bm7501_status_line,
+                number));
+
+        ((TextView) findViewById(R.id.bm7501_context)).setText(getString(R.string.bm7501_context_line,
+                model.getDate() == null ? "—" : formatDate(model.getDate()),
+                isBlank(model.getAirlineName()) ? "—" : model.getAirlineName(),
+                isBlank(model.getAirportName()) ? "—" : model.getAirportName()));
     }
 
     // ------------------------------------------------------------------ form -> model
@@ -295,23 +316,23 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         model.setTankDrainSampled(drain == R.id.f_tankDrain_yes ? Boolean.TRUE
                 : drain == R.id.f_tankDrain_no ? Boolean.FALSE : null);
 
-        int micro = checkedId(R.id.f_custMicro);
-        model.setCustomerMicrobialTestPerformed(micro == R.id.f_custMicro_yes ? TriState.YES
-                : micro == R.id.f_custMicro_no ? TriState.NO
-                : micro == R.id.f_custMicro_unk ? TriState.UNKNOWN : null);
-        model.setCustomerMicrobialKit(kitAt(selectedIndex(R.id.f_custMicroKit)));
+        MicrobialKit custKit = kitAt(checkedId(R.id.f_custMicroKit));
+        MicrobialResult custResult = resultAt(checkedId(R.id.f_custMicroResult));
+        model.setCustomerMicrobialKit(custKit);
         model.setCustomerMicrobialKitOther(fieldText(R.id.f_custMicroKitOther));
-        model.setCustomerMicrobialResult(resultAt(selectedIndex(R.id.f_custMicroResult)));
+        model.setCustomerMicrobialResult(custResult);
+        // Biểu mẫu không hỏi riêng "hãng đã kiểm tra chưa": có khai thiết bị/kết quả nghĩa là có.
+        model.setCustomerMicrobialTestPerformed(
+                custKit != null || custResult != null ? TriState.YES : TriState.NO);
 
-        int additive = checkedId(R.id.f_additivePresence);
-        model.setAdditivePresence(additive == R.id.f_add_present ? AdditivePresence.PRESENT
-                : additive == R.id.f_add_none ? AdditivePresence.NONE
-                : additive == R.id.f_add_undet ? AdditivePresence.UNDETERMINED : null);
         List<Additive> additives = new ArrayList<>();
         if (isChecked(R.id.f_add_fsii)) additives.add(Additive.FSII);
         if (isChecked(R.id.f_add_biocide)) additives.add(Additive.BIOCIDE);
         if (isChecked(R.id.f_add_aquarius)) additives.add(Additive.AQUARIUS_WMA);
         model.setAdditives(additives);
+        model.setAdditivePresence(!additives.isEmpty() ? AdditivePresence.PRESENT
+                : isChecked(R.id.f_add_none) ? AdditivePresence.NONE
+                : isChecked(R.id.f_add_undet) ? AdditivePresence.UNDETERMINED : null);
 
         model.setPrevLocation1(fieldText(R.id.f_prevLocation1));
         model.setPrevGrade1(fieldText(R.id.f_prevGrade1));
@@ -326,13 +347,9 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
                 : cwd == R.id.f_cwd_no ? QcCheck.NOT_SATISFY : null);
 
         model.setDensityKgM3(getNumber(R.id.f_densityKgM3));
-        model.setConductivityRequired(isChecked(R.id.f_conductivityRequired));
         model.setConductivityPsM(getNumber(R.id.f_conductivityPsM));
-        model.setContaminationSuspected(isChecked(R.id.f_contaminationSuspected));
-        model.setCustomerRequestedMicrobial(isChecked(R.id.f_customerRequestedMicrobial));
-        model.setSkypecMicrobialKit(kitAt(selectedIndex(R.id.f_skypecMicroKit)));
-        model.setSkypecMicrobialResult(resultAt(selectedIndex(R.id.f_skypecMicroResult)));
-        model.setMicrobialReason(fieldText(R.id.f_microbialReason));
+        model.setSkypecMicrobialKit(kitAt(checkedId(R.id.f_skypecMicroKit)));
+        model.setSkypecMicrobialResult(resultAt(checkedId(R.id.f_skypecMicroResult)));
 
         model.setDefuellerTruckNo(fieldText(R.id.f_defuellerTruckNo));
         model.setStartTime(parseDate(fieldText(R.id.f_startTime)));
@@ -342,7 +359,9 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         model.setMethod(method == R.id.f_method_ac ? DefuelMethod.AIRCRAFT_PUMP
                 : method == R.id.f_method_ref ? DefuelMethod.REFUELLER_PUMP
                 : method == R.id.f_method_both ? DefuelMethod.BOTH : null);
-        model.setSignalsBriefed(isChecked(R.id.f_signalsBriefed));
+        model.setSignalThumbUp(isChecked(R.id.f_signalThumb));
+        model.setSignalCrossArms(isChecked(R.id.f_signalCross));
+        model.setSignalsBriefed(model.isSignalThumbUp() || model.isSignalCrossArms());
         model.setOtherSignal(fieldText(R.id.f_otherSignal));
 
         model.setExpectedKg(getNumber(R.id.f_expectedKg));
@@ -355,11 +374,10 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         int refuellable = checkedId(R.id.f_refuellable);
         model.setRefuellableWithoutTest(refuellable == R.id.f_refuellable_yes ? Boolean.TRUE
                 : refuellable == R.id.f_refuellable_no ? Boolean.FALSE : null);
-        model.setHandling(handlingAt(selectedIndex(R.id.f_handling)));
+        model.setHandling(handlingAt(checkedId(R.id.f_handling)));
         model.setStorageFrom(parseDate(fieldText(R.id.f_storageFrom)));
         model.setStorageTo(parseDate(fieldText(R.id.f_storageTo)));
         model.setHandlingNote(fieldText(R.id.f_handlingNote));
-        model.setCustomerRepFinalName(fieldText(R.id.f_customerRepFinalName));
         model.setSkypecRepName(fieldText(R.id.f_skypecRepName));
     }
 
@@ -375,15 +393,51 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
             save(true);
         } else if (id == R.id.btnPrint7501) {
             printForm();
-        } else if (id == R.id.btnSign7501) {
-            signAndFinish();
-        } else if (id == R.id.btnSignSectionA) {
-            openSign(REQ_SIGN_SECTION_A);
+        } else if (id == R.id.btnExport7501) {
+            exportForm();
         } else if (id == R.id.btnSignSeller) {
             openSign(REQ_SIGN_SELLER);
         } else if (id == R.id.btnSignBuyer) {
             openSign(REQ_SIGN_BUYER);
+        } else if (id == R.id.btnPrevUndetermined) {
+            fillUndetermined();
+        } else if (id == R.id.f_startTime || id == R.id.f_endTime
+                || id == R.id.f_storageFrom || id == R.id.f_storageTo) {
+            pickDateTime(id);
         }
+    }
+
+    /** Lối tắt cho trường hợp phổ biến nhất của mục A4: hãng không xác định được loại nhiên liệu. */
+    private void fillUndetermined() {
+        String text = getString(R.string.bm7501_undetermined);
+        if (isBlank(fieldText(R.id.f_prevGrade1))) setText(R.id.f_prevGrade1, text);
+        if (isBlank(fieldText(R.id.f_prevGrade2))) setText(R.id.f_prevGrade2, text);
+        if (isBlank(fieldText(R.id.f_prevLocation1))) setText(R.id.f_prevLocation1, text);
+        if (isBlank(fieldText(R.id.f_prevLocation2))) setText(R.id.f_prevLocation2, text);
+    }
+
+    /**
+     * Chọn ngày rồi chọn giờ. Gõ tay "HH:mm dd/MM/yyyy" giữa sân đỗ vừa chậm vừa dễ sai định dạng,
+     * mà sai thì ô giờ âm thầm thành rỗng.
+     */
+    private void pickDateTime(int fieldId) {
+        if (model != null && !model.isEditable()) return;
+
+        Calendar c = Calendar.getInstance();
+        Date current = parseDate(fieldText(fieldId));
+        if (current != null) c.setTime(current);
+
+        new DatePickerDialog(this, (dateView, year, month, day) -> {
+            c.set(Calendar.YEAR, year);
+            c.set(Calendar.MONTH, month);
+            c.set(Calendar.DAY_OF_MONTH, day);
+            new TimePickerDialog(this, (timeView, hour, minute) -> {
+                c.set(Calendar.HOUR_OF_DAY, hour);
+                c.set(Calendar.MINUTE, minute);
+                c.set(Calendar.SECOND, 0);
+                setText(fieldId, formatDate(c.getTime()));
+            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show();
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void save(boolean showResult) {
@@ -416,10 +470,28 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         List<BM7501Validator.Finding> errors = BM7501Validator.errorsOnly(findings);
 
         if (errors.isEmpty()) {
-            showInfoMessage(R.string.bm7501_saved_complete);
+            List<BM7501Validator.Finding> warnings = BM7501Validator.warningsOnly(findings);
+            if (warnings.isEmpty()) {
+                showInfoMessage(R.string.bm7501_saved_complete);
+            } else {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle(R.string.bm7501_saved_complete)
+                        .setMessage(missingText(warnings))
+                        .setPositiveButton(R.string.ok, null)
+                        .show();
+            }
             return;
         }
 
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.bm7501_saved_incomplete)
+                .setMessage(missingText(errors))
+                .setPositiveButton(R.string.ok, null)
+                .show();
+    }
+
+    /** Liệt kê tối đa 8 mục còn thiếu, đủ để sửa mà không tràn màn hình. */
+    private String missingText(List<BM7501Validator.Finding> errors) {
         StringBuilder sb = new StringBuilder();
         int shown = 0;
         for (BM7501Validator.Finding f : errors) {
@@ -429,12 +501,77 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
             }
             sb.append("\n• ").append(f.getMessage());
         }
+        return sb.toString();
+    }
 
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.bm7501_saved_incomplete)
-                .setMessage(sb.toString())
-                .setPositiveButton(R.string.ok, null)
-                .show();
+    /**
+     * Xuất phiếu — chốt sổ. Khác nút In: In cho phép phiếu còn thiếu (in trước, ghi tay sau),
+     * còn Xuất là chốt nên phải đủ thông tin và phải có số phiếu, vì số đó đi vào danh sách mẻ
+     * hút và đi lên hệ thống.
+     */
+    private void exportForm() {
+        if (model == null) return;
+        if (!model.isEditable()) {
+            showErrorMessage(R.string.bm7501_locked_exported);
+            return;
+        }
+        bindFromForm();
+
+        List<BM7501Validator.Finding> errors =
+                BM7501Validator.errorsOnly(BM7501Validator.validateForSigning(model));
+        if (!errors.isEmpty()) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.bm7501_export_incomplete)
+                    .setMessage(missingText(errors))
+                    .setPositiveButton(R.string.ok, null)
+                    .show();
+            return;
+        }
+        if (isBlank(model.getLocalNumber())) {
+            showErrorMessage(R.string.bm7501_export_no_number);
+            return;
+        }
+
+        // Thiếu chữ ký không chặn (hai bên có thể ký tay trên giấy sau khi in), nhưng phải
+        // hỏi lại — chốt sổ xong là không quay lại ký trên máy được nữa.
+        List<BM7501Validator.Finding> warnings =
+                BM7501Validator.warningsOnly(BM7501Validator.validateForSigning(model));
+        if (!warnings.isEmpty()) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.bm7501_export_warning)
+                    .setMessage(missingText(warnings) + "\n\n"
+                            + getString(R.string.bm7501_export_confirm))
+                    .setPositiveButton(R.string.bm7501_export_anyway, (d, w) -> doExport())
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+            return;
+        }
+
+        showConfirmMessage(R.string.bm7501_export_confirm, () -> {
+            doExport();
+            return null;
+        });
+    }
+
+    private void doExport() {
+        setProgressDialog();
+        new Thread(() -> {
+            final BM7501Repository.WriteResult result =
+                    repository.export(model, currentUser == null ? 0 : currentUser.getUserId());
+            runOnUiThread(() -> {
+                closeProgressDialog();
+                if (result == BM7501Repository.WriteResult.OK) {
+                    showInfoMessage(R.string.bm7501_exported_ok);
+                    updateStatusLine();
+                    setFormEnabled(false);
+                } else if (result == BM7501Repository.WriteResult.CONFLICT) {
+                    showErrorMessage(R.string.bm7501_conflict);
+                    loadOrCreate();
+                } else {
+                    showErrorMessage(R.string.bm7501_export_failed);
+                }
+            });
+        }, "BM7501-Export").start();
     }
 
     private void printForm() {
@@ -445,14 +582,24 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         }
         bindFromForm();
 
-        // Chưa có luồng ký nên bản in còn đóng dấu MẪU. Khi bước ký hoàn thành,
-        // cờ này lấy theo businessStatus (SIGNED trở đi mới in bản gốc).
-        // Đã ký thì in bản gốc; chưa ký thì chỉ được in bản MẪU không giá trị pháp lý.
-        final boolean signed = model.getBusinessStatus() == BM7501Model.BusinessStatus.SIGNED
-                || model.getBusinessStatus() == BM7501Model.BusinessStatus.PRINTED;
+        // Thiếu thông tin thì nhắc, nhưng vẫn cho in: ngoài sân đỗ có khi phải in trước
+        // rồi hai bên ghi nốt bằng tay.
+        List<BM7501Validator.Finding> errors =
+                BM7501Validator.errorsOnly(BM7501Validator.validateForSigning(model));
+        if (errors.isEmpty()) {
+            doPrint();
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.bm7501_print_incomplete)
+                .setMessage(missingText(errors))
+                .setPositiveButton(R.string.bm7501_print_anyway, (d, w) -> doPrint())
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void doPrint() {
         final BM7501Printer.Options options = new BM7501Printer.Options()
-                .specimen(!signed)
-                .copy(model.getBusinessStatus() == BM7501Model.BusinessStatus.PRINTED)
                 .zq520(currentApp.getSetting() != null
                         && currentApp.getSetting().getThermalPrinterType()
                             == TruckModel.THERMAL_PRINTER_TYPE.ZQ520);
@@ -488,14 +635,9 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
 
         setProgressDialog();
         new Thread(() -> {
+            // Phiếu đã xuất là bản chốt: in chỉ đọc, không ghi đè nội dung.
             if (model.isEditable()) repository.savePayload(model);
             zebra.print7501(model, options);
-            if (signed) {
-                // Bản gốc in một lần; các lần sau tăng số lần in để đóng dấu BẢN SAO.
-                repository.markPrinted(model,
-                        model.getBusinessStatus() == BM7501Model.BusinessStatus.PRINTED);
-                runOnUiThread(this::updateStatusLine);
-            }
         }, "BM7501-Print").start();
     }
 
@@ -511,14 +653,13 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
 
     // ------------------------------------------------------------------ chữ ký
 
-    private static final int REQ_SIGN_SECTION_A = 7501;
     private static final int REQ_SIGN_SELLER = 7502;
     private static final int REQ_SIGN_BUYER = 7503;
 
     private void openSign(int requestCode) {
         if (model == null) return;
         if (!model.isEditable()) {
-            showErrorMessage(R.string.bm7501_locked);
+            showErrorMessage(R.string.bm7501_locked_exported);
             return;
         }
         bindFromForm();
@@ -528,18 +669,15 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode != RESULT_OK || data == null
-                || (requestCode != REQ_SIGN_SECTION_A && requestCode != REQ_SIGN_SELLER
-                    && requestCode != REQ_SIGN_BUYER)) {
+                || (requestCode != REQ_SIGN_SELLER && requestCode != REQ_SIGN_BUYER)) {
             super.onActivityResult(requestCode, resultCode, data);
             return;
         }
 
         final String source = data.getStringExtra("signature_file");
-        final String slot = requestCode == REQ_SIGN_SECTION_A
-                ? BM7501Signatures.SLOT_CUSTOMER_SECTION_A
-                : requestCode == REQ_SIGN_SELLER
-                    ? BM7501Signatures.SLOT_SKYPEC
-                    : BM7501Signatures.SLOT_CUSTOMER_FINAL;
+        final String slot = requestCode == REQ_SIGN_SELLER
+                ? BM7501Signatures.SLOT_SKYPEC
+                : BM7501Signatures.SLOT_CUSTOMER_FINAL;
 
         new Thread(() -> {
             BM7501Signatures.Stored stored = null;
@@ -557,10 +695,7 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
                     showErrorMessage(R.string.bm7501_sign_save_failed);
                     return;
                 }
-                if (BM7501Signatures.SLOT_CUSTOMER_SECTION_A.equals(slot)) {
-                    model.setCustomerSectionASignaturePath(result.getPath());
-                    model.setCustomerSectionASignatureSha256(result.getSha256());
-                } else if (BM7501Signatures.SLOT_SKYPEC.equals(slot)) {
+                if (BM7501Signatures.SLOT_SKYPEC.equals(slot)) {
                     model.setSkypecSignaturePath(result.getPath());
                     model.setSkypecSignatureSha256(result.getSha256());
                 } else {
@@ -574,86 +709,53 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
     }
 
     private void updateSignatureLabels() {
-        setSignLabel(R.id.lbl_sign_sectionA, "Khách hàng - mục A",
-                model.getCustomerSectionASignaturePath());
-        setSignLabel(R.id.lbl_sign_seller, "Người bán (SKYPEC)",
-                model.getSkypecSignaturePath());
-        setSignLabel(R.id.lbl_sign_buyer, "Người mua (khách hàng)",
-                model.getCustomerFinalSignaturePath());
-    }
-
-    private void setSignLabel(int id, String label, String path) {
-        boolean signed = path != null && !path.isEmpty();
-        ((TextView) findViewById(id)).setText(label + (signed ? ": đã ký" : ": chưa ký"));
+        showSignature(R.id.lbl_sign_seller, R.id.img_sign_seller,
+                R.string.bm7501_sign_label_skypec, model.getSkypecSignaturePath());
+        showSignature(R.id.lbl_sign_buyer, R.id.img_sign_buyer,
+                R.string.bm7501_sign_label_customer, model.getCustomerFinalSignaturePath());
     }
 
     /**
-     * Ký và hoàn tất phiếu: kiểm tra đủ thông tin, đẩy trạng thái tới C_DONE rồi ký.
-     * Sau khi ký phiếu bị khoá, và bản in sẽ là bản gốc thay vì bản MẪU.
+     * Hiện luôn ảnh chữ ký vừa ký. Chỉ ghi chữ "đã ký" thì nhân viên không kiểm được là đã ký
+     * đúng người hay nét ký có bị mất khi lưu hay không.
      */
-    private void signAndFinish() {
-        if (model == null) return;
-        if (!model.isEditable()) {
-            showErrorMessage(R.string.bm7501_locked);
-            return;
-        }
-        bindFromForm();
+    private void showSignature(int labelId, int imageId, int labelRes, String path) {
+        ((TextView) findViewById(labelId)).setText(getString(
+                isBlank(path) ? R.string.bm7501_unsigned : R.string.bm7501_signed,
+                getString(labelRes)));
 
-        List<BM7501Validator.Finding> errors =
-                BM7501Validator.errorsOnly(BM7501Validator.validateForSigning(model));
-        if (!errors.isEmpty()) {
-            showValidationSummary();
+        ImageView image = findViewById(imageId);
+        Bitmap bitmap = isBlank(path) ? null : BitmapFactory.decodeFile(path);
+        if (bitmap == null) {
+            image.setImageDrawable(null);
+            image.setVisibility(View.GONE);
             return;
         }
-        if (model.getLocalNumber() == null || model.getLocalNumber().isEmpty()) {
-            // Số phiếu lấy từ số phiếu của mẻ hút; chưa xuất phiếu thì chưa có số để in.
-            showErrorMessage(R.string.bm7501_no_number);
-            return;
-        }
-
-        showConfirmMessage(R.string.bm7501_confirm_sign, () -> {
-            doSign();
-            return null;
-        });
+        image.setImageBitmap(bitmap);
+        image.setVisibility(View.VISIBLE);
     }
 
-    private void doSign() {
-        setProgressDialog();
-        new Thread(() -> {
-            BM7501Repository.WriteResult result = repository.savePayload(model);
-
-            // Ký chỉ đi được từ C_DONE, nên đẩy tuần tự qua các bước đã đủ dữ liệu.
-            if (result != BM7501Repository.WriteResult.CONFLICT) {
-                repository.advanceStep(model, BM7501Model.BusinessStatus.A_DONE);
-                repository.advanceStep(model, BM7501Model.BusinessStatus.B_DONE);
-                repository.advanceStep(model, BM7501Model.BusinessStatus.C_DONE);
-                result = repository.sign(model);
-            }
-
-            final BM7501Repository.WriteResult finalResult = result;
-            runOnUiThread(() -> {
-                closeProgressDialog();
-                if (finalResult == BM7501Repository.WriteResult.OK) {
-                    showInfoMessage(R.string.bm7501_signed_ok);
-                    updateStatusLine();
-                    setFormEnabled(false);
-                } else if (finalResult == BM7501Repository.WriteResult.CONFLICT) {
-                    showErrorMessage(R.string.bm7501_conflict);
-                    loadOrCreate();
-                } else {
-                    showErrorMessage(R.string.bm7501_sign_blocked);
-                }
-            });
-        }, "BM7501-Sign").start();
-    }
-
-    /** Khoá form sau khi ký — chứng từ đã ký không được sửa nội dung. */
+    /**
+     * Khoá ô nhập. Phiếu bình thường KHÔNG bao giờ bị khoá — sửa và in lại là chuyện thường.
+     * Chỉ dùng cho phiếu đã huỷ/vô hiệu hoá và cho trường hợp dữ liệu bất thường
+     * (một mẻ có nhiều phiếu hiệu lực).
+     */
     private void setFormEnabled(boolean enabled) {
         findViewById(R.id.btnSave7501).setEnabled(enabled);
-        findViewById(R.id.btnSign7501).setEnabled(enabled);
-        findViewById(R.id.btnSignSectionA).setEnabled(enabled);
-        findViewById(R.id.btnSignSeller).setEnabled(enabled);
-        findViewById(R.id.btnSignBuyer).setEnabled(enabled);
+        findViewById(R.id.btnExport7501).setEnabled(enabled);
+        setEnabledDeep(findViewById(R.id.bm7501_form), enabled);
+        // Nút In luôn bật: phiếu đã xuất vẫn phải in lại được.
+        findViewById(R.id.btnPrint7501).setEnabled(true);
+    }
+
+    private static void setEnabledDeep(View view, boolean enabled) {
+        view.setEnabled(enabled);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                setEnabledDeep(group.getChildAt(i), enabled);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ tiện ích view
@@ -697,85 +799,82 @@ public class B7501Activity extends UserBaseActivity implements View.OnClickListe
         return ((CheckBox) findViewById(id)).isChecked();
     }
 
+    /** {@code buttonId} = -1 nghĩa là chưa chọn gì — bỏ chọn cả nhóm. */
     private void checkRadio(int groupId, int buttonId) {
-        ((RadioGroup) findViewById(groupId)).check(buttonId);
+        RadioGroup group = findViewById(groupId);
+        if (buttonId == -1) {
+            group.clearCheck();
+        } else {
+            group.check(buttonId);
+        }
     }
 
     private int checkedId(int groupId) {
         return ((RadioGroup) findViewById(groupId)).getCheckedRadioButtonId();
     }
 
-    private void setSpinnerValue(int id, int index) {
-        ((Spinner) findViewById(id)).setSelection(Math.max(index, 0));
-    }
-
-    private int selectedIndex(int id) {
-        return ((Spinner) findViewById(id)).getSelectedItemPosition();
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     // ------------------------------------------------------------------ ánh xạ enum
 
-    private static int kitIndex(MicrobialKit kit) {
-        if (kit == null) return 0;
+    private static int kitId(MicrobialKit kit, boolean customerSection) {
+        if (kit == null) return -1;
         switch (kit) {
-            case HY_LITE: return 1;
-            case MICROB_MONITOR2: return 2;
-            case FUELSTAT: return 3;
-            case OTHER: return 4;
-            default: return 0;
+            case HY_LITE: return customerSection ? R.id.f_custKit_hylite : R.id.f_skKit_hylite;
+            case MICROB_MONITOR2: return customerSection ? R.id.f_custKit_mm2 : R.id.f_skKit_mm2;
+            case FUELSTAT: return customerSection ? R.id.f_custKit_fuelstat : R.id.f_skKit_fuelstat;
+            // Biểu mẫu chỉ có ô "Khác" ở mục A.
+            case OTHER: return customerSection ? R.id.f_custKit_other : -1;
+            default: return -1;
         }
     }
 
-    private static MicrobialKit kitAt(int index) {
-        switch (index) {
-            case 1: return MicrobialKit.HY_LITE;
-            case 2: return MicrobialKit.MICROB_MONITOR2;
-            case 3: return MicrobialKit.FUELSTAT;
-            case 4: return MicrobialKit.OTHER;
-            default: return null;
-        }
+    private static MicrobialKit kitAt(int id) {
+        if (id == R.id.f_custKit_hylite || id == R.id.f_skKit_hylite) return MicrobialKit.HY_LITE;
+        if (id == R.id.f_custKit_mm2 || id == R.id.f_skKit_mm2) return MicrobialKit.MICROB_MONITOR2;
+        if (id == R.id.f_custKit_fuelstat || id == R.id.f_skKit_fuelstat) return MicrobialKit.FUELSTAT;
+        if (id == R.id.f_custKit_other) return MicrobialKit.OTHER;
+        return null;
     }
 
-    private static int resultIndex(MicrobialResult r) {
-        if (r == null) return 0;
+    private static int resultId(MicrobialResult r, boolean customerSection) {
+        if (r == null) return -1;
         switch (r) {
-            case NORMAL: return 1;
-            case WARNING: return 2;
-            case ACTION: return 3;
-            default: return 0;
+            case NORMAL: return customerSection ? R.id.f_custRes_normal : R.id.f_skRes_normal;
+            case WARNING: return customerSection ? R.id.f_custRes_warning : R.id.f_skRes_warning;
+            case ACTION: return customerSection ? R.id.f_custRes_action : R.id.f_skRes_action;
+            default: return -1;
         }
     }
 
-    private static MicrobialResult resultAt(int index) {
-        switch (index) {
-            case 1: return MicrobialResult.NORMAL;
-            case 2: return MicrobialResult.WARNING;
-            case 3: return MicrobialResult.ACTION;
-            default: return null;
-        }
+    private static MicrobialResult resultAt(int id) {
+        if (id == R.id.f_custRes_normal || id == R.id.f_skRes_normal) return MicrobialResult.NORMAL;
+        if (id == R.id.f_custRes_warning || id == R.id.f_skRes_warning) return MicrobialResult.WARNING;
+        if (id == R.id.f_custRes_action || id == R.id.f_skRes_action) return MicrobialResult.ACTION;
+        return null;
     }
 
-    private static int handlingIndex(HandlingOption h) {
-        if (h == null) return 0;
+    private static int handlingId(HandlingOption h) {
+        if (h == null) return -1;
         switch (h) {
-            case STORAGE: return 1;
-            case SAME_AIRCRAFT: return 2;
-            case OTHER_AIRCRAFT_SAME_AIRLINE: return 3;
-            case AUTHORIZE_SKYPEC: return 4;
-            case REFUEL_DESPITE_ISSUE: return 5;
-            default: return 0;
+            case STORAGE: return R.id.f_handling_storage;
+            case SAME_AIRCRAFT: return R.id.f_handling_same;
+            case OTHER_AIRCRAFT_SAME_AIRLINE: return R.id.f_handling_other_ac;
+            case AUTHORIZE_SKYPEC: return R.id.f_handling_authorize;
+            case REFUEL_DESPITE_ISSUE: return R.id.f_handling_despite;
+            default: return -1;
         }
     }
 
-    private static HandlingOption handlingAt(int index) {
-        switch (index) {
-            case 1: return HandlingOption.STORAGE;
-            case 2: return HandlingOption.SAME_AIRCRAFT;
-            case 3: return HandlingOption.OTHER_AIRCRAFT_SAME_AIRLINE;
-            case 4: return HandlingOption.AUTHORIZE_SKYPEC;
-            case 5: return HandlingOption.REFUEL_DESPITE_ISSUE;
-            default: return null;
-        }
+    private static HandlingOption handlingAt(int id) {
+        if (id == R.id.f_handling_storage) return HandlingOption.STORAGE;
+        if (id == R.id.f_handling_same) return HandlingOption.SAME_AIRCRAFT;
+        if (id == R.id.f_handling_other_ac) return HandlingOption.OTHER_AIRCRAFT_SAME_AIRLINE;
+        if (id == R.id.f_handling_authorize) return HandlingOption.AUTHORIZE_SKYPEC;
+        if (id == R.id.f_handling_despite) return HandlingOption.REFUEL_DESPITE_ISSUE;
+        return null;
     }
 
     private static String formatDate(Date d) {

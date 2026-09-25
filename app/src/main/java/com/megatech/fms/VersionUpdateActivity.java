@@ -397,7 +397,45 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         return elapsedMs <= 0 ? 0 : bytes * 1000L / elapsedMs;
     }
 
+    /**
+     * Đang tải hoặc đang cài — màn hình không được rời đi và không được tự tắt.
+     *
+     * <p>Bật khi bắt đầu tải, chỉ tắt khi TẢI THẤT BẠI. Cài đặt thành công thì trình cài đặt
+     * của hệ điều hành tiếp quản và app bị thay thế, nên không có thời điểm nào để tắt cờ —
+     * cờ mất cùng cửa sổ là đúng.
+     */
+    private boolean updateInProgress = false;
+
+    /**
+     * Chặn Back trong lúc cập nhật.
+     *
+     * <p>Từ khi Back được mở lại cho toàn app (xem {@code BaseActivity.isBackBlocked()}), màn
+     * này thoát ra được giữa chừng. Thoát khi đang tải thì tệp dở dang bị xoá và lần sau phải
+     * tải lại từ đầu; thoát khi đang cài thì người dùng tưởng đã cập nhật xong trong khi chưa.
+     * Ngoài lúc cập nhật thì Back vẫn cho phép bình thường.
+     */
+    @Override
+    protected boolean isBackBlocked() {
+        return updateInProgress;
+    }
+
+    /**
+     * Giữ màn hình sáng suốt quá trình cập nhật.
+     *
+     * <p>Máy tự tắt màn hình giữa chừng thì người dùng không thấy được tiến trình, dễ tưởng
+     * máy treo rồi rút nguồn hoặc khởi động lại đúng lúc đang ghi tệp cài đặt.
+     */
+    private void setUpdateInProgress(boolean inProgress) {
+        updateInProgress = inProgress;
+        if (inProgress) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
     private void showDownloadProgress() {
+        setUpdateInProgress(true);
         View row = findViewById(R.id.download_progress_row);
         ProgressBar bar = findViewById(R.id.download_progress);
         TextView text = findViewById(R.id.download_progress_text);
@@ -409,7 +447,9 @@ public class VersionUpdateActivity extends BaseActivity implements View.OnClickL
         if (text != null) text.setText(R.string.update_download_preparing);
     }
 
+    /** Chỉ gọi ở nhánh TẢI THẤT BẠI — xem {@link #updateInProgress}. */
     private void hideDownloadProgress() {
+        setUpdateInProgress(false);
         View row = findViewById(R.id.download_progress_row);
         if (row != null) row.setVisibility(View.GONE);
     }

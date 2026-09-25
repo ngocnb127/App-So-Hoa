@@ -24,7 +24,10 @@ import java.util.Date;
  * Golden test bản in BM 75.01.
  *
  * <p>Bản in nhiệt là bản gốc của biểu mẫu nên test bám vào yêu cầu "in đủ, không rút gọn":
- * đủ ba mục A/B/C, đủ ba chữ ký, đủ các ghi chú pháp lý và mã biểu mẫu.
+ * đủ ba mục A/B/C, đủ hai chữ ký cuối phiếu, đủ các ghi chú pháp lý và mã biểu mẫu.
+ *
+ * <p>Không còn dấu MẪU/SPECIMEN, không đánh số bản sao và không có chữ ký mục A — chốt với
+ * chủ dự án ngày 2026-09-23 sau khi đối chiếu phiếu thật.
  *
  * <p>Test không thay được việc in thử trên ZQ511/ZQ520 thật — đó vẫn là điều kiện nghiệm thu.
  */
@@ -35,9 +38,10 @@ public class BM7501PrinterTest {
     @Test
     public void zpl_coDuBaMuc() {
         String zpl = textOf(BM7501Printer.createZpl(full(), opts()));
-        assertTrue(zpl.contains("A. KHÁCH HÀNG / CUSTOMER"));
-        assertTrue(zpl.contains("B. SKYPEC"));
-        assertTrue(zpl.contains("C. XÁC NHẬN / CONFIRMATION"));
+        assertTrue(zpl.contains("A. KHÁCH HÀNG ĐIỀN"));
+        assertTrue(zpl.contains("(To be completed by customer)"));
+        assertTrue(zpl.contains("B. SKYPEC ĐIỀN"));
+        assertTrue(zpl.contains("C. CÁC BÊN XÁC NHẬN THÔNG TIN"));
     }
 
     @Test
@@ -63,19 +67,17 @@ public class BM7501PrinterTest {
 
     @Test
     public void zpl_llKhopVoiNoiDung() {
-        String zpl = BM7501Printer.createZpl(full(), opts());
-        int ll = Integer.parseInt(zpl.substring(zpl.indexOf("^LL") + 3, zpl.indexOf('\n')));
+        int ll = llOf(BM7501Printer.createZpl(full(), opts()));
         // Phiếu đầy đủ dài hơn 2000 dots (~25cm) và phải nằm trong giới hạn hợp lý của cuộn giấy.
         assertTrue("^LL = " + ll, ll > 2000);
-        assertTrue("^LL = " + ll, ll < 6000);
+        assertTrue("^LL = " + ll, ll < 9000);
     }
 
     // ------------------------------------------------------------------ chữ ký
 
     @Test
-    public void zpl_inDuBaChuKyKhiCoAnh() {
+    public void zpl_inDuHaiChuKyKhiCoAnh() {
         String zpl = BM7501Printer.createZpl(full(), opts());
-        assertTrue(zpl.contains("^XG" + BM7501Printer.GRF_CUSTOMER_SECTION_A));
         assertTrue(zpl.contains("^XG" + BM7501Printer.GRF_SKYPEC));
         assertTrue(zpl.contains("^XG" + BM7501Printer.GRF_CUSTOMER_FINAL));
     }
@@ -92,57 +94,69 @@ public class BM7501PrinterTest {
     }
 
     @Test
-    public void zpl_coCaHaiLanKyCuaKhachHang() {
+    public void zpl_coDuHaiKhoiChuKyCuoiPhieu() {
         String zpl = textOf(BM7501Printer.createZpl(full(), opts()));
-        assertTrue(zpl.contains("Customer Rep. - Section A"));
-        assertTrue(zpl.contains("Customer Rep. (Ký, ghi rõ họ tên)"));
+        assertTrue(zpl.contains("Skypec Rep. Name (print) and Signature"));
+        assertTrue(zpl.contains("Customer Rep. Name (print) and Signature"));
     }
 
-    // ------------------------------------------------------------------ bản sao
+    // ------------------------------------------------------------------ ô đánh dấu
+
+    /**
+     * Bản in phải giữ nguyên các lựa chọn của biểu mẫu giấy dưới dạng ô đánh dấu, kể cả ô
+     * KHÔNG được chọn — người đọc phiếu cần thấy hãng đã bỏ qua lựa chọn nào.
+     */
+    @Test
+    public void zpl_inDuMoiLuaChon_keCaOKhongDuocChon() {
+        String zpl = BM7501Printer.createZpl(full(), opts());
+
+        assertTrue("Lý do đã chọn phải có tick", isChecked(zpl, "Điều chỉnh tải trọng"));
+        assertFalse("Lựa chọn không chọn vẫn in ra nhưng để trống",
+                isChecked(zpl, "Bảo dưỡng, sửa chữa"));
+        assertTrue("Lựa chọn không chọn vẫn phải in ra",
+                textOf(zpl).contains("Bảo dưỡng, sửa chữa tàu bay/Aircraft maintenance"));
+        assertFalse(isChecked(zpl, "Bơm của xe tra nạp"));
+    }
 
     @Test
-    public void zpl_banSao_khiInLai() {
+    public void zpl_khongKiemTraViSinh_moiOThietBiDeTrong() {
         BM7501Model m = full();
-        m.setReprintCount(1);
+        m.setCustomerMicrobialKit(null);
+        m.setCustomerMicrobialResult(null);
+        m.setSkypecMicrobialKit(null);
+        m.setSkypecMicrobialResult(null);
 
-        String zpl = textOf(BM7501Printer.createZpl(m, opts()));
-        assertTrue(zpl.contains("BẢN SAO / COPY"));
-        assertTrue(zpl.contains("Lần in: 2"));
+        String zpl = BM7501Printer.createZpl(m, opts());
+        // Hai mục A và B đều in dải thiết bị/kết quả, và không ô nào được đánh dấu.
+        assertEquals("Cả hai mục đều phải in dải thiết bị",
+                2, countOccurrences(textOf(zpl), "Hy-lite"));
+        assertEquals("Chưa kiểm tra thì không ô nào được tick", 0, countChecked(zpl, "Hy-lite"));
+        assertEquals(0, countChecked(zpl, "Mức độ được chấp nhận"));
     }
 
     @Test
-    public void zpl_banGoc_khongCoDauBanSao() {
-        assertFalse(textOf(BM7501Printer.createZpl(full(), opts())).contains("BẢN SAO"));
+    public void zpl_viSinhDaKiemTra_danhDauDungThietBiVaKetQua() {
+        BM7501Model m = full();
+        m.setSkypecMicrobialKit(MicrobialKit.FUELSTAT);
+        m.setSkypecMicrobialResult(MicrobialResult.WARNING);
+
+        String zpl = BM7501Printer.createZpl(m, opts());
+        assertEquals("Cả mục A và mục B cùng chọn Fuelstat", 2, countChecked(zpl, "Fuelstat"));
+        // Mục A để kết quả "được chấp nhận", mục B mới là "cảnh báo" -> đúng một ô được tick.
+        assertEquals(1, countChecked(zpl, "Mức độ cảnh báo"));
     }
 
+    /** Phiếu cũ chỉ có một cờ chung "đã phổ biến tín hiệu" — in ra là đã thống nhất cả hai. */
     @Test
-    public void zpl_banSao_theoCoTuyChon() {
-        String zpl = textOf(BM7501Printer.createZpl(full(), opts().copy(true)));
-        assertTrue(zpl.contains("BẢN SAO / COPY"));
-    }
+    public void zpl_phieuCu_coCoPhoBienTinHieu_tickCaHaiTinHieuChuan() {
+        BM7501Model m = full();
+        m.setSignalsBriefed(true);
+        m.setSignalThumbUp(false);
+        m.setSignalCrossArms(false);
 
-    // ------------------------------------------------------------------ bản thử
-
-    @Test
-    public void zpl_banThu_dongDauMauOCaDauVaCuoiPhieu() {
-        String zpl = textOf(BM7501Printer.createZpl(full(), opts().specimen(true)));
-
-        assertTrue(zpl.contains("MẪU / SPECIMEN"));
-        assertTrue(zpl.contains("KHÔNG CÓ GIÁ TRỊ PHÁP LÝ"));
-        // In hai lần: đầu phiếu và chân phiếu, phòng khi tờ giấy bị xé rời.
-        assertEquals(2, countOccurrences(zpl, "NOT A LEGAL DOCUMENT"));
-    }
-
-    @Test
-    public void zpl_banThat_khongCoDauMau() {
-        assertFalse(textOf(BM7501Printer.createZpl(full(), opts())).contains("SPECIMEN"));
-    }
-
-    @Test
-    public void escp_banThu_dongDauMau() {
-        String text = BM7501Printer.createEscpText(full(), opts().specimen(true));
-        assertTrue(text.contains("MẪU / SPECIMEN"));
-        assertTrue(text.contains("KHÔNG CÓ GIÁ TRỊ PHÁP LÝ"));
+        String zpl = BM7501Printer.createZpl(m, opts());
+        assertTrue(isChecked(zpl, "Giơ ngón cái"));
+        assertTrue(isChecked(zpl, "Giơ chéo hai tay"));
     }
 
     // ------------------------------------------------------------------ dữ liệu
@@ -168,20 +182,7 @@ public class BM7501PrinterTest {
     public void zpl_nhietDoAm_inDung() {
         BM7501Model m = full();
         m.setActualTempC(-5.5d);
-        assertTrue(textOf(BM7501Printer.createZpl(m, opts())).contains("-5.5"));
-    }
-
-    @Test
-    public void zpl_khongCoViSinh_ghiKhongYeuCau() {
-        BM7501Model m = full();
-        m.setVac(QcCheck.SATISFY);
-        m.setCwd(QcCheck.SATISFY);
-        m.setContaminationSuspected(false);
-        m.setCustomerRequestedMicrobial(false);
-        m.setSkypecMicrobialKit(null);
-        m.setSkypecMicrobialResult(null);
-
-        assertTrue(textOf(BM7501Printer.createZpl(m, opts())).contains("Không yêu cầu / Not required"));
+        assertTrue(textOf(BM7501Printer.createZpl(m, opts())).contains("-5,5"));
     }
 
     @Test
@@ -192,10 +193,9 @@ public class BM7501PrinterTest {
         for (int i = 0; i < 40; i++) longReason.append("lý do rất dài ");
         m.setReasonOther(longReason.toString());
 
-        String zpl = BM7501Printer.createZpl(m, opts());
-        int ll = Integer.parseInt(zpl.substring(zpl.indexOf("^LL") + 3, zpl.indexOf('\n')));
         // Nội dung dài làm phiếu dài thêm — chứng tỏ chiều cao bám nội dung thật.
-        int llShort = Integer.parseInt(shortLl(BM7501Printer.createZpl(full(), opts())));
+        int ll = llOf(BM7501Printer.createZpl(m, opts()));
+        int llShort = llOf(BM7501Printer.createZpl(full(), opts()));
         assertTrue(ll > llShort);
     }
 
@@ -219,9 +219,9 @@ public class BM7501PrinterTest {
         m.setStorageTo(new Date(9_000_000L));
 
         String zpl = textOf(BM7501Printer.createZpl(m, opts()));
-        assertTrue(zpl.contains("Yêu cầu lưu trữ / Storage"));
-        assertTrue(zpl.contains("Lưu trữ từ / From"));
-        assertTrue(zpl.contains("Lưu trữ đến / To"));
+        assertTrue(zpl.contains("Yêu cầu lưu trữ/Storage"));
+        assertTrue(zpl.contains("Từ/From"));
+        assertTrue(zpl.contains("Đến/To"));
     }
 
     @Test
@@ -230,37 +230,6 @@ public class BM7501PrinterTest {
         m.setCustomerRepName("Nguyễn Trần Hoàng Long Khánh Đức Thịnh Vượng Phát Đạt");
 
         assertTrue(textOf(BM7501Printer.createZpl(m, opts())).contains("Nguyễn"));
-    }
-
-    // ------------------------------------------------------------------ ESC/P
-
-    @Test
-    public void escp_coDuBaMucVaBaChuKy() {
-        String text = BM7501Printer.createEscpText(full(), opts());
-        assertTrue(text.contains("A. KHÁCH HÀNG / CUSTOMER"));
-        assertTrue(text.contains("B. SKYPEC"));
-        assertTrue(text.contains("C. XÁC NHẬN / CONFIRMATION"));
-        assertTrue(text.contains("Customer Rep. - Section A"));
-        assertTrue(text.contains("ĐẠI DIỆN SKYPEC"));
-    }
-
-    @Test
-    public void escp_khongInNull() {
-        assertFalse(BM7501Printer.createEscpText(new BM7501Model(), opts()).contains("null"));
-    }
-
-    @Test
-    public void escp_khongVuotKhoGiay() {
-        for (String line : BM7501Printer.createEscpText(full(), opts()).split("\n")) {
-            assertTrue("Dòng dài " + line.length() + ": " + line, line.length() <= 70);
-        }
-    }
-
-    @Test
-    public void escp_banSao_khiInLai() {
-        BM7501Model m = full();
-        m.setReprintCount(2);
-        assertTrue(BM7501Printer.createEscpText(m, opts()).contains("Lần in: 3"));
     }
 
     // ------------------------------------------------------------------ chuyển ngữ
@@ -281,11 +250,39 @@ public class BM7501PrinterTest {
      * Builder wrap chủ động nên một câu dài nằm trên nhiều trường — tìm chuỗi liền mạch
      * trong ZPL thô sẽ trượt, còn kiểm tra trên chuỗi đã gom mới đúng ý "phiếu có in nội dung này".
      */
+    /**
+     * Bỏ các trường đắp chồng của cơ chế in đậm (bản sao lệch đúng 1 dot theo trục X), để
+     * test đếm được số lần một nội dung THỰC SỰ xuất hiện trên phiếu.
+     */
+    private static String plain(String zpl) {
+        String[] parts = zpl.split("\\^FS");
+        StringBuilder out = new StringBuilder();
+        String prevRest = null;
+        int prevX = Integer.MIN_VALUE;
+        for (String part : parts) {
+            int fo = part.lastIndexOf("^FO");
+            int comma = fo < 0 ? -1 : part.indexOf(',', fo);
+            if (comma > 0) {
+                try {
+                    int x = Integer.parseInt(part.substring(fo + 3, comma).trim());
+                    String rest = part.substring(comma);
+                    if (rest.equals(prevRest) && x == prevX + 1) continue;
+                    prevRest = rest;
+                    prevX = x;
+                } catch (NumberFormatException ignored) {
+                    prevRest = null;
+                }
+            }
+            out.append(part).append("^FS");
+        }
+        return out.toString();
+    }
+
     private static String textOf(String zpl) {
         StringBuilder sb = new StringBuilder();
         java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("\\^FD(.*?)\\^FS", java.util.regex.Pattern.DOTALL)
-                .matcher(zpl);
+                .matcher(plain(zpl));
         while (m.find()) {
             if (sb.length() > 0) sb.append(' ');
             sb.append(m.group(1));
@@ -306,8 +303,35 @@ public class BM7501PrinterTest {
         return count;
     }
 
-    private static String shortLl(String zpl) {
-        return zpl.substring(zpl.indexOf("^LL") + 3, zpl.indexOf('\n'));
+    private static int llOf(String zpl) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\^LL(\\d+)").matcher(zpl);
+        assertTrue("Nhãn không có ^LL", m.find());
+        return Integer.parseInt(m.group(1));
+    }
+
+    /**
+     * Ô đánh dấu nay là hình vuông vẽ thật: ^GB là khung, hai ^GD là nét tick. Một lựa chọn
+     * được chọn khi giữa khung và chữ của nó có ^GD.
+     */
+    private static boolean isChecked(String rawZpl, String label) {
+        String zpl = plain(rawZpl);
+        int text = zpl.indexOf("^FD" + label);
+        assertTrue("Bản in không có lựa chọn: " + label, text > 0);
+        int box = zpl.lastIndexOf("^GB", text);
+        return box > 0 && zpl.substring(box, text).contains("^GD");
+    }
+
+    private static int countChecked(String rawZpl, String label) {
+        String zpl = plain(rawZpl);
+        int count = 0;
+        int from = 0;
+        while (true) {
+            int text = zpl.indexOf("^FD" + label, from);
+            if (text < 0) return count;
+            int box = zpl.lastIndexOf("^GB", text);
+            if (box > 0 && zpl.substring(box, text).contains("^GD")) count++;
+            from = text + 3;
+        }
     }
 
     private static BM7501Model full() {
@@ -337,7 +361,6 @@ public class BM7501PrinterTest {
         m.setVac(QcCheck.SATISFY);
         m.setCwd(QcCheck.SATISFY);
         m.setDensityKgM3(795.2d);
-        m.setConductivityRequired(true);
         m.setConductivityPsM(150d);
 
         m.setDefuellerTruckNo("51F-123.45");
@@ -353,11 +376,9 @@ public class BM7501PrinterTest {
         m.setLiter(3748d);
         m.setRefuellableWithoutTest(Boolean.TRUE);
 
-        m.setCustomerSectionASignaturePath("/x/a.png");
         m.setSkypecSignaturePath("/x/s.png");
         m.setCustomerFinalSignaturePath("/x/c.png");
         m.setSkypecRepName("Trần Văn B");
-        m.setCustomerRepFinalName("Nguyễn Văn A");
         return m;
     }
 }

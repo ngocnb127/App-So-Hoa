@@ -53,49 +53,64 @@ public interface BM7501Dao {
 
     /**
      * Ghi nội dung theo kiểu so-sánh-rồi-đổi: chỉ ghi khi phiên bản cục bộ đúng như đang cầm
-     * VÀ phiếu còn ở nhóm sửa được. Trả về số dòng bị ảnh hưởng — 0 nghĩa là có xung đột,
+     * VÀ phiếu chưa bị huỷ/vô hiệu hoá. Trả về số dòng bị ảnh hưởng — 0 nghĩa là có xung đột,
      * tầng gọi phải đọc lại chứ không được ghi đè.
+     *
+     * <p>Phiếu đã in vẫn sửa được (chốt 2026-09-23): bản in không phải là chốt chặn, in lại
+     * là chuyện bình thường ngoài hiện trường.
      */
     @Query("UPDATE BM7501 SET jsonData = :payload, "
             + "localRevision = localRevision + 1, "
             + "isLocalModified = 1, "
+            + "isSynced = 0, "
+            + "syncStatus = 'PENDING', "
             + "dateUpdated = :now "
             + "WHERE uniqueId = :uniqueId "
             + "AND localRevision = :expectedRevision "
-            + "AND businessStatus IN ('DRAFT','A_DONE','B_DONE','C_DONE')")
+            + "AND businessStatus NOT IN ('CANCELLED','VOIDED','EXPORTED')")
     int updatePayloadIfUnchanged(String uniqueId, String payload, int expectedRevision, long now);
 
-    /** Đổi trạng thái trong nhóm còn sửa được (xác nhận hoàn tất từng bước). */
-    @Query("UPDATE BM7501 SET businessStatus = :newStatus, "
+    /**
+     * Điền số phiếu khi mẻ hút được cấp số muộn hơn lúc lập phiếu 75.01.
+     *
+     * <p>Chỉ ghi khi số hiện tại đang trống: số đã cấp thì không bao giờ được đổi.
+     */
+    @Query("UPDATE BM7501 SET localNumber = :localNumber, "
             + "localRevision = localRevision + 1, "
             + "isLocalModified = 1, "
+            + "isSynced = 0, "
+            + "syncStatus = 'PENDING', "
+            + "dateUpdated = :now "
+            + "WHERE uniqueId = :uniqueId "
+            + "AND (localNumber IS NULL OR localNumber = '') "
+            + "AND businessStatus NOT IN ('CANCELLED','VOIDED','EXPORTED')")
+    int fillLocalNumberIfEmpty(String uniqueId, String localNumber, long now);
+
+    /**
+     * Xuất phiếu — chốt sổ. Sau lệnh này {@code updatePayloadIfUnchanged} không ăn nữa nên nội
+     * dung khoá vĩnh viễn; phiếu vẫn in lại được vì in chỉ đọc.
+     *
+     * <p>Đặt lại {@code syncStatus = 'PENDING'} để trạng thái mới được đẩy lên server — server
+     * dựa vào đó để chuyển phiếu sang Omega.
+     */
+    @Query("UPDATE BM7501 SET businessStatus = 'EXPORTED', "
+            + "localRevision = localRevision + 1, "
+            + "isLocalModified = 1, "
+            + "isSynced = 0, "
+            + "syncStatus = 'PENDING', "
             + "dateUpdated = :now "
             + "WHERE uniqueId = :uniqueId "
             + "AND localRevision = :expectedRevision "
-            + "AND businessStatus IN ('DRAFT','A_DONE','B_DONE','C_DONE')")
-    int updateStatusIfEditable(String uniqueId, String newStatus, int expectedRevision, long now);
+            + "AND businessStatus NOT IN ('CANCELLED','VOIDED','EXPORTED')")
+    int markExported(String uniqueId, int expectedRevision, long now);
 
-    /** Ký: chỉ đi được từ C_DONE, và ghi kèm băm bản đã ký. */
-    @Query("UPDATE BM7501 SET businessStatus = 'SIGNED', "
-            + "signedAt = :signedAt, "
-            + "signedSnapshotHash = :snapshotHash, "
-            + "localRevision = localRevision + 1, "
-            + "isLocalModified = 1, "
-            + "dateUpdated = :signedAt "
-            + "WHERE uniqueId = :uniqueId AND businessStatus = 'C_DONE'")
-    int markSigned(String uniqueId, String snapshotHash, long signedAt);
+    /** Trạng thái phiếu của nhiều mẻ hút cùng lúc — dùng cho danh sách mẻ hút. */
+    @Query("SELECT * FROM BM7501 WHERE refuelItemUniqueId IN (:refuelItemUniqueIds) "
+            + "AND businessStatus <> 'CANCELLED' "
+            + "ORDER BY revisionNumber")
+    List<BM7501> getActiveByRefuelItems(List<String> refuelItemUniqueIds);
 
-    /** In: đi từ SIGNED (bản gốc) hoặc PRINTED (bản sao, tăng số lần in). */
-    @Query("UPDATE BM7501 SET businessStatus = 'PRINTED', "
-            + "printedAt = :printedAt, "
-            + "reprintCount = reprintCount + :increment, "
-            + "localRevision = localRevision + 1, "
-            + "isLocalModified = 1, "
-            + "dateUpdated = :printedAt "
-            + "WHERE uniqueId = :uniqueId AND businessStatus IN ('SIGNED','PRINTED')")
-    int markPrinted(String uniqueId, int increment, long printedAt);
-
-    /** Huỷ TRƯỚC khi ký. */
+    /** Huỷ phiếu. */
     @Query("UPDATE BM7501 SET businessStatus = 'CANCELLED', "
             + "localRevision = localRevision + 1, "
             + "isLocalModified = 1, "
@@ -103,14 +118,6 @@ public interface BM7501Dao {
             + "WHERE uniqueId = :uniqueId "
             + "AND businessStatus IN ('DRAFT','A_DONE','B_DONE','C_DONE')")
     int markCancelled(String uniqueId, long now);
-
-    /** Vô hiệu hoá SAU khi đã ký/in. */
-    @Query("UPDATE BM7501 SET businessStatus = 'VOIDED', "
-            + "localRevision = localRevision + 1, "
-            + "isLocalModified = 1, "
-            + "dateUpdated = :now "
-            + "WHERE uniqueId = :uniqueId AND businessStatus IN ('SIGNED','PRINTED')")
-    int markVoided(String uniqueId, long now);
 
     /**
      * Đồng bộ chỉ được chạm tới danh tính phía server. KHÔNG đụng {@code jsonData},
@@ -124,14 +131,19 @@ public interface BM7501Dao {
     @Query("UPDATE BM7501 SET syncStatus = :syncStatus WHERE uniqueId = :uniqueId")
     int updateSyncStatus(String uniqueId, String syncStatus);
 
-    /** Phiếu chờ đẩy lên server — dùng cho outbox và cho cảnh báo "chưa đồng bộ". */
-    @Query("SELECT * FROM BM7501 WHERE syncStatus <> 'SYNCED' "
-            + "AND businessStatus IN ('SIGNED','PRINTED','VOIDED') "
+    /**
+     * Phiếu chờ đẩy lên server — dùng cho outbox và cho cảnh báo "chưa đồng bộ".
+     *
+     * <p>Bỏ qua {@code FAILED}: đó là phiếu bị server từ chối bằng 409/400, gửi lại bao nhiêu
+     * lần cũng hỏng như nhau. Nhân viên sửa phiếu là nó quay về {@code PENDING} và được thử lại.
+     */
+    @Query("SELECT * FROM BM7501 WHERE syncStatus NOT IN ('SYNCED','FAILED') "
+            + "AND businessStatus <> 'CANCELLED' "
             + "ORDER BY localId")
     List<BM7501> getPendingSync();
 
-    @Query("SELECT COUNT(*) FROM BM7501 WHERE syncStatus <> 'SYNCED' "
-            + "AND businessStatus IN ('SIGNED','PRINTED','VOIDED')")
+    @Query("SELECT COUNT(*) FROM BM7501 WHERE syncStatus NOT IN ('SYNCED','FAILED') "
+            + "AND businessStatus <> 'CANCELLED'")
     int countPendingSync();
 
     /** Chỉ dọn phiếu đã đồng bộ xong; phiếu chờ gửi giữ lại bất kể tuổi. */

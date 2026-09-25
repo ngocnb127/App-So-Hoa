@@ -43,6 +43,7 @@ import com.megatech.fms.helpers.ImageUtil;
 import com.megatech.fms.helpers.LCRReader;
 import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.helpers.PrintWorker;
+import com.megatech.fms.helpers.SignatureCache;
 import com.megatech.fms.helpers.ZebraWorker;
 import com.megatech.fms.model.LCRDataModel;
 import com.megatech.fms.model.ReceiptModel;
@@ -57,8 +58,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.FileWriter;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
@@ -179,7 +185,7 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                         // Không disconnect ở đây - chờ dữ liệu về ở onDataChanged (xem updateGrossDisplay)
                     } else {
                         showDeviceConnectionWarning();
-                        disconnectDeviceOnce(); // không kết nối được -> ngắt ngay, không giữ kết nối treo
+                        disconnectDeviceOnce(); // không kết nối được -> thôi nghe đồng hồ (kết nối chung vẫn giữ)
                     }
                 } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
                     tcsDevice = new TcsDevice(storedIP, 10001,
@@ -222,10 +228,12 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             TruckModel settingModel = currentApp.getSetting();
             if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.LCR) {
                 if (reader != null) {
-                    reader.setFieldDataListener(null);
-                    reader.setConnectionListener(null);
-                    reader.doDisconnectDevice();
-                    Logger.appendLog("PRINT", "Đã ngắt kết nối LCR sau khi lấy số");
+                    // CHỈ gỡ listener của màn này, KHÔNG ngắt đồng hồ. Đồng hồ là của chung cả
+                    // ứng dụng: ngắt ở đây (và nhất là trong onDestroy, vốn chạy muộn) là cắt
+                    // kết nối — và trước đây còn gỡ luôn listener — của màn tra nạp kế tiếp vừa
+                    // mở. Chủ dự án chốt ngày 2026-09-14.
+                    reader.removeListeners(lcrDataListener, lcrConnectionListener, null);
+                    Logger.appendLog("PRINT", "Đã lấy số LCR — gỡ listener màn in, giữ kết nối đồng hồ");
                 }
             } else if (settingModel.getDeviceType() == TruckModel.DEVICE_TYPE.TCS) {
                 if (tcsDevice != null) {
@@ -324,8 +332,12 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         });
     }
 
+    /** Listener màn này gắn vào đồng hồ dùng chung — giữ lại để chỉ gỡ đúng chúng. */
+    private volatile LCRReader.LCRDataListener lcrDataListener;
+    private volatile LCRReader.LCRConnectionListener lcrConnectionListener;
+
     private void addLCRListeners() {
-        reader.setFieldDataListener(new LCRReader.LCRDataListener() {
+        reader.setFieldDataListener(lcrDataListener = new LCRReader.LCRDataListener() {
             @Override
             public void onDataChanged(LCRDataModel dataModel, LCRReader.FIELD_CHANGE field_change) {
                 lcrModel = dataModel;
@@ -342,7 +354,7 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             }
         });
 
-        reader.setConnectionListener(new LCRReader.LCRConnectionListener() {
+        reader.setConnectionListener(lcrConnectionListener = new LCRReader.LCRConnectionListener() {
             @Override
             public void onConnected() {
                 Logger.appendLog("PRINT", "LCR Connected");
@@ -457,15 +469,30 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
 
     private boolean reprint = false;
 
+    /**
+     * Phiếu in lại đã dựng sẵn (JSON) — từ màn "Hoá đơn theo xe", phiếu có thể của XE KHÁC.
+     * Xem {@code ReceiptReprint}.
+     */
+    public static final String EXTRA_REPRINT_RECEIPT = "REPRINT_RECEIPT";
+
     private void loaddata() {
 
         setProgressDialog();
         Bundle b = getIntent().getExtras();
         String data = b.getString("RECEIPT");
+        String reprintData = b.getString(EXTRA_REPRINT_RECEIPT);
         if (data != null) {
             model = ReceiptModel.fromJson(data);
             bindData();
             initDeviceConnection();  // ← Khởi tạo kết nối device (background thread)
+        }
+        else if (reprintData != null)
+        {
+            // Không nối đồng hồ: số đồng hồ của xe này không liên quan tới một phiếu cũ,
+            // nhất là phiếu của xe khác — đem so sẽ ra cảnh báo lệch sai.
+            reprint = true;
+            model = ReceiptModel.fromJson(reprintData);
+            bindData();
         }
         else
         {
@@ -539,19 +566,297 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             findViewById(R.id.receipt_signtype_check).setVisibility(View.GONE);
         }
 
+        // Mời dùng lại chữ ký đã lưu tạm của CHUYẾN này (nếu có). Không áp cho màn in lại.
+        offerCachedSignature();
+
+    }
+
+    /**
+     * Thoát màn hình phiếu.
+     *
+     * <p>Trước bản vá chỉ xét {@code isCaptured() || isPrinted()}: ký xong mà chưa in, chưa
+     * chụp rồi bấm thoát thì chữ ký MẤT IM LẶNG, không một cảnh báo nào. Nay có chữ ký chưa
+     * xuất ra phiếu cũng phải hỏi lại.
+     *
+     * <p>Trước đây {@code BaseActivity.onBackPressed()} là no-op cho toàn app nên đây là đường
+     * thoát duy nhất. Từ khi Back được mở lại (xem {@code BaseActivity.isBackBlocked()}), phím
+     * Back trở thành lối vòng qua cảnh báo này — ký xong bấm Back là mất chữ ký im lặng, đúng
+     * lỗi mà bản vá trên vừa sửa. Vì vậy {@link #onBackPressed()} phải dẫn về đây, KHÔNG dùng
+     * {@code isBackBlocked()}: chặn cứng Back sẽ tạo lại ngõ cụt, còn ở đây người dùng vẫn
+     * thoát được, chỉ phải xác nhận một lần.
+     */
+    @Override
+    public void onBackPressed() {
+        exit();
     }
 
     private void exit() {
-        if (model.isCaptured() || model.isPrinted()) {
-            showConfirmMessage(R.string.receipt_not_saved, new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    finish();
-                    return null;
-                }
-            });
+        boolean hasSignature = hasUnexportedSignature();
+        if (model.isCaptured() || model.isPrinted() || hasSignature) {
+            // Đếm tần suất: trước bản vá không có log nào ở chỗ này nên không đo được thật
+            // sự có bao nhiêu lần người dùng thoát khi đang giữ chữ ký/ảnh chưa xuất.
+            Logger.appendLog("RECEIPT", String.format(java.util.Locale.US,
+                    "EXIT_WITH_PENDING captured=%s printed=%s signature=%s buyerSign=%s sellerSign=%s",
+                    model.isCaptured(), model.isPrinted(), hasSignature,
+                    model.getSignaturePath() != null, model.getSellerSignaturePath() != null));
+            showConfirmMessage(
+                    hasSignature && !model.isCaptured() && !model.isPrinted()
+                            ? R.string.warn_exit_with_signature : R.string.receipt_not_saved,
+                    new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            finish();
+                            return null;
+                        }
+                    });
         } else
             finish();
+    }
+
+    /** Có chữ ký đã vẽ nhưng chưa được in/chụp ra phiếu hay không. */
+    private boolean hasUnexportedSignature() {
+        if (model == null) return false;
+        String buyer = model.getSignaturePath();
+        String seller = model.getSellerSignaturePath();
+        return (buyer != null && !buyer.trim().isEmpty())
+                || (seller != null && !seller.trim().isEmpty());
+    }
+
+    // ======================= LƯU TẠM CHỮ KÝ THEO CHUYẾN =======================
+    // Vấn đề: ký xong, phát hiện phải sửa một thông tin của chuyến, quay ra sửa rồi vào lại
+    // thì chữ ký mất và phải ký lại từ đầu. Ở đây chữ ký vừa ký được ĐỔI TÊN sang một tên
+    // mang khoá chuyến, lần sau mở lại chuyến đó thì HỎI người dùng có dùng lại không.
+    //
+    // Ràng buộc: không tự áp, không chặn, không khoá nút. Toàn bộ việc làm nằm trong màn này —
+    // ReceiptSignActivity dùng chung cho 8 màn khác nên không được đụng tới.
+    // Đã hỏi rồi thì thôi, tránh hỏi lại mỗi lần bindData() dựng lại màn.
+    private boolean signatureOfferAsked = false;
+
+    /** Khoá chuyến của phiếu đang mở; {@code null} thì không lưu tạm gì cả. */
+    private String cacheFlightKey() {
+        if (model == null) return null;
+        String key = SignatureCache.flightKey(model.getFlightId(), model.getFlightCode());
+        // Phiếu HOÀN (defueling) là chứng từ KHÁC của cùng chuyến, không được dùng chung ô
+        // lưu tạm với phiếu tra nạp — nếu không, ký phiếu hoàn sẽ đè mất chữ ký phiếu nạp.
+        if (key != null && model.isReturn()) key = "R" + key;
+        return key;
+    }
+
+    private int currentUserId() {
+        try {
+            com.megatech.fms.model.UserInfo user = FMSApplication.getApplication().getUser();
+            return user == null ? 0 : user.getUserId();
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    private File pictureDir() {
+        return getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+    }
+
+    /**
+     * Đổi tên tệp ảnh chữ ký vừa ký sang tên mang khoá chuyến, và ghi lại khối lượng lúc ký.
+     *
+     * <p>Ký lại thì GHI ĐÈ cùng tên ⇒ vá luôn chỗ rò rỉ tệp cũ ({@code createTempFile} sinh tên
+     * ngẫu nhiên, không ai dọn). Mọi lỗi ở đây đều nuốt: đây là tiện ích, hỏng thì mất tiện ích
+     * chứ không được làm hỏng việc ký.
+     *
+     * @return đường dẫn sẽ dùng cho model — tên mới nếu đổi được, còn không thì giữ tên cũ.
+     */
+    private String cacheSignatureFile(String signaturePath, boolean buyer) {
+        if (signaturePath == null || signaturePath.isEmpty()) return signaturePath;
+        if (reprint) return signaturePath;
+        String flightKey = cacheFlightKey();
+        if (flightKey == null) return signaturePath;
+        try {
+            File source = new File(signaturePath);
+            if (!source.exists()) return signaturePath;
+            File dir = pictureDir();
+            if (dir == null) return signaturePath;
+            File target = new File(dir,
+                    SignatureCache.fileName(flightKey, buyer, currentUserId()));
+            if (target.exists() && !target.delete()) return signaturePath;
+            if (!source.renameTo(target)) return signaturePath;
+            writeSignatureMeta(dir, flightKey);
+            Logger.appendLog("RECEIPT", "SIGN_CACHED " + target.getName());
+            return target.getAbsolutePath();
+        } catch (Exception ex) {
+            Logger.appendLog("RECEIPT", "SIGN_CACHE_FAILED " + ex.getMessage());
+            return signaturePath;
+        }
+    }
+
+    /** Ghi khối lượng (Kg) lúc ký — chỉ để HIỂN THỊ trong câu hỏi lần sau. */
+    private void writeSignatureMeta(File dir, String flightKey) {
+        FileWriter writer = null;
+        try {
+            writer = new FileWriter(new File(dir, SignatureCache.metaFileName(flightKey)), false);
+            writer.write(SignatureCache.metaContent(model.getWeight()));
+        } catch (Exception ex) {
+            // Thiếu meta chỉ làm mất DÒNG SO SÁNH, không làm mất lời mời dùng lại.
+            Logger.appendLog("RECEIPT", "SIGN_META_FAILED " + ex.getMessage());
+        } finally {
+            try {
+                if (writer != null) writer.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private Double readSignatureMeta(File dir, String flightKey) {
+        try {
+            File meta = new File(dir, SignatureCache.metaFileName(flightKey));
+            if (!meta.exists()) return null;
+            byte[] buffer = new byte[64];
+            java.io.FileInputStream in = new java.io.FileInputStream(meta);
+            try {
+                int read = in.read(buffer);
+                if (read <= 0) return null;
+                return SignatureCache.parseMetaWeight(new String(buffer, 0, read));
+            } finally {
+                in.close();
+            }
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private List<String> pictureFileNames() {
+        List<String> names = new ArrayList<>();
+        File dir = pictureDir();
+        if (dir == null) return names;
+        File[] files = dir.listFiles();
+        if (files == null) return names;
+        for (File f : files) {
+            if (f.isFile()) names.add(f.getName());
+        }
+        return names;
+    }
+
+    /**
+     * Hỏi "Dùng chữ ký đã lưu?" khi chuyến này có chữ ký lưu tạm.
+     *
+     * <p>BỎ QUA hoàn toàn khi {@code reprint} — nghiệp vụ in lại giữ nguyên như cũ. Hộp thoại
+     * huỷ được, hai nút đều đi tiếp, không khoá gì. Dòng so sánh sản lượng chỉ để người dùng
+     * tự quyết, KHÔNG dùng để chặn hay để tự bỏ chữ ký.
+     */
+    private void offerCachedSignature() {
+        if (reprint || model == null || signatureOfferAsked) return;
+        String flightKey = cacheFlightKey();
+        if (flightKey == null) return;
+        File dir = pictureDir();
+        if (dir == null) return;
+
+        final SignatureCache.Offer offer = SignatureCache.offer(
+                pictureFileNames(), flightKey, currentUserId(), reprint);
+        if (!offer.hasAny()) return;
+
+        final File buyerFile = offer.hasBuyer() ? new File(dir, offer.buyerFileName) : null;
+        final File sellerFile = offer.hasSeller() ? new File(dir, offer.sellerFileName) : null;
+        // Chỉ hỏi khi tệp thực sự còn — DataRetention có thể đã dọn.
+        boolean buyerReady = buyerFile != null && buyerFile.exists();
+        boolean sellerReady = sellerFile != null && sellerFile.exists();
+        if (!buyerReady && !sellerReady) return;
+
+        long signedAtMs = Math.max(buyerReady ? buyerFile.lastModified() : 0,
+                sellerReady ? sellerFile.lastModified() : 0);
+        // Có NGÀY chứ không chỉ giờ: ca làm vắt qua nửa đêm, và chữ ký lưu tạm sống tới khi
+        // DataRetention dọn — chỉ thấy "09:12" thì không biết là sáng nay hay hôm qua.
+        String signedAt = signedAtMs > 0
+                ? new SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.US).format(new Date(signedAtMs))
+                : "";
+        String weightLine = SignatureCache.weightLine(
+                readSignatureMeta(dir, flightKey), model.getWeight(),
+                NumberFormat.getInstance(Locale.getDefault()));
+
+        signatureOfferAsked = true;
+        Logger.appendLog("RECEIPT", String.format(Locale.US,
+                "SIGN_REUSE_OFFERED flight=%s buyer=%s seller=%s sellerDropped=%s",
+                flightKey, buyerReady, sellerReady, offer.sellerDroppedByUserChange));
+
+        final boolean useBuyer = buyerReady;
+        final boolean useSeller = sellerReady;
+        new AlertDialog.Builder(this)
+                .setTitle("Dùng chữ ký đã lưu?")
+                .setMessage(SignatureCache.buildMessage(offer, signedAt, weightLine))
+                .setCancelable(true)
+                .setPositiveButton("Dùng lại", (dialog, which) -> {
+                    if (useBuyer) applyCachedSignature(buyerFile.getAbsolutePath(), true);
+                    if (useSeller) applyCachedSignature(sellerFile.getAbsolutePath(), false);
+                    Logger.appendLog("RECEIPT", "SIGN_REUSE_ACCEPTED flight=" + flightKey);
+                })
+                // "Ký mới" KHÔNG xoá tệp tạm: người dùng có thể đổi ý ở lượt sau.
+                .setNegativeButton("Ký mới", (dialog, which) ->
+                        Logger.appendLog("RECEIPT", "SIGN_REUSE_DECLINED flight=" + flightKey))
+                .show();
+    }
+
+    /** Gán chữ ký dùng lại vào model và bật dấu tích như luồng ký bình thường. */
+    private void applyCachedSignature(String path, boolean buyer) {
+        if (buyer) model.setSignaturePath(path);
+        else model.setSellerSignaturePath(path);
+        if (binding != null) binding.invalidateAll();
+        Button btn = findViewById(buyer ? R.id.btnSign : R.id.btnSellerSign);
+        if (btn != null)
+            btn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_checked, 0, 0, 0);
+    }
+
+    /**
+     * Trước khi xuất hoá đơn: đưa chữ ký đang dùng RA KHỎI vùng lưu tạm.
+     *
+     * <p>Bắt buộc phải làm trước lúc dựng bản ghi để gửi. Hoá đơn đi theo hàng đợi và
+     * {@code ReceiptAPI} đọc tệp ảnh tại LÚC ĐẨY, nên nếu cứ để tên lưu tạm rồi xoá theo luật
+     * "xuất xong thì xoá", máy đang mất sóng sẽ đẩy lên hoá đơn KHÔNG CÒN CHỮ KÝ. Đổi tên
+     * không được thì giữ nguyên đường dẫn cũ — {@link #clearCachedSignature()} có chốt bỏ qua
+     * tệp vẫn đang được phiếu tham chiếu nên vẫn không mất chữ ký.
+     */
+    private void promoteCachedSignatures() {
+        if (model == null) return;
+        model.setSignaturePath(promoteOne(model.getSignaturePath(), true));
+        model.setSellerSignaturePath(promoteOne(model.getSellerSignaturePath(), false));
+    }
+
+    private String promoteOne(String path, boolean buyer) {
+        if (path == null || path.isEmpty()) return path;
+        try {
+            File source = new File(path);
+            if (!source.exists()) return path;
+            if (!source.getName().startsWith(SignatureCache.PREFIX)) return path;
+            File dir = pictureDir();
+            if (dir == null) return path;
+            File target = new File(dir,
+                    SignatureCache.promotedFileName(model.getNumber(), buyer));
+            if (target.exists() && !target.delete()) return path;
+            if (!source.renameTo(target)) return path;
+            Logger.appendLog("RECEIPT", "SIGN_PROMOTED " + target.getName());
+            return target.getAbsolutePath();
+        } catch (Exception ex) {
+            Logger.appendLog("RECEIPT", "SIGN_PROMOTE_FAILED " + ex.getMessage());
+            return path;
+        }
+    }
+
+    /** Xoá chữ ký lưu tạm của chuyến sau khi đã XUẤT HOÁ ĐƠN thành công. */
+    private void clearCachedSignature() {
+        try {
+            String flightKey = cacheFlightKey();
+            File dir = pictureDir();
+            if (flightKey == null || dir == null) return;
+            String buyerInUse = model == null ? null : model.getSignaturePath();
+            String sellerInUse = model == null ? null : model.getSellerSignaturePath();
+            for (String name : SignatureCache.filesOfFlight(pictureFileNames(), flightKey)) {
+                File f = new File(dir, name);
+                String abs = f.getAbsolutePath();
+                // Chốt an toàn: tệp vẫn đang là chữ ký của phiếu vừa xuất thì KHÔNG xoá —
+                // bản ghi còn nằm trong hàng đợi gửi và cần đọc lại ảnh này.
+                if (abs.equals(buyerInUse) || abs.equals(sellerInUse)) continue;
+                if (f.exists() && f.delete())
+                    Logger.appendLog("RECEIPT", "SIGN_CACHE_CLEARED " + name);
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("RECEIPT", "SIGN_CACHE_CLEAR_FAILED " + ex.getMessage());
+        }
     }
 
     private final int SELLER_SIGNATURE = 445;
@@ -630,17 +935,22 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
                 zebra.setStateListener(new ZebraWorker.ZebraStateListener() {
                     @Override
                     public void onConnectionError() {
+                        // Đóng hộp tiến trình ở CẢ BA nhánh: việc in nay chạy nền, nhánh nào
+                        // quên đóng là để lại một vòng xoay không bao giờ tắt.
+                        closeProgressDialog();
                         showErrorMessage(R.string.printer_error);
                     }
 
                     @Override
                     public void onError() {
+                        closeProgressDialog();
                     }
 
                     @Override
                     public void onSuccess() {
                         model.setPrinted(true);
                         binding.invalidateAll();
+                        closeProgressDialog();
                     }
                 });
             }
@@ -764,13 +1074,19 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         }
         else if (requestCode == BUYER_SIGNATURE && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
+            // Đổi tên sang tên mang khoá chuyến để lần sau còn mời dùng lại.
+            file = cacheSignatureFile(file, true);
             model.setSignaturePath(file);
+            // Đếm tần suất ký: trước bản vá không có log nào ở đây.
+            Logger.appendLog("RECEIPT", "SIGNED buyer=true receipt=" + model.getNumber());
             binding.invalidateAll();
             ((Button) findViewById(R.id.btnSign)).setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_checked, 0, 0, 0);
         }
         else if (requestCode == SELLER_SIGNATURE && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
+            file = cacheSignatureFile(file, false);
             model.setSellerSignaturePath(file);
+            Logger.appendLog("RECEIPT", "SIGNED buyer=false receipt=" + model.getNumber());
             binding.invalidateAll();
             ((Button) findViewById(R.id.btnSellerSign)).setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_checked, 0, 0, 0);
         }
@@ -982,6 +1298,9 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         // để tránh unlock giữa lúc network đang xử lý
 
         Logger.appendLog("RECEIPT_WINDOW", "save receipt " + model.getNumber());
+        // Chữ ký từ đây là chữ ký THẬT của phiếu, không còn là bản lưu tạm. Phải đổi tên
+        // TRƯỚC khi dựng bản ghi gửi đi, vì đường dẫn sẽ nằm trong hàng đợi đồng bộ.
+        promoteCachedSignatures();
         setProgressDialog();
         sendScreenshot();
 
@@ -1075,6 +1394,9 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
     private void postCompleted() {
         closeProgressDialog();
         Logger.appendLog("RECEIPT_WINDOW", "save receipt completed " + model.getNumber());
+        // Đã xuất hoá đơn xong thì chữ ký tạm hết nhiệm vụ — xoá ngay, chỉ giữ chữ ký thật
+        // theo luồng hiện tại.
+        clearCachedSignature();
         Intent returnIntent = new Intent();
         returnIntent.putExtra("number", model.getNumber());
         returnIntent.putExtra("uniqueId", model.getUniqueId());

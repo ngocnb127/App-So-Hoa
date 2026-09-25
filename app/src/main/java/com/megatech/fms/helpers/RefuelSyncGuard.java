@@ -137,6 +137,21 @@ public final class RefuelSyncGuard {
      */
     public static String mergeByOwnership(String localJson, String remoteJson,
                                           boolean adoptClientOwned, boolean adoptMeasuredTimes) {
+        return mergeByOwnership(localJson, remoteJson, adoptClientOwned, adoptMeasuredTimes, null);
+    }
+
+    /**
+     * @param keepLocalKeys những khoá NGƯỜI DÙNG đã sửa mà server chưa xác nhận. Bản server
+     *                      cho các khoá này chắc chắn CŨ HƠN, nên không được phủ lên.
+     *
+     *                      <p>Không có nó thì mỗi lượt đọc lại kéo bãi đỗ / số hiệu tàu bay /
+     *                      hãng bay về giá trị cũ của server, đúng phản ánh "sửa xong, load
+     *                      lại thì mất". Chỉ chặn ĐÚNG các khoá đang chờ, nên thay đổi của
+     *                      điều độ ở mọi khoá khác vẫn về xe bình thường.
+     */
+    public static String mergeByOwnership(String localJson, String remoteJson,
+                                          boolean adoptClientOwned, boolean adoptMeasuredTimes,
+                                          java.util.Set<String> keepLocalKeys) {
         if (remoteJson == null || remoteJson.isEmpty()) return localJson;
         if (localJson == null || localJson.isEmpty()) return remoteJson;
 
@@ -160,11 +175,14 @@ public final class RefuelSyncGuard {
             // là dữ liệu, chỉ là dấu vết của lần sinh phản hồi.
             for (String key : remote.keySet()) {
                 if (!adoptMeasuredTimes && DEVICE_MEASURED_TIME_KEYS.contains(key)) continue;
+                if (keepLocalKeys != null && keepLocalKeys.contains(key)) continue;
                 overlay(merged, remote, key);
             }
         } else {
-            for (String key : SERVER_OWNED_KEYS)
+            for (String key : SERVER_OWNED_KEYS) {
+                if (keepLocalKeys != null && keepLocalKeys.contains(key)) continue;
                 overlay(merged, remote, key);
+            }
             // Mẻ của xe khác đã chốt: giờ trên server là giờ xe đó thật sự đo, còn bản local
             // chỉ là giá trị lúc phân xe. Giữ bản local ở đây chính là đường sinh ra hoá đơn
             // in giờ bắt đầu 06:34 cho chuyến tra nạp lúc 15:28.
@@ -296,11 +314,18 @@ public final class RefuelSyncGuard {
      */
     public static RefuelItemData applyRemote(RefuelItem localItem, RefuelItemData remote,
                                              boolean adoptClientOwned, boolean adoptMeasuredTimes) {
+        return applyRemote(localItem, remote, adoptClientOwned, adoptMeasuredTimes, null);
+    }
+
+    /** @param keepLocalKeys xem {@link #mergeByOwnership(String, String, boolean, boolean, java.util.Set)}. */
+    public static RefuelItemData applyRemote(RefuelItem localItem, RefuelItemData remote,
+                                             boolean adoptClientOwned, boolean adoptMeasuredTimes,
+                                             java.util.Set<String> keepLocalKeys) {
         if (localItem == null || remote == null) return null;
 
         String remoteJson = isBlank(remote.getRawJson()) ? remote.toJson() : remote.getRawJson();
         String mergedJson = mergeByOwnership(localItem.getJsonData(), remoteJson,
-                adoptClientOwned, adoptMeasuredTimes);
+                adoptClientOwned, adoptMeasuredTimes, keepLocalKeys);
 
         RefuelItemData merged;
         try {

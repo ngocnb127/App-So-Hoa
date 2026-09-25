@@ -36,6 +36,63 @@ public final class ZplLayoutBuilder {
      */
     private static final double CHAR_WIDTH_RATIO = 0.55d;
 
+    /**
+     * Bề rộng ước lượng của từng ký tự, tính theo cỡ chữ.
+     *
+     * <p>Một tỉ lệ chung 0,55 là quá hẹp cho chữ HOA: tiêu đề mục in hoa bị tính thừa chỗ nên
+     * tràn khỏi ô {@code ^FB} và máy in ép phần dư vào cùng một dòng — đúng lỗi "chữ bị đè"
+     * trên bản in thử ngày 2026-09-23.
+     */
+    private static double charRatio(char c) {
+        if (c == ' ') return 0.30d;
+        if (Character.isUpperCase(c) || Character.isDigit(c)) return 0.68d;
+        if (Character.isLetter(c)) return 0.55d;
+        return 0.40d;
+    }
+
+    /** Bề rộng ước lượng của một chuỗi ở cỡ chữ cho trước (dots). */
+    public static double textWidth(String text, int fontSize) {
+        if (text == null) return 0;
+        double w = 0;
+        for (int i = 0; i < text.length(); i++) w += charRatio(text.charAt(i));
+        return w * fontSize;
+    }
+
+    /** Wrap theo bề rộng thật của chữ, không theo số ký tự. */
+    public static List<String> wrapToWidth(String text, int widthDots, int fontSize) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.trim().isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+        StringBuilder line = new StringBuilder();
+        for (String word : text.trim().split("\\s+")) {
+            while (textWidth(word, fontSize) > widthDots) {
+                // Từ dài hơn cả dòng: cắt cứng cho tới khi vừa.
+                int cut = word.length();
+                while (cut > 1 && textWidth(word.substring(0, cut), fontSize) > widthDots) cut--;
+                if (line.length() > 0) {
+                    lines.add(line.toString());
+                    line.setLength(0);
+                }
+                lines.add(word.substring(0, cut));
+                word = word.substring(cut);
+            }
+            String candidate = line.length() == 0 ? word : line + " " + word;
+            if (textWidth(candidate, fontSize) <= widthDots) {
+                line.setLength(0);
+                line.append(candidate);
+            } else {
+                if (line.length() > 0) lines.add(line.toString());
+                line.setLength(0);
+                line.append(word);
+            }
+        }
+        if (line.length() > 0) lines.add(line.toString());
+        if (lines.isEmpty()) lines.add("");
+        return lines;
+    }
+
     public enum Align {
         LEFT("L"),
         CENTER("C"),
@@ -58,6 +115,7 @@ public final class ZplLayoutBuilder {
 
     private int y;
     private int fontSize = 30;
+    private boolean bold;
 
     public ZplLayoutBuilder(int printWidth, boolean zq520) {
         this.printWidth = printWidth > 0 ? printWidth : DEFAULT_PRINT_WIDTH;
@@ -71,6 +129,18 @@ public final class ZplLayoutBuilder {
 
     public int getFontSize() {
         return fontSize;
+    }
+
+    /**
+     * Bật/tắt in đậm cho các trường tiếp theo.
+     *
+     * <p>ZPL không có thuộc tính đậm cho font TrueType và máy in chỉ nạp bản nét thường, nên
+     * đậm = in chồng chính trường đó lệch 1 dot. Chỉ dùng cho tiêu đề: đắp cả phiếu làm chữ
+     * nhỏ dính nét, đọc rối.
+     */
+    public ZplLayoutBuilder setBold(boolean bold) {
+        this.bold = bold;
+        return this;
     }
 
     /** Đổi cỡ chữ cho các dòng tiếp theo. Chiều cao dòng bằng cỡ chữ. */
@@ -104,7 +174,7 @@ public final class ZplLayoutBuilder {
      * TRƯỚC khi ký/in, chứ không để bản in âm thầm mất chữ.
      */
     public ZplLayoutBuilder addWrappedText(String text, Align align, int maxLines) {
-        List<String> lines = wrap(text, maxCharsPerLine(fontSize, printWidth));
+        List<String> lines = wrapToWidth(text, printWidth, fontSize);
         if (lines.size() > maxLines && maxLines > 0) {
             lines = new ArrayList<>(lines.subList(0, maxLines));
             lines.set(maxLines - 1, lines.get(maxLines - 1) + "...");
@@ -124,7 +194,7 @@ public final class ZplLayoutBuilder {
         String shown = isBlank(value) ? "....." : value;
         int valueWidth = printWidth - LABEL_WIDTH - 20;
 
-        List<String> valueLines = wrap(shown, maxCharsPerLine(fontSize, valueWidth));
+        List<String> valueLines = wrapToWidth(shown, valueWidth, fontSize);
         int startY = y;
 
         field(0, LABEL_WIDTH, Align.LEFT, label);
@@ -134,6 +204,91 @@ public final class ZplLayoutBuilder {
             fieldAt(LABEL_WIDTH, y, valueWidth, Align.RIGHT, line);
             y += fontSize;
         }
+        return this;
+    }
+
+    /**
+     * Ô đánh dấu là <b>hình vuông thật</b> (vẽ bằng ^GB), tick là hai nét chéo (^GD) —
+     * không dùng "[X]"/"[ ]" vì trên giấy nhiệt hai dấu ngoặc vuông trông như chữ, người ký
+     * phải nhìn kỹ mới biết ô nào được chọn.
+     *
+     * @param indent lề trái của ô vuông (dots)
+     */
+    public ZplLayoutBuilder addCheckOption(boolean checked, String text, int indent) {
+        int box = Math.max(fontSize - 8, 14);
+        int boxTop = y + 4;
+
+        body.append("^FO").append(indent).append(',').append(boxTop)
+                .append("^GB").append(box).append(',').append(box).append(",2^FS\n");
+        if (checked) {
+            int pad = 5;
+            int inner = box - pad * 2;
+            body.append("^FO").append(indent + pad).append(',').append(boxTop + pad)
+                    .append("^GD").append(inner).append(',').append(inner).append(",2,B,R^FS\n");
+            body.append("^FO").append(indent + pad).append(',').append(boxTop + pad)
+                    .append("^GD").append(inner).append(',').append(inner).append(",2,B,L^FS\n");
+        }
+
+        int textX = indent + box + 12;
+        int textWidth = printWidth - textX;
+        List<String> lines = wrapToWidth(text, textWidth, fontSize);
+        for (String line : lines) {
+            fieldAt(textX, y, textWidth, Align.LEFT, line);
+            y += fontSize;
+        }
+        y += 4;
+        return this;
+    }
+
+    /**
+     * Nhiều ô đánh dấu trên CÙNG một dòng, chia đều bề ngang — đúng kiểu "Có/Yes  Không/No"
+     * nằm cạnh nhau của bản giấy, và đỡ tốn giấy hơn mỗi lựa chọn một dòng.
+     */
+    public ZplLayoutBuilder addCheckOptionsRow(String[] labels, boolean[] checked, int indent) {
+        if (labels == null || labels.length == 0) return this;
+
+        int box = Math.max(fontSize - 8, 14);
+        int cell = (printWidth - indent) / labels.length;
+        int startY = y;
+        int maxLines = 1;
+
+        for (int i = 0; i < labels.length; i++) {
+            int x = indent + i * cell;
+            int boxTop = startY + 4;
+
+            body.append("^FO").append(x).append(',').append(boxTop)
+                    .append("^GB").append(box).append(',').append(box).append(",2^FS\n");
+            if (i < checked.length && checked[i]) {
+                int pad = 5;
+                int inner = box - pad * 2;
+                body.append("^FO").append(x + pad).append(',').append(boxTop + pad)
+                        .append("^GD").append(inner).append(',').append(inner).append(",2,B,R^FS\n");
+                body.append("^FO").append(x + pad).append(',').append(boxTop + pad)
+                        .append("^GD").append(inner).append(',').append(inner).append(",2,B,L^FS\n");
+            }
+
+            int textX = x + box + 10;
+            int textWidth = cell - box - 14;
+            List<String> lines = wrapToWidth(labels[i], textWidth, fontSize);
+            for (int j = 0; j < lines.size(); j++) {
+                fieldAt(textX, startY + j * fontSize, textWidth, Align.LEFT, lines.get(j));
+            }
+            maxLines = Math.max(maxLines, lines.size());
+        }
+
+        y = startY + maxLines * fontSize + 6;
+        return this;
+    }
+
+    /**
+     * Khung viền quanh một hạng mục, vẽ SAU khi đã in xong nội dung của hạng mục đó.
+     * Gọi {@link #currentY()} trước và sau phần nội dung để lấy hai mốc.
+     */
+    public ZplLayoutBuilder addBoxAround(int top, int bottom, int padding) {
+        int height = bottom - top + padding * 2;
+        if (height <= 0) return this;
+        body.append("^FO0,").append(top - padding)
+                .append("^GB").append(printWidth).append(',').append(height).append(",2^FS\n");
         return this;
     }
 
@@ -178,6 +333,11 @@ public final class ZplLayoutBuilder {
     }
 
     private void fieldAt(int x, int atY, int width, Align align, String text) {
+        emitField(x, atY, width, align, text);
+        if (bold) emitField(x + 1, atY, width, align, text);
+    }
+
+    private void emitField(int x, int atY, int width, Align align, String text) {
         body.append("^FO").append(x).append(',').append(atY)
                 .append("^FB").append(width).append(",1,0,").append(align.getCode()).append(",0")
                 .append("^FD").append(escape(text)).append("^FS\n");

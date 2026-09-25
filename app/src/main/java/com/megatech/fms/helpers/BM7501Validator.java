@@ -94,11 +94,9 @@ public final class BM7501Validator {
                     "Chưa trả lời: trước khi hút đã xả tất cả thùng để lấy mẫu KTCL chưa");
         }
 
-        // A11/A12 — vi sinh chỉ bắt buộc khi hãng ĐÃ thực hiện kiểm tra
-        if (m.getCustomerMicrobialTestPerformed() == null) {
-            error(out, "customerMicrobialTestPerformed",
-                    "Chưa trả lời: hãng đã kiểm tra vi sinh chưa");
-        } else if (m.getCustomerMicrobialTestPerformed() == TriState.YES) {
+        // A11/A12 — "Trường hợp hãng đã kiểm tra vi sinh": không kiểm tra thì bỏ trống;
+        // đã khai thiết bị hoặc kết quả thì phải khai đủ cả hai.
+        if (m.getCustomerMicrobialTestPerformed() == TriState.YES) {
             if (m.getCustomerMicrobialKit() == null) {
                 error(out, "customerMicrobialKit", "Chưa chọn thiết bị kiểm tra vi sinh");
             } else if (m.getCustomerMicrobialKit() == BM7501Model.MicrobialKit.OTHER
@@ -146,22 +144,20 @@ public final class BM7501Validator {
             checkDensity(out, "densityKgM3", m.getDensityKgM3());
         }
 
-        if (m.isConductivityRequired() && m.getConductivityPsM() == null) {
-            error(out, "conductivityPsM", "Có yêu cầu đo độ dẫn điện nhưng chưa nhập kết quả (pS/m)");
-        }
+        // Độ dẫn điện: biểu mẫu ghi "(nếu yêu cầu)" nên để trống là hợp lệ.
 
-        // Vi sinh mục B: điều kiện đúng theo biểu mẫu (VAC/CWD không đạt · nghi ngờ · khách yêu cầu)
-        if (m.isSkypecMicrobialRequired()) {
+        // Vi sinh mục B: bắt buộc theo điều kiện của biểu mẫu (VAC/CWD không đạt · nghi ngờ ·
+        // khách yêu cầu). Ngoài ra, đã chọn thiết bị thì phải có kết quả và ngược lại.
+        // Biểu mẫu không có ô "lý do kiểm tra vi sinh" nên không đòi.
+        boolean anyMicro = m.getSkypecMicrobialKit() != null || m.getSkypecMicrobialResult() != null;
+        if (m.isSkypecMicrobialRequired() || anyMicro) {
+            String prefix = m.isSkypecMicrobialRequired()
+                    ? "Trường hợp này bắt buộc kiểm tra vi sinh: " : "Kiểm tra vi sinh (mục B): ";
             if (m.getSkypecMicrobialKit() == null) {
-                error(out, "skypecMicrobialKit",
-                        "Trường hợp này bắt buộc kiểm tra vi sinh: chưa chọn thiết bị");
+                error(out, "skypecMicrobialKit", prefix + "chưa chọn thiết bị");
             }
             if (m.getSkypecMicrobialResult() == null) {
-                error(out, "skypecMicrobialResult",
-                        "Trường hợp này bắt buộc kiểm tra vi sinh: chưa chọn kết quả");
-            }
-            if (isBlank(m.getMicrobialReason())) {
-                error(out, "microbialReason", "Chưa ghi lý do phải kiểm tra vi sinh");
+                error(out, "skypecMicrobialResult", prefix + "chưa chọn kết quả");
             }
         }
 
@@ -186,10 +182,10 @@ public final class BM7501Validator {
 
         if (m.getMethod() == null) error(out, "method", "Chưa chọn phương thức hút");
 
-        // C4 — hai tín hiệu chuẩn là nội dung hướng dẫn; chỉ cần xác nhận đã phổ biến.
-        if (!m.isSignalsBriefed() && isBlank(m.getOtherSignal())) {
-            error(out, "signalsBriefed",
-                    "Chưa xác nhận đã phổ biến/thống nhất phương thức ra tín hiệu");
+        // C4 — phải thống nhất ít nhất một phương thức ra tín hiệu (ô chuẩn hoặc tín hiệu khác).
+        if (!m.isSignalsBriefed() && !m.isSignalThumbUp() && !m.isSignalCrossArms()
+                && isBlank(m.getOtherSignal())) {
+            error(out, "signalsBriefed", "Chưa chọn phương thức ra tín hiệu trong công tác phối hợp");
         }
 
         if (m.getExpectedKg() == null) error(out, "expectedKg", "Chưa nhập lượng hút dự kiến (kg)");
@@ -240,10 +236,12 @@ public final class BM7501Validator {
     // ------------------------------------------------------------- trước khi ký
 
     /**
-     * Kiểm tra toàn phiếu trước khi ký: A + B + C + ba chữ ký + họ tên hai bên.
+     * Kiểm tra toàn phiếu trước khi in/xuất: A + B + C + họ tên đại diện SKYPEC.
      *
-     * <p>Ba chữ ký theo quyết định đã chốt: khách hàng xác nhận mục A, SKYPEC ký cuối,
-     * khách hàng ký cuối.
+     * <p>Thiếu chữ ký chỉ là {@link Severity#WARNING} — xem ghi chú trong thân hàm.
+     *
+     * <p>Hai chữ ký cuối phiếu: SKYPEC và khách hàng. Họ tên đại diện hãng đã khai ở mục A nên
+     * khối ký của khách hàng chỉ cần chữ ký (chốt ngày 2026-09-23).
      */
     public static List<Finding> validateForSigning(BM7501Model m) {
         List<Finding> out = new ArrayList<>();
@@ -253,22 +251,17 @@ public final class BM7501Validator {
         out.addAll(validateSectionB(m));
         out.addAll(validateSectionC(m));
 
-        if (isBlank(m.getCustomerSectionASignaturePath())) {
-            error(out, "customerSectionASignaturePath",
-                    "Thiếu chữ ký đại diện hãng xác nhận mục A");
-        }
+        // Chữ ký chỉ là CẢNH BÁO: luồng thật là in phiếu ra rồi hai bên ký tay trên giấy
+        // (chủ dự án chốt 2026-09-23). Bắt buộc ký trên tablet sẽ khoá cứng những phiếu ký tay.
         if (isBlank(m.getSkypecSignaturePath())) {
-            error(out, "skypecSignaturePath", "Thiếu chữ ký đại diện SKYPEC");
+            warning(out, "skypecSignaturePath", "Chưa có chữ ký đại diện SKYPEC trên máy");
         }
         if (isBlank(m.getCustomerFinalSignaturePath())) {
-            error(out, "customerFinalSignaturePath", "Thiếu chữ ký xác nhận cuối của khách hàng");
+            warning(out, "customerFinalSignaturePath", "Chưa có chữ ký đại diện khách hàng trên máy");
         }
 
         if (isBlank(m.getSkypecRepName())) {
             error(out, "skypecRepName", "Chưa ghi rõ họ tên đại diện SKYPEC");
-        }
-        if (isBlank(m.getCustomerRepFinalName())) {
-            error(out, "customerRepFinalName", "Chưa ghi rõ họ tên đại diện khách hàng");
         }
 
         return out;
@@ -302,8 +295,21 @@ public final class BM7501Validator {
         out.add(new Finding(Severity.ERROR, field, message));
     }
 
+    private static void warning(List<Finding> out, String field, String message) {
+        out.add(new Finding(Severity.WARNING, field, message));
+    }
+
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    /** Tiện ích cho UI: chỉ lấy cảnh báo — thứ nên hỏi lại người dùng chứ không chặn. */
+    public static List<Finding> warningsOnly(List<Finding> findings) {
+        List<Finding> out = new ArrayList<>();
+        for (Finding f : findings) {
+            if (f.getSeverity() == Severity.WARNING) out.add(f);
+        }
+        return out;
     }
 
     /** Tiện ích cho UI: bỏ qua cảnh báo, chỉ lấy lỗi chặn. */

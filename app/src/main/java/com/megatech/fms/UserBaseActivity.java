@@ -12,6 +12,7 @@ import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -22,7 +23,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +41,7 @@ import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.Logger;
 import com.megatech.fms.helpers.PrintWorker;
 import com.megatech.fms.helpers.ZebraWorker;
+import com.megatech.fms.helpers.print.PrinterProvisioner;
 import com.megatech.fms.model.LogEntryModel;
 
 
@@ -324,6 +329,9 @@ public class UserBaseActivity extends BaseActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         optionMenu = menu;
+        // Lệnh factory là ZPL/SGD của Zebra; bản máy in kim không có gì để factory.
+        MenuItem factory = menu.findItem(R.id.action_printer_factory);
+        if (factory != null) factory.setVisible(BuildConfig.THERMAL_PRINTER);
         return true;
     }
 
@@ -352,9 +360,35 @@ public class UserBaseActivity extends BaseActivity {
                 showRestart();
                 break;
             case R.id.action_send_log:
-                if (Logger.sendLog()) {
-                    showMessage(R.string.info, R.string.send_log_completed,R.drawable.ic_checked_circle, null);
-                }
+                // PHẢI ra luồng nền: sendLog() đọc bảng nhật ký trong Room, mà Room chặn cứng
+                // truy vấn trên luồng giao diện (assertNotMainThread) — gọi thẳng ở đây là
+                // VĂNG APP. StrictMode.permitAll() ở BaseActivity không che được, đó là chốt
+                // riêng của Room. Cùng một lỗi với đường chốt mẻ, sửa 06-09-2026.
+                //
+                // Nút này còn là thứ người dùng bấm NGAY SAU khi gặp sự cố để gửi nhật ký về,
+                // nên nó văng là mất luôn đường chẩn đoán của mọi lỗi khác.
+                new Thread(() -> {
+                    boolean sent = false;
+                    try {
+                        sent = Logger.sendLog();
+                    } catch (Exception ex) {
+                        Logger.appendLog("LOGSEND", "Gửi nhật ký lỗi: " + ex);
+                    }
+                    final boolean ok = sent;
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        if (ok)
+                            showMessage(R.string.info, R.string.send_log_completed,
+                                    R.drawable.ic_checked_circle, null);
+                        else
+                            showMessage(R.string.error, R.string.send_log_failed,
+                                    R.drawable.ic_error, null);
+                    });
+                }, "FMS-Send-Log").start();
+                break;
+
+            case R.id.action_printer_factory:
+                if (BuildConfig.THERMAL_PRINTER) startPrinterFactory();
                 break;
 
             case R.id.action_printer_test:
@@ -441,6 +475,120 @@ public class UserBaseActivity extends BaseActivity {
             zebraWorker = new ZebraWorker(this);
         return zebraWorker;
     }
+    /**
+     * Factory máy in, bước 1: đọc máy in đang cầm trên tay.
+     *
+     * <p>Đọc TRƯỚC khi hỏi xác nhận để hộp thoại nói được tên Bluetooth hiện tại và tên sẽ
+     * hiện ra sau factory — người dùng tự ghép lại, nên phải biết tìm tên nào.
+     */
+    private void startPrinterFactory() {
+        setProgressDialog();
+        getZebraWorker().readPrinterIdentity(identity -> {
+            closeProgressDialog();
+            if (!isActive || isFinishing() || isDestroyed()) return;
+
+            if (identity.error != null) {
+                showErrorMessage(R.string.printer_factory,
+                        getString(R.string.printer_factory_read_failed, identity.error),
+                        R.drawable.ic_error);
+                return;
+            }
+            if (identity.isCpclMode()) {
+                showErrorMessage(R.string.printer_factory,
+                        getString(R.string.printer_factory_cpcl, identity.language),
+                        R.drawable.ic_warning);
+                return;
+            }
+            showPrinterFactoryConfirm(identity);
+        });
+    }
+
+    /** Factory máy in, bước 2: xác nhận, kèm ô nhập tên Bluetooth mới (tuỳ chọn). */
+    private void showPrinterFactoryConfirm(PrinterProvisioner.Identity identity) {
+        String unknown = getString(R.string.printer_factory_unknown);
+        String currentName = identity.bluetoothName == null ? unknown : identity.bluetoothName;
+        String serial = identity.serial == null ? unknown : identity.serial;
+
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(padding, padding / 2, padding, 0);
+
+        TextView message = new TextView(this);
+        message.setText(getString(R.string.printer_factory_confirm, currentName, serial));
+        message.setTextSize(16);
+        layout.addView(message);
+
+        EditText nameInput = new EditText(this);
+        nameInput.setHint(R.string.printer_factory_name_hint);
+        nameInput.setSingleLine(true);
+        nameInput.setFilters(new InputFilter[]{
+                new InputFilter.LengthFilter(PrinterProvisioner.BLUETOOTH_NAME_MAX)});
+        layout.addView(nameInput);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(layout);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.printer_factory)
+                .setIcon(R.drawable.ic_warning)
+                .setView(scroll)
+                .setCancelable(false)
+                .setPositiveButton(R.string.printer_factory_button, null)
+                .setNegativeButton(R.string.back, (d, which) -> {
+                    Logger.saveLog(LogEntryModel.LOG_TYPE.USER_ACTION,
+                            "Huỷ factory máy in", getPackageName());
+                    d.dismiss();
+                })
+                .create();
+        dialog.show();
+
+        // Gắn sau show() để tên sai thì báo ngay trên ô nhập, KHÔNG đóng hộp thoại — đóng
+        // là bắt người dùng đọc lại từ đầu chỉ vì gõ nhầm một dấu.
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String typed = nameInput.getText().toString();
+            String problem = PrinterProvisioner.bluetoothNameProblem(typed);
+            if (problem != null) {
+                nameInput.setError(problem);
+                return;
+            }
+            dialog.dismiss();
+            String newName = PrinterProvisioner.normalizeBluetoothName(typed);
+            Logger.saveLog(LogEntryModel.LOG_TYPE.USER_ACTION, "Xác nhận factory máy in "
+                    + currentName + (newName == null ? "" : " → " + newName), getPackageName());
+            runPrinterFactory(newName, newName != null ? newName
+                    : getString(R.string.printer_factory_done_default_name, serial));
+        });
+    }
+
+    /** Factory máy in, bước 3: gửi lệnh và báo tên cần ghép lại. */
+    private void runPrinterFactory(String newName, String nameToPair) {
+        setProgressDialog();
+        getZebraWorker().setStateListener(new ZebraWorker.ZebraStateListener() {
+            @Override
+            public void onConnectionError() {
+                closeProgressDialog();
+                showErrorMessage(R.string.printer_connection_error);
+            }
+
+            @Override
+            public void onError() {
+                closeProgressDialog();
+                showErrorMessage(R.string.printer_factory,
+                        getString(R.string.printer_factory_failed), R.drawable.ic_error);
+            }
+
+            @Override
+            public void onSuccess() {
+                closeProgressDialog();
+                showErrorMessage(R.string.printer_factory,
+                        getString(R.string.printer_factory_done, nameToPair),
+                        R.drawable.ic_info);
+            }
+        });
+        getZebraWorker().factoryReset(newName);
+    }
+
     private void showUpdate() {
         Intent intent = new Intent(this, VersionUpdateActivity.class);
         startActivity(intent);

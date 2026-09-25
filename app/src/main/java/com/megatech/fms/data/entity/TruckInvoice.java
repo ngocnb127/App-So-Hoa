@@ -1,6 +1,7 @@
 package com.megatech.fms.data.entity;
 
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -23,6 +24,16 @@ public class TruckInvoice {
     @SerializedName("FlightId") private long flightId;
     @SerializedName("hoadon68_id") private String electronicInvoiceId;
     @SerializedName("tthai") private String status;
+
+    /**
+     * Id phiếu trên server, dùng để tải phiếu về in lại ({@code GET api/receipts/{id}}).
+     *
+     * <p>{@code @Ignore} là bắt buộc: đây là cột MỚI, mà thêm cột vào Room là đổi schema và
+     * chặn cập nhật trên máy đang có dữ liệu chờ đẩy. Trường này chỉ sống trong phiên tải từ
+     * API — đủ dùng, vì in lại phiếu vốn phải có mạng khi phiếu không nằm trong máy.
+     */
+    @Ignore
+    @SerializedName("ReceiptId") private int receiptId;
 
     public long getLocalId() { return localId; }
     public void setLocalId(long localId) { this.localId = localId; }
@@ -48,4 +59,6 @@ public class TruckInvoice {
     public void setElectronicInvoiceId(String electronicInvoiceId) { this.electronicInvoiceId = electronicInvoiceId; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public int getReceiptId() { return receiptId; }
+    public void setReceiptId(int receiptId) { this.receiptId = receiptId; }
 }

@@ -24,8 +24,6 @@ public final class BM7501Signatures {
     private BM7501Signatures() {
     }
 
-    /** Chữ ký đại diện hãng xác nhận lời khai mục A. */
-    public static final String SLOT_CUSTOMER_SECTION_A = "customer-section-a";
     /** Chữ ký người mua — đại diện khách hàng xác nhận cuối. */
     public static final String SLOT_CUSTOMER_FINAL = "customer-final";
     /** Chữ ký người bán — đại diện SKYPEC. */

@@ -4,8 +4,6 @@ import androidx.room.Transaction;
 
 import com.megatech.fms.data.dao.BM7501Dao;
 import com.megatech.fms.data.entity.BM7501;
-import com.megatech.fms.helpers.BM7501Canonical;
-import com.megatech.fms.helpers.BM7501State;
 import com.megatech.fms.model.BM7501Model;
 import com.megatech.fms.model.BM7501Model.BusinessStatus;
 import com.megatech.fms.model.BM7501Model.SyncStatus;
@@ -47,9 +45,9 @@ public class BM7501Repository {
 
     /**
      * Bất biến "mỗi mẻ chỉ một phiếu hiệu lực" không được DB ép buộc (Room không biểu diễn
-     * được partial unique index), nên phải tự kiểm tra khi mở phiếu và trước khi ký.
+     * được partial unique index), nên phải tự kiểm tra mỗi lần mở phiếu.
      *
-     * @return true nếu dữ liệu bất thường — tầng gọi phải KHOÁ ký/in và ghi log,
+     * @return true nếu dữ liệu bất thường — tầng gọi phải KHOÁ nhập/in và ghi log,
      *         tuyệt đối không tự chọn bừa một revision.
      */
     public boolean hasMultipleActive(String refuelItemUniqueId) {
@@ -59,6 +57,15 @@ public class BM7501Repository {
 
     public int countPendingSync() {
         return dao.countPendingSync();
+    }
+
+    /** Phiếu chờ đẩy lên server, mới nhất theo thứ tự lập. */
+    public java.util.List<BM7501Model> getPendingSync() {
+        java.util.List<BM7501Model> out = new java.util.ArrayList<>();
+        for (BM7501 entity : dao.getPendingSync()) {
+            if (entity != null) out.add(entity.toModel());
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------ tạo
@@ -93,41 +100,6 @@ public class BM7501Repository {
         return model;
     }
 
-    /**
-     * Tạo revision thay thế cho phiếu đã ký/in: vô hiệu hoá bản cũ rồi chèn bản mới,
-     * trong cùng một giao dịch để không bao giờ tồn tại hai bản hiệu lực.
-     */
-    @Transaction
-    public BM7501Model supersede(BM7501Model current, BM7501Model replacement) {
-        if (current == null || replacement == null) {
-            throw new IllegalArgumentException("Thiếu phiếu cũ hoặc phiếu thay thế");
-        }
-        BusinessStatus status = current.getBusinessStatus();
-        if (status != BusinessStatus.SIGNED && status != BusinessStatus.PRINTED) {
-            throw new IllegalStateException(
-                    "Chỉ phiếu đã ký/in mới được thay thế, đang ở " + status);
-        }
-
-        if (dao.markVoided(current.getUniqueId(), System.currentTimeMillis()) == 0) {
-            throw new IllegalStateException("Không vô hiệu hoá được phiếu cũ");
-        }
-
-        replacement.setRefuelItemUniqueId(current.getRefuelItemUniqueId());
-        replacement.setSupersedesUniqueId(current.getUniqueId());
-        replacement.setRevisionNumber(dao.getMaxRevision(current.getRefuelItemUniqueId()) + 1);
-        replacement.setBusinessStatus(BusinessStatus.DRAFT);
-        replacement.setSyncStatus(SyncStatus.NOT_READY);
-        replacement.setLocalRevision(0);
-
-        BM7501 entity = BM7501.fromModel(replacement);
-        entity.setLocalModified(true);
-        entity.setSynced(false);
-        entity.setDateUpdated(new Date());
-
-        replacement.setLocalId((int) dao.insert(entity));
-        return replacement;
-    }
-
     // ------------------------------------------------------------------ ghi
 
     /**
@@ -152,99 +124,81 @@ public class BM7501Repository {
         return WriteResult.OK;
     }
 
-    /** Xác nhận hoàn tất một bước (A/B/C). Chỉ gọi khi validation của bước đó đã đạt. */
-    public WriteResult advanceStep(BM7501Model model, BusinessStatus target) {
+    /**
+     * Điền số phiếu khi mẻ hút được cấp số sau lúc lập phiếu.
+     *
+     * <p>Số chứng từ nằm ở cột phẳng nên {@link #savePayload} không chạm tới được; không có
+     * đường này thì phiếu lập sớm sẽ mãi không có số và không ký được.
+     *
+     * @return {@link WriteResult#OK} nếu vừa điền được; {@link WriteResult#INVALID_STATE}
+     *         nếu phiếu đã có số hoặc đã khoá — đều không phải lỗi cần báo người dùng.
+     */
+    public WriteResult fillLocalNumber(BM7501Model model, String localNumber) {
         if (model == null || model.getUniqueId() == null) return WriteResult.INVALID_STATE;
-        if (!BM7501State.canTransition(model.getBusinessStatus(), target)) {
+        if (localNumber == null || localNumber.trim().isEmpty()) return WriteResult.INVALID_STATE;
+        if (model.getLocalNumber() != null && !model.getLocalNumber().trim().isEmpty()) {
             return WriteResult.INVALID_STATE;
         }
-        if (!target.isEditable()) return WriteResult.INVALID_STATE;
 
-        int affected = dao.updateStatusIfEditable(
-                model.getUniqueId(), target.name(),
-                model.getLocalRevision(), System.currentTimeMillis());
+        int affected = dao.fillLocalNumberIfEmpty(
+                model.getUniqueId(), localNumber.trim(), System.currentTimeMillis());
+        if (affected == 0) return WriteResult.INVALID_STATE;
 
-        if (affected == 0) return WriteResult.CONFLICT;
-
+        model.setLocalNumber(localNumber.trim());
         model.setLocalRevision(model.getLocalRevision() + 1);
-        model.setBusinessStatus(target);
         return WriteResult.OK;
     }
 
     /**
-     * Ký phiếu: đóng băng nội dung và ghi băm bản đã ký.
+     * Xuất phiếu: chốt sổ. Ghi nốt nội dung rồi khoá — sau lệnh này chỉ in lại được.
      *
-     * <p>Chạy trong một giao dịch cùng lần ghi nội dung cuối, để không có khe hở giữa
-     * "lưu nội dung" và "đóng dấu đã ký".
+     * <p>Tầng gọi phải kiểm tra đủ thông tin và có số phiếu TRƯỚC khi gọi; ở đây chỉ lo phần
+     * ghi cho đúng thứ tự (nội dung trước, khoá sau) để không xuất nhầm một bản còn thiếu.
      */
     @Transaction
-    public WriteResult sign(BM7501Model model) {
+    public WriteResult export(BM7501Model model, int userId) {
         if (model == null || model.getUniqueId() == null) return WriteResult.INVALID_STATE;
-        if (model.getBusinessStatus() != BusinessStatus.C_DONE) return WriteResult.INVALID_STATE;
-        if (hasMultipleActive(model.getRefuelItemUniqueId())) return WriteResult.INVALID_STATE;
+        if (!model.isEditable()) return WriteResult.INVALID_STATE;
 
-        // Lưu nốt nội dung trước khi đóng băng.
+        Date exportedAt = new Date();
+        model.setExportedAt(exportedAt);
+        model.setExportedByUserId(userId);
+
         WriteResult saved = savePayload(model);
-        if (saved == WriteResult.CONFLICT) return WriteResult.CONFLICT;
+        if (saved != WriteResult.OK) return saved;
 
-        Date signedAt = new Date();
-        String payload = model.toJson();
-        String manifest = BM7501Canonical.manifest(
-                model.getSchemaVersion(),
-                model.getUniqueId(),
-                model.getRefuelItemUniqueId(),
-                model.getRevisionNumber(),
-                model.getLocalNumber(),
-                BM7501Canonical.sha256OfString(payload),
-                model.getCustomerSectionASignatureSha256(),
-                model.getCustomerFinalSignatureSha256(),
-                model.getSkypecSignatureSha256(),
-                signedAt.getTime());
-        String hash = BM7501Canonical.hashManifest(manifest);
-
-        if (dao.markSigned(model.getUniqueId(), hash, signedAt.getTime()) == 0) {
+        if (dao.markExported(model.getUniqueId(), model.getLocalRevision(),
+                exportedAt.getTime()) == 0) {
             return WriteResult.CONFLICT;
         }
 
-        model.setSignedAt(signedAt);
-        model.setSignedSnapshotHash(hash);
-        model.setBusinessStatus(BusinessStatus.SIGNED);
+        model.setLocalRevision(model.getLocalRevision() + 1);
+        model.setBusinessStatus(BusinessStatus.EXPORTED);
         model.setSyncStatus(SyncStatus.PENDING);
-        dao.updateSyncStatus(model.getUniqueId(), SyncStatus.PENDING.name());
         return WriteResult.OK;
     }
 
     /**
-     * Đánh dấu đã in.
+     * Trạng thái phiếu của nhiều mẻ hút, tra một lần cho cả danh sách.
      *
-     * @param isReprint true nếu là bản sao — tăng {@code reprintCount} để bản in sau đóng
-     *                  dấu BẢN SAO và không nhân bản bản gốc không kiểm soát.
+     * @return map theo {@code refuelItemUniqueId}; mẻ chưa có phiếu thì không có khoá
      */
-    public WriteResult markPrinted(BM7501Model model, boolean isReprint) {
-        if (model == null || model.getUniqueId() == null) return WriteResult.INVALID_STATE;
+    public java.util.Map<String, BM7501Model> getActiveByRefuelItems(java.util.List<String> refuelItemUniqueIds) {
+        java.util.Map<String, BM7501Model> out = new java.util.HashMap<>();
+        if (refuelItemUniqueIds == null || refuelItemUniqueIds.isEmpty()) return out;
 
-        BusinessStatus status = model.getBusinessStatus();
-        if (status != BusinessStatus.SIGNED && status != BusinessStatus.PRINTED) {
-            return WriteResult.INVALID_STATE;
+        for (BM7501 entity : dao.getActiveByRefuelItems(refuelItemUniqueIds)) {
+            if (entity == null || entity.getRefuelItemUniqueId() == null) continue;
+            // Query sắp theo revisionNumber tăng dần nên bản sau ghi đè bản trước: lấy revision mới nhất.
+            out.put(entity.getRefuelItemUniqueId(), entity.toModel());
         }
-
-        Date now = new Date();
-        if (dao.markPrinted(model.getUniqueId(), isReprint ? 1 : 0, now.getTime()) == 0) {
-            return WriteResult.CONFLICT;
-        }
-
-        model.setPrintedAt(now);
-        model.setBusinessStatus(BusinessStatus.PRINTED);
-        if (isReprint) model.setReprintCount(model.getReprintCount() + 1);
-        return WriteResult.OK;
+        return out;
     }
 
-    /** Huỷ trước khi ký. */
+    /** Huỷ phiếu. Phiếu đã huỷ là phiếu duy nhất không sửa được nữa. */
     public WriteResult cancel(BM7501Model model, String reason) {
         if (model == null || model.getUniqueId() == null) return WriteResult.INVALID_STATE;
-        if (!BM7501State.canTransition(model.getBusinessStatus(), BusinessStatus.CANCELLED)) {
-            return WriteResult.INVALID_STATE;
-        }
+        if (!model.isEditable()) return WriteResult.INVALID_STATE;
 
         model.setCancelReason(reason);
         model.setCancelledAt(new Date());
@@ -254,26 +208,6 @@ public class BM7501Repository {
             return WriteResult.CONFLICT;
         }
         model.setBusinessStatus(BusinessStatus.CANCELLED);
-        return WriteResult.OK;
-    }
-
-    /** Vô hiệu hoá sau khi đã ký/in. Bắt buộc có lý do và người thực hiện. */
-    @Transaction
-    public WriteResult voidDocument(BM7501Model model, String reason, int userId) {
-        if (model == null || model.getUniqueId() == null) return WriteResult.INVALID_STATE;
-        if (reason == null || reason.trim().isEmpty()) return WriteResult.INVALID_STATE;
-        if (!BM7501State.canTransition(model.getBusinessStatus(), BusinessStatus.VOIDED)) {
-            return WriteResult.INVALID_STATE;
-        }
-
-        if (dao.markVoided(model.getUniqueId(), System.currentTimeMillis()) == 0) {
-            return WriteResult.CONFLICT;
-        }
-
-        model.setVoidReason(reason);
-        model.setVoidedByUserId(userId);
-        model.setVoidedAt(new Date());
-        model.setBusinessStatus(BusinessStatus.VOIDED);
         return WriteResult.OK;
     }
 

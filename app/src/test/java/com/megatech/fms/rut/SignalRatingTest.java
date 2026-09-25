@@ -1,6 +1,7 @@
 package com.megatech.fms.rut;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -119,5 +120,49 @@ public class SignalRatingTest {
         assertEquals(2, SignalRating.FAIR.bars());
         assertEquals(1, SignalRating.WEAK.bars());
         assertEquals(0, SignalRating.VERY_WEAK.bars());
+    }
+
+    // ------------------------------------------------- số đo vô lý của router
+
+    /**
+     * Ca gây báo sai ngoài hiện trường: modem KHÔNG đo được sóng và trả số 0, 99 hoặc phần
+     * trăm. Mọi số đó đều lớn hơn mọi ngưỡng dBm, nên lọt thẳng vào bậc "Rất tốt" — màn
+     * hình hiện đủ vạch đúng lúc ngoài xe không có sóng. Phải loại trước khi xếp hạng.
+     */
+    @Test
+    public void rejects_non_dbm_values_that_would_read_as_a_perfect_signal() {
+        for (Integer bogus : new Integer[]{0, 99, 31, 80, 100, -5}) {
+            assertNull("RSSI " + bogus + " không phải số đo dBm",
+                    SignalRating.plausibleRssi(bogus));
+            assertNull("RSRP " + bogus + " không phải số đo dBm",
+                    SignalRating.plausibleRsrp(bogus));
+        }
+    }
+
+    /** Sóng thật vẫn phải đi qua được, kể cả ca rất yếu. */
+    @Test
+    public void keeps_real_measurements_including_very_weak_ones() {
+        assertEquals(Integer.valueOf(-71), SignalRating.plausibleRssi(-71));
+        assertEquals(Integer.valueOf(-113), SignalRating.plausibleRssi(-113));
+        assertEquals(Integer.valueOf(-81), SignalRating.plausibleRsrp(-81));
+        assertEquals(Integer.valueOf(-125), SignalRating.plausibleRsrp(-125));
+    }
+
+    @Test
+    public void rejects_values_outside_the_physical_range_on_both_ends() {
+        assertNull(SignalRating.plausibleRsrp(SignalRating.RSRP_MAX_DBM + 1));
+        assertEquals(Integer.valueOf(SignalRating.RSRP_MAX_DBM),
+                SignalRating.plausibleRsrp(SignalRating.RSRP_MAX_DBM));
+        assertNull(SignalRating.plausibleRsrp(SignalRating.RSRP_MIN_DBM - 1));
+        assertNull(SignalRating.plausibleRssi(SignalRating.RSSI_MAX_DBM + 1));
+        assertEquals(Integer.valueOf(SignalRating.RSSI_MAX_DBM),
+                SignalRating.plausibleRssi(SignalRating.RSSI_MAX_DBM));
+        assertNull(SignalRating.plausibleRssi(SignalRating.RSSI_MIN_DBM - 1));
+    }
+
+    @Test
+    public void passes_a_missing_measurement_through_as_missing() {
+        assertNull(SignalRating.plausibleRsrp(null));
+        assertNull(SignalRating.plausibleRssi(null));
     }
 }

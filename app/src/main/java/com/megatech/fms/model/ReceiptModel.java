@@ -121,6 +121,8 @@ public class ReceiptModel extends BaseModel {
     }
 
     public static ReceiptModel createReceipt(List<RefuelItemData> refuels, String[] replacedReceipts, boolean isReturn, String oldNumber, boolean createNew) {
+        if (refuels == null || refuels.isEmpty())
+            throw new InvalidRefuelTimeException("Chưa chọn mẻ để tạo phiếu");
 
         // =================================================
         // 🔴 VALIDATE TIME CHO TỪNG REFUEL ITEM (>= 3 PHÚT)
@@ -268,14 +270,17 @@ public class ReceiptModel extends BaseModel {
             model.isThermal = BuildConfig.THERMAL_PRINTER;
             model.setRefuelMethod(model.isFHS ? REFUEL_METHOD.FHS : REFUEL_METHOD.REFUELER);
             model.customerId = refuel.getAirlineId();
-            model.customerName = refuel.getInvoiceNameCharter().trim();
+            AirlineModel airline = refuel.getAirlineModel();
+            if (airline == null)
+                throw buildItemException(refuel, "thiếu thông tin hãng bay");
+            model.customerName = trimToEmpty(refuel.getInvoiceNameCharter());
             if (model.customerName.isEmpty())
-                model.customerName = refuel.getAirlineModel().getName().trim();
-            model.customerCode = refuel.getAirlineModel().getCode().trim();
-            model.customerAddress = refuel.getAirlineModel().getAddress().trim();
-            model.taxCode = refuel.getAirlineModel().getTaxCode().trim();
-            model.customerType = refuel.getAirlineModel().isInternational() ? 1 : 0;
-            model.productName = refuel.getAirlineModel().getProductName();
+                model.customerName = trimToEmpty(airline.getName());
+            model.customerCode = trimToEmpty(airline.getCode());
+            model.customerAddress = trimToEmpty(airline.getAddress());
+            model.taxCode = trimToEmpty(airline.getTaxCode());
+            model.customerType = airline.isInternational() ? 1 : 0;
+            model.productName = trimToEmpty(airline.getProductName());
             model.isReturn = isReturn;
             model.setFlightType(refuel.isInternational() ? 1 : 0);
 
@@ -288,6 +293,15 @@ public class ReceiptModel extends BaseModel {
                 }
             }
 
+            if (refuel.getWeightNote() != null && !refuel.getWeightNote().isEmpty()) {
+                try {
+                    model.techLog = Double.parseDouble(refuel.getWeightNote());
+                } catch (NumberFormatException ex) {
+                    Logger.appendLog("RECEIPT", "Bỏ qua TechLog không phải số uid="
+                            + refuel.getUniqueId());
+                }
+            }
+
             int id = 0;
             for (RefuelItemData itemData : refuels) {
                 addItem(model, itemData);
@@ -295,8 +309,6 @@ public class ReceiptModel extends BaseModel {
                     model.setStartTime(itemData.getStartTime());
                 if (itemData.getEndTime().compareTo(model.getEndTime()) > 0)
                     model.setEndTime(itemData.getEndTime());
-                if (itemData.getWeightNote() != null && !itemData.getWeightNote().isEmpty())
-                    model.techLog = Double.parseDouble(itemData.getWeightNote());
                 id = Math.max(id, itemData.getId());
             }
 
@@ -326,21 +338,54 @@ public class ReceiptModel extends BaseModel {
             model.items = new ArrayList<>();
 
         if (!model.isReturn || itemData.getReturnAmount() > 0) {
-            // Phiếu dựng bằng JSON round-trip nên lấy FIELD `volume`, không gọi getVolume().
-            // Bản ghi lưu trong Room từ trước bản vá có thể còn số lít của lần cập nhật cũ —
-            // ép lại trước khi in để tờ giấy không mang số sai đó ra ngoài.
-            String volumeFix = itemData.reconcileVolume();
-            if (volumeFix != null)
-                Logger.appendLog("VOLUME_MISMATCH", String.format(java.util.Locale.US,
-                        "dựng phiếu uid=%s %s -> dùng volume_calc",
-                        itemData.getUniqueId(), volumeFix));
-
             ReceiptItemModel itemModel = gson.fromJson(itemData.toJson(), ReceiptItemModel.class);
+
+            // GALLON là số duy nhất đo được từ đồng hồ; số lít và khối lượng đều là dẫn xuất
+            // của nó. Dựng phiếu là lần cuối cùng còn chặn được một con số sai trước khi nó
+            // ra tờ giấy, nên cả hai đều được tính lại từ gallon tại đây.
+            //
+            // Sửa trên DÒNG CHỨNG TỪ, không gọi reconcileVolume() trên source: source có thể
+            // là snapshot authoritative của xe khác và phải giữ nguyên cả trong RAM.
+            //
+            // Phải chụp số đang có TRƯỚC khi chạm vào, vì setVolume()/setDensity() của dòng in
+            // tự tính lại khối lượng — đọc sau đó thì không còn biết dữ liệu vào là gì.
+            double rawVolume = itemModel.getVolume();
+            double density = itemData.getDensity();
+            double derivedVolume = itemData.getVolume();
+            double derivedWeight = itemData.getWeight();
+
+            // RefuelItemData KHÔNG có field weight, nên khối lượng "đang có" không nằm trong
+            // JSON mà chỉ tồn tại gián tiếp qua số lít cũ. So bằng đúng công thức dòng in
+            // dùng, nếu không thì lấy 0 ra so và lần nào cũng báo sai.
+            double rawWeight = Math.round(rawVolume * density);
+
+            // Khớp thì im lặng: đây là đường đi bình thường của mọi phiếu, ghi log ở đây chỉ
+            // làm trôi mất những dòng đáng chú ý.
+            if (Math.abs(rawVolume - derivedVolume)
+                    > RefuelItemData.VOLUME_TOLERANCE_LITTER) {
+                Logger.appendLog("VOLUME_MISMATCH", String.format(java.util.Locale.US,
+                        "dựng phiếu uid=%s gallon=%.0f volume_in=%.0f volume_calc=%.0f"
+                                + " -> chỉ sửa dòng in",
+                        itemData.getUniqueId(), itemData.getRealAmount(),
+                        rawVolume, derivedVolume));
+            }
+            if (Math.abs(rawWeight - derivedWeight)
+                    > RefuelItemData.WEIGHT_TOLERANCE_KG) {
+                Logger.appendLog("WEIGHT_MISMATCH", String.format(java.util.Locale.US,
+                        "dựng phiếu uid=%s gallon=%.0f density=%.4f weight_in=%.0f"
+                                + " weight_calc=%.0f -> chỉ sửa dòng in",
+                        itemData.getUniqueId(), itemData.getRealAmount(), density,
+                        rawWeight, derivedWeight));
+            }
+
+            itemModel.setVolume(derivedVolume);
             itemModel.setRefuelItemId(itemData.getUniqueId());
             itemModel.setRefuelId(itemData.getId());
             itemModel.setTemperature(itemData.getManualTemperature());
             itemModel.setQualityNo(itemData.getQualityNo());
-            itemModel.setWeight(itemData.getWeight());
+            // Đặt sau setVolume(): setVolume() cũng tự tính khối lượng, nhưng theo density của
+            // DÒNG IN. Đặt lại tường minh để nguồn của cả hai số chắc chắn là cùng một mẻ.
+            itemModel.setWeight(derivedWeight);
             itemModel.setDriverId(itemData.getDriverId());
             itemModel.setOperatorId(itemData.getOperatorId());
             if (itemData.getReturnAmount() > 0) {
@@ -544,6 +589,10 @@ public class ReceiptModel extends BaseModel {
      */
     private static boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private static String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /**

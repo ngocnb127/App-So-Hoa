@@ -10,11 +10,13 @@ import android.content.Context;
 import androidx.room.Room;
 import androidx.test.core.app.ApplicationProvider;
 
+import com.megatech.fms.FMSApplication;
 import com.megatech.fms.data.AppDatabase;
 import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.data.entity.RefuelItem;
 import com.megatech.fms.model.REFUEL_ITEM_STATUS;
 import com.megatech.fms.model.RefuelItemData;
+import com.megatech.fms.model.TruckModel;
 
 import org.junit.After;
 import org.junit.Before;
@@ -44,6 +46,10 @@ public class RefuelConfirmFieldsPersistTest {
     @Before
     public void setUp() {
         Context context = ApplicationProvider.getApplicationContext();
+        TruckModel setting = new TruckModel();
+        setting.setTruckId(173);
+        setting.setTruckNo("XT-01");
+        ((FMSApplication) context).saveSetting(setting, false);
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase.class)
                 .allowMainThreadQueries()
                 .build();
@@ -69,6 +75,8 @@ public class RefuelConfirmFieldsPersistTest {
         data.setFlightId(1265515);
         data.setFlightCode("VN 1237-01");
         data.setFlightStatus(RefuelItemData.FLIGHT_STATUS.ASSIGNED);
+        data.setTruckId(173);
+        data.setTruckNo("XT-01");
         data.setParkingLot("A1");
         data.setAircraftCode("VN-A123");
         data.setStartNumber(817751);

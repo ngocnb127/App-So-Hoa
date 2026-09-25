@@ -132,7 +132,7 @@ public class BM7501ValidatorTest {
 
         List<Finding> f = BM7501Validator.validateSectionB(m);
         assertFalse(hasFieldError(f, "skypecMicrobialKit"));
-        assertFalse(hasFieldError(f, "microbialReason"));
+        assertFalse(hasFieldError(f, "skypecMicrobialResult"));
     }
 
     @Test
@@ -143,34 +143,19 @@ public class BM7501ValidatorTest {
         List<Finding> f = BM7501Validator.validateSectionB(m);
         assertTrue(hasFieldError(f, "skypecMicrobialKit"));
         assertTrue(hasFieldError(f, "skypecMicrobialResult"));
-        assertTrue(hasFieldError(f, "microbialReason"));
     }
 
+    /**
+     * Biểu mẫu ghi "Kiểm tra độ dẫn điện (nếu yêu cầu)" và không có ô nào khai việc được yêu cầu,
+     * nên app không đòi: để trống vẫn ký được, có đo thì ghi kết quả.
+     */
     @Test
-    public void sectionB_viSinh_batBuoc_khiNghiNgoNhiemViSinh() {
+    public void sectionB_doDanDien_khongBatBuoc() {
         BM7501Model m = validSectionB();
-        m.setContaminationSuspected(true);
-
-        assertTrue(hasFieldError(BM7501Validator.validateSectionB(m), "skypecMicrobialKit"));
-    }
-
-    @Test
-    public void sectionB_viSinh_batBuoc_khiKhachYeuCau() {
-        BM7501Model m = validSectionB();
-        m.setCustomerRequestedMicrobial(true);
-
-        assertTrue(hasFieldError(BM7501Validator.validateSectionB(m), "skypecMicrobialKit"));
-    }
-
-    @Test
-    public void sectionB_doDanDien_chiBatBuocKhiCoYeuCau() {
-        BM7501Model m = validSectionB();
-        m.setConductivityRequired(false);
-        m.setConductivityPsM(null);
         assertFalse(hasFieldError(BM7501Validator.validateSectionB(m), "conductivityPsM"));
 
-        m.setConductivityRequired(true);
-        assertTrue(hasFieldError(BM7501Validator.validateSectionB(m), "conductivityPsM"));
+        m.setConductivityPsM(150d);
+        assertFalse(hasFieldError(BM7501Validator.validateSectionB(m), "conductivityPsM"));
     }
 
     // ------------------------------------------------------------------ MỤC C
@@ -272,6 +257,17 @@ public class BM7501ValidatorTest {
         assertTrue(hasFieldError(BM7501Validator.validateSectionC(m), "handlingNote"));
     }
 
+    /** Hai ô tín hiệu chuẩn của biểu mẫu: tick ô nào cũng là đã thống nhất phương thức. */
+    @Test
+    public void sectionC_tinHieu_chapNhanKhiTickOTinHieuChuan() {
+        BM7501Model m = validSectionC();
+        m.setSignalsBriefed(false);
+        m.setSignalThumbUp(true);
+        m.setSignalCrossArms(false);
+
+        assertFalse(hasFieldError(BM7501Validator.validateSectionC(m), "signalsBriefed"));
+    }
+
     @Test
     public void sectionC_tinHieu_chapNhanKhiDaPhoBien() {
         BM7501Model m = validSectionC();
@@ -311,21 +307,27 @@ public class BM7501ValidatorTest {
 
     // -------------------------------------------------------------- trước khi ký
 
+    /**
+     * Chốt 2026-09-23: hai bên thường ký TAY trên tờ phiếu in ra, nên thiếu chữ ký trên máy chỉ
+     * là cảnh báo. Bắt buộc ký trên tablet sẽ khoá cứng mọi phiếu ký tay, không xuất được.
+     */
     @Test
-    public void truocKhiKy_batBuocDuBaChuKy() {
+    public void thieuChuKy_chiLaCanhBao_khongChanXuatPhieu() {
         BM7501Model m = fullyValid();
-        m.setCustomerSectionASignaturePath(null);
+        m.setSkypecSignaturePath(null);
+        m.setCustomerFinalSignaturePath(null);
 
         List<Finding> f = BM7501Validator.validateForSigning(m);
-        assertTrue(hasFieldError(f, "customerSectionASignaturePath"));
+        assertFalse("Thiếu chữ ký không được chặn", BM7501Validator.hasError(f));
+        assertTrue(hasFinding(f, "skypecSignaturePath", Severity.WARNING));
+        assertTrue(hasFinding(f, "customerFinalSignaturePath", Severity.WARNING));
+        assertEquals(2, BM7501Validator.warningsOnly(f).size());
+    }
 
-        m.setCustomerSectionASignaturePath("/x/a.png");
-        m.setSkypecSignaturePath(null);
-        assertTrue(hasFieldError(BM7501Validator.validateForSigning(m), "skypecSignaturePath"));
-
-        m.setSkypecSignaturePath("/x/s.png");
-        m.setCustomerFinalSignaturePath(null);
-        assertTrue(hasFieldError(BM7501Validator.validateForSigning(m), "customerFinalSignaturePath"));
+    @Test
+    public void duChuKy_thiKhongCanhBaoGiNua() {
+        assertTrue(BM7501Validator.warningsOnly(
+                BM7501Validator.validateForSigning(fullyValid())).isEmpty());
     }
 
     @Test
@@ -372,7 +374,6 @@ public class BM7501ValidatorTest {
         m.setVac(QcCheck.SATISFY);
         m.setCwd(QcCheck.SATISFY);
         m.setDensityKgM3(795d);
-        m.setConductivityRequired(false);
         return m;
     }
 
@@ -395,11 +396,9 @@ public class BM7501ValidatorTest {
 
     private static BM7501Model fullyValid() {
         BM7501Model m = validSectionC();
-        m.setCustomerSectionASignaturePath("/x/a.png");
         m.setSkypecSignaturePath("/x/s.png");
         m.setCustomerFinalSignaturePath("/x/c.png");
         m.setSkypecRepName("Trần Văn B");
-        m.setCustomerRepFinalName("Nguyễn Văn A");
         return m;
     }
 

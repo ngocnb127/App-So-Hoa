@@ -98,8 +98,24 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
         updateRefuelList();
         requestSync();
 
-
+        // Dựng sẵn kết nối đồng hồ Ở ĐÂY chứ không phải trong onCreate. SDK đồng hồ khởi
+        // động một service, và từ Android 12 việc đó bị từ chối nếu tiến trình đang ở
+        // background. onCreate KHÔNG bảo đảm đang ở foreground: nếu người dùng bấm Home hay
+        // màn hình tắt ngay sau khi StartupActivity chuyển sang đây, hệ thống đã hạ tiến
+        // trình xuống cached trước khi onCreate chạy xong. Đo trên máy thật 06-09-2026: đúng
+        // khe hở đó làm app chết ngay lúc mở (xem ghi chú ở LCRReader.init).
+        //
+        // onResume mới là điểm chắc chắn foreground. Chỉ dựng một lần cho mỗi màn hình:
+        // create(..., renew = true) thử khởi tạo lại SDK nếu lần trước bị từ chối, gọi mỗi lần
+        // quay lại là thừa. SDK là của chung cả ứng dụng, không dựng lại (xem LCRReader.create).
+        if (!readerInitialized && !currentApp.isFirstUse()) {
+            readerInitialized = true;
+            initReader();
+        }
     }
+
+    /** Đã dựng kết nối đồng hồ cho lần sống này của màn hình chưa. */
+    private boolean readerInitialized = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -194,9 +210,7 @@ public class MainActivity extends UserBaseActivity implements RefuelListFragment
 
         checkIncompleteItem();
 
-        if (!currentApp.isFirstUse())
-            initReader();
-
+        // initReader() ĐÃ CHUYỂN sang onResume — xem ghi chú ở đó. Đừng đưa về lại đây.
 
         // Danh sách kế hoạch đọc từ Room chứ không gọi thẳng API, nên nếu không nghe
         // SYNC_BROADCAST thì lần cài mới màn hình đứng rỗng cho tới lần refresh sau.

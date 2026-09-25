@@ -50,12 +50,15 @@ import com.megatech.fms.model.TruckFuelModel;
 import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 public class DataRepository {
@@ -212,6 +215,256 @@ public class DataRepository {
         }
     }
 
+    /** Cho phép tầng điều phối gom nhiều thao tác repository vào một transaction Room. */
+    public void runInTransaction(Runnable action) {
+        db.runInTransaction(action);
+    }
+
+    /** Thay membership Others mà không làm row thành localModified. */
+    public boolean replaceRemoteOthersMembership(String rootUniqueId, List<String> childUids) {
+        if (rootUniqueId == null || rootUniqueId.trim().isEmpty() || childUids == null)
+            return false;
+
+        JSONArray json = new JSONArray();
+        Set<String> seen = new HashSet<>();
+        for (String uid : childUids) {
+            if (uid == null || uid.trim().isEmpty() || !seen.add(uid)) return false;
+            json.put(uid);
+        }
+        return db.refuelItemDao().updateRemoteOthersMembership(
+                rootUniqueId, json.toString()) == 1;
+    }
+
+    /** Null = chưa có snapshot membership; list rỗng là một snapshot rỗng hợp lệ. */
+    @Nullable
+    public List<String> getRemoteOthersMembership(String rootUniqueId) {
+        RefuelItem root = getRefuel(rootUniqueId);
+        if (root == null || root.getRemoteOthersUidsJson() == null) return null;
+        try {
+            JSONArray json = new JSONArray(root.getRemoteOthersUidsJson());
+            List<String> result = new ArrayList<>(json.length());
+            Set<String> seen = new HashSet<>();
+            for (int i = 0; i < json.length(); i++) {
+                String uid = json.optString(i, null);
+                if (uid == null || uid.trim().isEmpty() || !seen.add(uid)) return null;
+                result.add(uid);
+            }
+            return result;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Lưu nguyên một snapshot các mẻ do XE KHÁC thực hiện.
+     *
+     * <p>Máy này không sở hữu và không được sửa các mẻ đó, vì vậy không được dùng đường
+     * merge dành cho mẻ của chính máy. Mỗi row được thay bằng nguyên payload server, chỉ giữ
+     * lại {@code localId} của Room. Toàn bộ danh sách được kiểm tra trước rồi ghi trong cùng
+     * một transaction để màn hình không nhìn thấy nửa snapshot cũ, nửa snapshot mới.
+     *
+     * <p>{@link RefuelItemData#getRawJson()} được ưu tiên để không làm mất những trường server
+     * biết nhưng model của app chưa biết. Response cũ hơn theo {@code ServerRevision} không
+     * được phép kéo một bản sao mới hơn lùi lại. Row mới hơn được giữ, các row còn lại được
+     * cập nhật trong cùng transaction để UI luôn thấy một collection nhất quán theo từng UID.
+     *
+     * @return số snapshot đã xử lý (ghi mới/thay thế hoặc chủ ý giữ bản local mới hơn)
+     * @throws IllegalArgumentException nếu response thiếu định danh hoặc có UID trùng nhau;
+     *                                  khi đó transaction chưa ghi bất kỳ item nào
+     */
+    public static final class RemoteSnapshotResult {
+        public final int applied;
+        public final int keptNewer;
+
+        RemoteSnapshotResult(int applied, int keptNewer) {
+            this.applied = applied;
+            this.keptNewer = keptNewer;
+        }
+
+        public int handled() {
+            return applied + keptNewer;
+        }
+    }
+
+    /**
+     * Bản tương thích cho các caller chỉ cần biết toàn bộ batch đã được xử lý hay chưa.
+     * Caller cần quyết định có được dùng metadata đi kèm (Flight/Others) phải gọi bản
+     * detailed bên dưới: một snapshot cũ được giữ lại là "handled", nhưng tuyệt đối không
+     * được lấy Flight hay membership từ chính payload cũ đó.
+     */
+    public int replaceRemoteRefuelSnapshots(List<RefuelItemData> snapshots) {
+        return replaceRemoteRefuelSnapshotsDetailed(snapshots).handled();
+    }
+
+    public RemoteSnapshotResult replaceRemoteRefuelSnapshotsDetailed(
+            List<RefuelItemData> snapshots) {
+        if (snapshots == null || snapshots.isEmpty())
+            return new RemoteSnapshotResult(0, 0);
+
+        Set<String> uniqueIds = new HashSet<>();
+        Set<Integer> serverIds = new HashSet<>();
+        for (RefuelItemData snapshot : snapshots) {
+            if (snapshot == null
+                    || snapshot.getUniqueId() == null
+                    || snapshot.getUniqueId().trim().isEmpty()) {
+                throw new IllegalArgumentException("Remote refuel snapshot thiếu UniqueId");
+            }
+            if (snapshot.getStatus() == null || snapshot.getRefuelItemType() == null) {
+                throw new IllegalArgumentException(
+                        "Remote refuel snapshot thiếu trạng thái/loại: "
+                                + snapshot.getUniqueId());
+            }
+            if (snapshot.getRawJson() == null || snapshot.getRawJson().trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Remote refuel snapshot thiếu raw JSON: " + snapshot.getUniqueId());
+            }
+            try {
+                JSONObject raw = new JSONObject(snapshot.getRawJson());
+                String rawUid = raw.optString("UniqueId", null);
+                if (rawUid == null || !snapshot.getUniqueId().equals(rawUid)) {
+                    throw new IllegalArgumentException(
+                            "Remote refuel raw JSON sai UniqueId: " + snapshot.getUniqueId());
+                }
+                if (raw.has("Id") && !raw.isNull("Id") && snapshot.getId() > 0
+                        && raw.optInt("Id", 0) != snapshot.getId()) {
+                    throw new IllegalArgumentException(
+                            "Remote refuel raw JSON sai Id: " + snapshot.getUniqueId());
+                }
+            } catch (IllegalArgumentException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new IllegalArgumentException(
+                        "Remote refuel raw JSON không hợp lệ: " + snapshot.getUniqueId(), ex);
+            }
+            if (!uniqueIds.add(snapshot.getUniqueId())) {
+                throw new IllegalArgumentException(
+                        "Remote refuel snapshot trùng UniqueId: " + snapshot.getUniqueId());
+            }
+            if (snapshot.getId() > 0 && !serverIds.add(snapshot.getId())) {
+                throw new IllegalArgumentException(
+                        "Remote refuel snapshot trùng Id: " + snapshot.getId());
+            }
+        }
+
+        final int[] applied = {0};
+        final int[] keptNewer = {0};
+        db.runInTransaction(() -> {
+            List<RefuelItem> currentRows = new ArrayList<>(snapshots.size());
+            List<Boolean> keepCurrentRows = new ArrayList<>(snapshots.size());
+
+            // Preflight TOÀN BỘ trước khi ghi. Identity lỗi làm transaction fail; response
+            // cũ theo từng UID chỉ giữ row hiện có, không được kéo nó lùi lại.
+            for (RefuelItemData snapshot : snapshots) {
+                RefuelItem byUid = db.refuelItemDao().get(snapshot.getUniqueId());
+                RefuelItem byId = snapshot.getId() > 0
+                        ? db.refuelItemDao().get(snapshot.getId()) : null;
+
+                // Luôn kiểm cả hai chiều, kể cả đã tìm thấy UID. Nếu không, payload A mang
+                // nhầm Id của B sẽ update A thành cùng Id với B và các lookup sau có thể lấy
+                // ngẫu nhiên sai row (cột server Id không có UNIQUE constraint).
+                if (byId != null
+                        && !snapshot.getUniqueId().equals(byId.getUniqueId())) {
+                    throw new IllegalArgumentException(
+                            "Remote refuel Id trùng UID khác: id=" + snapshot.getId());
+                }
+                if (byUid != null && snapshot.getId() > 0 && byUid.getId() > 0
+                        && byUid.getId() != snapshot.getId()) {
+                    throw new IllegalArgumentException(
+                            "Remote refuel UID đổi Id: uid=" + snapshot.getUniqueId()
+                                    + " oldId=" + byUid.getId()
+                                    + " newId=" + snapshot.getId());
+                }
+                if (byUid != null && byId != null
+                        && byUid.getLocalId() != byId.getLocalId()) {
+                    throw new IllegalArgumentException(
+                            "Remote refuel UID/Id trỏ hai row khác nhau: uid="
+                                    + snapshot.getUniqueId());
+                }
+                RefuelItem current = byUid != null ? byUid : byId;
+                currentRows.add(current);
+
+                // Một GET có thể đi qua replica/cache cũ. Chỉ dùng revision khi cả hai phía
+                // thực sự có giá trị; 0 trên server legacy nghĩa là "không có thông tin".
+                boolean staleRevision = current != null
+                        && current.getServerRevision() > 0
+                        && snapshot.getServerRevision() > 0
+                        && snapshot.getServerRevision() < current.getServerRevision();
+
+                // Revision 0 trên server legacy nghĩa là "không có thông tin". Trong ca
+                // đó DateUpdated là dấu thứ tự duy nhất còn lại để một modified-list trả
+                // chậm không phủ ngược lên GET chi tiết vừa lưu. Revision tăng thật vẫn
+                // thắng DateUpdated để chịu được lệch đồng hồ phía server.
+            // Revision dương là version có thẩm quyền và phải thắng row legacy revision 0,
+            // kể cả DateUpdated của server bị lệch/cũ hơn.
+            boolean higherRevision = current != null
+                    && snapshot.getServerRevision() > 0
+                    && snapshot.getServerRevision() > current.getServerRevision();
+                boolean staleUpdatedAt = current != null && !higherRevision
+                        && current.getDateUpdated() != null
+                        && snapshot.getDateUpdated() != null
+                        && snapshot.getDateUpdated().before(current.getDateUpdated());
+
+                // Không để một response đứng yên/lùi revision mở lại mẻ đã chốt. Khi server
+                // có revision cao hơn thì đó là thay đổi có chủ ý và được nhận nguyên bản.
+                boolean staleDoneDowngrade = current != null
+                        && current.getStatus() == RefuelItem.REFUEL_ITEM_STATUS.DONE
+                        && snapshot.getStatus() != com.megatech.fms.model.REFUEL_ITEM_STATUS.DONE
+                        && snapshot.getServerRevision() <= current.getServerRevision();
+                keepCurrentRows.add(staleRevision || staleUpdatedAt || staleDoneDowngrade);
+            }
+
+            for (int i = 0; i < snapshots.size(); i++) {
+                RefuelItemData snapshot = snapshots.get(i);
+                RefuelItem current = currentRows.get(i);
+                if (keepCurrentRows.get(i)) {
+                    keptNewer[0]++;
+                    continue;
+                }
+                RefuelItem replacement = RefuelItem.fromRefuelItemData(snapshot);
+                replacement.setJsonData(snapshot.getRawJson());
+                // Full replace phải truyền được cả null; projectColumnsFrom cố ý bỏ qua null
+                // cho đường merge của xe hiện tại nên cần đóng dấu lại ở đường replica này.
+                replacement.setStartTime(snapshot.getStartTime());
+                replacement.setEndTime(snapshot.getEndTime());
+                replacement.setDeleted(snapshot.isDeleted());
+
+                if (current != null) {
+                    replacement.setLocalId(current.getLocalId());
+                    // Membership là metadata cache của endpoint root trên chính UID này,
+                    // không nằm trong payload child nên full-replace không được làm mất.
+                    replacement.setRemoteOthersUidsJson(current.getRemoteOthersUidsJson());
+                    if (replacement.getId() <= 0) replacement.setId(current.getId());
+                }
+
+                // Server legacy dùng 0 cho version "không có thông tin". Giữ dấu mốc kỹ
+                // thuật đã quan sát ở cột Room để lần GET cũ sau còn bị nhận diện; payload
+                // nghiệp vụ raw JSON vẫn là nguyên bản server.
+                if (current != null && snapshot.getClientSeq() <= 0)
+                    replacement.setClientSeq(current.getClientSeq());
+                if (current != null && snapshot.getServerRevision() <= 0)
+                    replacement.setServerRevision(current.getServerRevision());
+
+                // Remote replica không bao giờ được lọt vào hàng đợi POST của máy này.
+                replacement.setLocalModified(false);
+                replacement.setSynced(true);
+                replacement.setPostStatus(RefuelItem.ITEM_POST_STATUS.SUCCESS);
+                replacement.setRemoteReplica(true);
+
+                if (current == null) {
+                    // localId thuộc riêng DB trên tablet. Payload server/JSON không có quyền
+                    // chọn primary key; giữ nó có thể khiến INSERT(REPLACE) xoá nhầm một row
+                    // hoàn toàn khác đang dùng cùng localId.
+                    replacement.setLocalId(0);
+                    replacement.setLocalId((int) db.refuelItemDao().insert(replacement));
+                } else {
+                    db.refuelItemDao().update(replacement);
+                }
+                applied[0]++;
+            }
+        });
+        return new RemoteSnapshotResult(applied[0], keptNewer[0]);
+    }
+
     public RefuelItem getRefuel(String uniqueId) {
         RefuelItem item = null;
 
@@ -235,6 +488,11 @@ public class DataRepository {
 
     public void removeDeletedRefuels(int[] ids) {
         db.refuelItemDao().removeDeleted(ids);
+    }
+
+    public boolean removeRemoteDeletedRefuel(RefuelItem item) {
+        return item != null
+                && db.refuelItemDao().removeRemoteDeletedLocal(item.getLocalId()) == 1;
     }
 
     public List<RefuelItem> getModifiedRefuel() {
@@ -468,16 +726,40 @@ public class DataRepository {
         return null;
     }
 
-    public void insertInvoice(Invoice model) {
-        Invoice item = db.invoiceDao().get(model.getId(), model.getLocalId());
+    /**
+     * Ghi hoá đơn xuống Room và GHI NGƯỢC localId Room vừa sinh vào object.
+     * Trước đây hàm trả void và chỉ tra theo (id, localId): sau khi POST xong, object Java vẫn
+     * mang localId = 0 nên lượt ghi thứ hai (id = idServer) không khớp hàng cũ (id = 0) và ĐẺ
+     * THÊM MỘT HÀNG; hàng cũ vẫn isLocalModified nên vòng Synchronize POST lại ⇒ trùng hoá đơn.
+     * Thứ tự tra: localId (chắc chắn nhất) → uniqueId (định danh hàng) → (id, localId) như cũ.
+     * Lưu ý: uniqueId sinh mới mỗi lần dựng InvoiceModel nên CHỈ dùng làm định danh hàng trong
+     * Room, KHÔNG phải khoá idempotency xuyên nhiều lần dựng model.
+     */
+    public int insertInvoice(Invoice model) {
+        final int[] rowId = new int[1];
+        db.runInTransaction(() -> {
+            Invoice item = null;
+            if (model.getLocalId() > 0)
+                item = db.invoiceDao().getByLocalId(model.getLocalId());
+            if (item == null) {
+                String uid = model.getUniqueId();
+                if (uid != null && !uid.trim().isEmpty())
+                    item = db.invoiceDao().getByUniqueId(uid);
+            }
+            if (item == null)
+                item = db.invoiceDao().get(model.getId(), model.getLocalId());
 
-        if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.invoiceDao().insert(model);
-        } else {
-
-            model.setLocalId(item.getLocalId());
-            db.invoiceDao().update(model);
-        }
+            if (item == null) {
+                model.setLocalId((int) db.invoiceDao().insert(model));
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.invoiceDao().update(model);
+            }
+            rowId[0] = model.getLocalId();
+        });
+        return rowId[0];
     }
 
     public List<BM2505Model> getBM2505List(Date date) {
@@ -810,6 +1092,10 @@ public class DataRepository {
 
     public Receipt getReceipt(String uniqueId) {
         return db.receiptDao().getByUniqueId(uniqueId);
+    }
+
+    public Receipt getReceiptByNumber(String number) {
+        return db.receiptDao().get(number);
     }
 
     public List<BM2505ContainerModel> getBM2505ContainerList() {

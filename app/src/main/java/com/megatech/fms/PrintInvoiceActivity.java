@@ -49,30 +49,9 @@ public class PrintInvoiceActivity extends UserBaseActivity implements View.OnCli
 
             @Override
             public void onError() {
-
-
-                runOnUiThread(() -> showMessage(R.string.validate, R.string.print_error, R.drawable.ic_error, () -> {
-
-                    showInputData(R.string.return_invoice_number, "", InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, ".*", true, new OnInputCompleted() {
-                        @Override
-                        public boolean onOK(String text) {
-                            model.setInvoiceNumber(text);
-                            isOK = true;
-                            return true;
-                        }
-
-                        @Override
-                        public void onCancel() {
-
-                        }
-
-                        @Override
-                        public void onCompleted() {
-                            save();
-                        }
-                    });
-                    return null;
-                }));
+                // FB-3: máy in lỗi KHÔNG chặn xuất hoá đơn, nhưng cũng không được đẩy thẳng
+                // người dùng vào hộp nhập số không lối thoát.
+                runOnUiThread(PrintInvoiceActivity.this::showPrintErrorChoices);
             }
 
             @Override
@@ -297,14 +276,42 @@ public class PrintInvoiceActivity extends UserBaseActivity implements View.OnCli
         else finish();
     }
 
+    /**
+     * FB-3 — máy in lỗi thì nhân viên viết phiếu tay, nên VẪN PHẢI XUẤT ĐƯỢC HOÁ ĐƠN.
+     *
+     * <p>Trước bản vá này, in lỗi là bật thẳng hộp "Số hoá đơn" với {@code required=true}:
+     * không nút Quay lại, không bấm ra ngoài được, và gõ xong là {@code save()} chạy ngay —
+     * một cú bấm nhầm thành hành vi phát hành chứng từ pháp lý. Nay hỏi rõ tình huống và cho
+     * ba lựa chọn, trong đó "Nhập số &amp; xuất" vẫn được giữ nguyên vì đó là yêu cầu nghiệp vụ.
+     */
+    private void showPrintErrorChoices() {
+        if (isFinishing()) return;
+        Logger.appendLog("INV", "Máy in báo lỗi — hỏi lại người dùng, KHÔNG chặn xuất hoá đơn");
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.print_error_title)
+                .setMessage(R.string.print_error_choice)
+                .setIcon(R.drawable.ic_error)
+                .setPositiveButton(R.string.print_retry, (dialog, which) -> print(printTest))
+                .setNeutralButton(R.string.input_invoice_and_issue,
+                        (dialog, which) -> inputInvoiceNumber())
+                .setNegativeButton(R.string.back, (dialog, which) -> dialog.dismiss())
+                .setCancelable(true)
+                .show();
+    }
+
     private void inputInvoiceNumber() {
-        showInputData(R.string.invoice_number, "", InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, ".*", true, new OnInputCompleted() {
+        // FB-3: required=false ⇒ hộp có nút "Trở lại" và đóng được. Ô rỗng vẫn bị chặn ở nút
+        // Lưu (BaseActivity), nên đường lùi này không làm lọt hoá đơn thiếu số.
+        showInputData(R.string.invoice_number, "", InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, ".*", false, new OnInputCompleted() {
             @Override
             public boolean onOK(String text) {
 
-                model.setInvoiceNumber(text);
+                String number = text == null ? "" : text.trim();
+                if (number.isEmpty()) return false;
 
-                Logger.appendLog("INV", "input invoice number " + text);
+                model.setInvoiceNumber(number);
+
+                Logger.appendLog("INV", "input invoice number " + number);
                 isOK = true;
 
                 return true;
@@ -312,14 +319,37 @@ public class PrintInvoiceActivity extends UserBaseActivity implements View.OnCli
 
             @Override
             public void onCancel() {
-
+                isOK = false;
             }
 
             @Override
             public void onCompleted() {
-                save();
+                confirmIssueInvoice();
             }
         });
+    }
+
+    /**
+     * FB-3 — gõ số xong KHÔNG phát hành ngay: phải xác nhận một bước, có số hoá đơn hiện ra
+     * để đối chiếu.
+     *
+     * <p>Cũng là chốt chặn cho ca {@code onCompleted()} chạy ngoài nhánh thành công: số rỗng
+     * hoặc bị chính hàm kiểm tra từ chối thì không phát hành gì cả.
+     */
+    private void confirmIssueInvoice() {
+        String number = model == null ? null : model.getInvoiceNumber();
+        if (!isOK || number == null || number.trim().isEmpty()) {
+            Logger.appendLog("INV", "Bỏ qua phát hành: chưa có số hoá đơn hợp lệ");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm)
+                .setMessage(getString(R.string.confirm_issue_invoice, number.trim()))
+                .setIcon(R.drawable.ic_question)
+                .setPositiveButton(R.string.accept, (dialog, which) -> save())
+                .setNegativeButton(R.string.back, (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void print(boolean test) {

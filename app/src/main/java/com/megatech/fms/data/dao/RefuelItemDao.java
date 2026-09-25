@@ -25,6 +25,9 @@ public interface RefuelItemDao {
     @Query("Select * from RefuelItem where uniqueId = :uniqueId")
     RefuelItem get(String uniqueId);
 
+    @Query("UPDATE RefuelItem SET remoteOthersUidsJson = :uidsJson WHERE uniqueId = :uniqueId")
+    int updateRemoteOthersMembership(String uniqueId, String uidsJson);
+
     @Query("Select * from RefuelItem where localId != :id AND flightId = (SELECT flightId from RefuelItem where localId= :id)")
     List<RefuelItem> getOthers(int id);
 
@@ -71,6 +74,10 @@ public interface RefuelItemDao {
     @Query("Delete from RefuelItem where id > 0 and id in (:ids) and NOT isLocalModified")
     void removeDeleted(int[] ids);
 
+    /** Xoá đúng một tombstone đã preflight bằng primary key local, không theo Id mơ hồ. */
+    @Query("DELETE FROM RefuelItem WHERE localId = :localId AND NOT isLocalModified")
+    int removeRemoteDeletedLocal(int localId);
+
     @Query("Select * from RefuelItem where isLocalModified OR id = 0")
     List<RefuelItem> getModified();
 
@@ -79,7 +86,8 @@ public interface RefuelItemDao {
      * Dữ liệu local của chúng vẫn nguyên vẹn và vẫn isLocalModified; chúng chỉ quay lại
      * hàng đợi khi người dùng sửa/lưu lại (xem DataHelper.resumeSync).
      */
-    @Query("Select * from RefuelItem where (isLocalModified OR id = 0) AND postStatus <> 2")
+    @Query("Select * from RefuelItem where (isLocalModified OR id = 0) "
+            + "AND postStatus <> 2 AND NOT remoteReplica")
     List<RefuelItem> getModifiedForSync();
 
     @Query("Select Max(dateUpdated) from RefuelItem ")

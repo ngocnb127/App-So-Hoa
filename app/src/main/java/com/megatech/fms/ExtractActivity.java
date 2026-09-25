@@ -12,9 +12,13 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.megatech.fms.data.AppDatabase;
+import com.megatech.fms.data.BM7501Repository;
 import com.megatech.fms.data.DataRepository;
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.helpers.HttpClient;
+import com.megatech.fms.helpers.Logger;
+import com.megatech.fms.model.BM7501Model;
 import com.megatech.fms.model.RefuelItemData;
 import com.megatech.fms.model.UserInfo;
 import com.megatech.fms.view.RefuelRecyclerView;
@@ -66,6 +70,7 @@ public class ExtractActivity extends UserBaseActivity implements View.OnClickLis
             @Override
             public void run() {
                 lstData = DataHelper.getRefuelList(true,1);
+                final java.util.Map<String, String> exported = loadExportedNumbers(lstData);
                 if (activity != null)
                     activity.runOnUiThread(new Runnable() {
                         @Override
@@ -75,6 +80,7 @@ public class ExtractActivity extends UserBaseActivity implements View.OnClickLis
                                 //this.getActivity().finishAffinity();
                             } else {
                                 mAdapter = new RefuelRecyclerViewAdapter(activity, lstData);
+                                mAdapter.setExportedBM7501(exported);
 
                                 extract_list.setLayoutManager(new GridLayoutManager(activity, 1));
 
@@ -85,6 +91,38 @@ public class ExtractActivity extends UserBaseActivity implements View.OnClickLis
 
             }
         }).start();
+    }
+
+    /**
+     * Số phiếu BM 75.01 đã xuất của từng mẻ hút trong danh sách.
+     *
+     * <p>Tra một lần cho cả danh sách ở luồng nền: đọc DB trong lúc vẽ từng dòng sẽ giật màn
+     * hình. Lỗi đọc thì trả về map rỗng — danh sách vẫn hiện, chỉ thiếu nhãn.
+     */
+    private java.util.Map<String, String> loadExportedNumbers(List<RefuelItemData> items) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        if (items == null || items.isEmpty()) return out;
+
+        try {
+            java.util.List<String> ids = new java.util.ArrayList<>();
+            for (RefuelItemData item : items) {
+                if (item != null && item.getUniqueId() != null) ids.add(item.getUniqueId());
+            }
+            if (ids.isEmpty()) return out;
+
+            BM7501Repository repository = new BM7501Repository(
+                    AppDatabase.getInstance(getApplicationContext()).bm7501Dao());
+            for (java.util.Map.Entry<String, BM7501Model> entry
+                    : repository.getActiveByRefuelItems(ids).entrySet()) {
+                BM7501Model form = entry.getValue();
+                if (form != null && form.isExported() && form.getLocalNumber() != null) {
+                    out.put(entry.getKey(), form.getLocalNumber());
+                }
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("BM7501", "Không đọc được trạng thái phiếu hút: " + ex.getMessage());
+        }
+        return out;
     }
 
     private void new_extract() {

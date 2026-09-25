@@ -81,7 +81,7 @@ import com.megatech.fms.data.entity.Product;
         Product.class,
         TruckInvoice.class
         },
-        version = 13,
+        version = 14,
         exportSchema = false
         )
 @TypeConverters({Converters.class,
@@ -250,6 +250,17 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    /** Đánh dấu bản sao mẻ xe khác để Room loại chúng khỏi mọi hàng đợi POST. */
+    static final Migration MIGRATION_13_14 = new Migration(13, 14) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE RefuelItem "
+                    + "ADD COLUMN remoteReplica INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE RefuelItem "
+                    + "ADD COLUMN remoteOthersUidsJson TEXT");
+        }
+    };
+
     public abstract RefuelItemDao refuelItemDao();
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
@@ -261,7 +272,8 @@ public abstract class AppDatabase extends RoomDatabase {
 
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, BuildConfig.DB_FILE)
-                            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                            .addMigrations(MIGRATION_9_10, MIGRATION_10_11,
+                                    MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                             .fallbackToDestructiveMigration()  // lưới an toàn cho máy version cổ
                             .build();
                 }

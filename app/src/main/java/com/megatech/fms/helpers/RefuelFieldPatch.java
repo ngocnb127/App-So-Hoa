@@ -53,7 +53,66 @@ public final class RefuelFieldPatch {
                 "StartNumber", "EndNumber", "OriginalEndMeter",
                 "StartTime", "EndTime", "DeviceStartTime", "DeviceEndTime",
                 "Temperature", "WaterSensor", "SaleNumber", "TicketNumber",
-                "TruckId", "TruckNo", "ReceiptNumber", "Completed"});
+                "TruckId", "TruckNo", "ReceiptNumber", "Completed"}),
+
+        /**
+         * Đúng tập trường các hộp thoại của {@code RefuelPreviewActivity} cho phép nhập.
+         *
+         * <p>Màn hình xem trước đang lưu bằng FULL SNAPSHOT bất đồng bộ, mỗi hộp thoại một
+         * luồng riêng. Sửa nhiệt độ rồi tỉ trọng liên tiếp là hai luồng chạy song song trên
+         * cùng một baseline: luồng về sau đứng trên ClientSeq đã cũ nên bị chặn CONFLICT, và
+         * người dùng phải nhập lại — đúng phản ánh "nhiệt độ, tỉ trọng nhập mấy lần mới ăn".
+         * Có scope này thì lần bị chặn còn đường đắp lại đúng trường vừa nhập lên row mới
+         * nhất, thay vì bắt người dùng gõ lại.
+         *
+         * <p>Thêm ô nhập mới trên màn hình đó thì PHẢI thêm khoá ở đây, nếu không thay đổi
+         * sẽ bị bỏ im lặng.
+         */
+        PREVIEW(new String[]{
+                // CHỈ những trường màn hình xem trước thực sự ghi qua updateBinding().
+                //
+                // KHÔNG thêm khoá có giá trị là OBJECT (ví dụ AirlineModel): RefuelValues
+                // .normalize() trả nguyên JsonElement cho thứ không phải primitive, nên object
+                // lồng bị so bằng JSON sâu. Bản model round-trip đổi thứ tự khoá và mất khoá
+                // server chưa biết, nên nó LUÔN khác nền — patch thấy "cả hai phía cùng đổi"
+                // và chặn mọi lần sửa. Đo trên máy thật 27-08-2026 14:22:17:
+                // result=FIELD_CONFLICT [AirlineModel] trong khi người dùng chỉ sửa giờ.
+                //
+                // Cũng KHÔNG thêm metadata chứng từ (ReceiptNumber/ReceiptCount/PrintStatus):
+                // chúng đi đường patchAllPrintItems() chứ không qua đây, mà mặc định của model
+                // khác "vắng mặt trong JSON" nên cũng sinh xung đột giả.
+
+                // setAll(...) — áp cho MỌI mẻ của xe hiện tại trong chuyến
+                "AircraftCode", "AircraftType", "RouteName", "ParkingLot",
+                "InvoiceNameCharter", "Price", "TaxRate", "IsInternational",
+                // hộp thoại sửa đúng một mẻ
+                "ManualTemperature", "Density", "QualityNo", "WeightNote",
+                "RealAmount", "Gallon", "StartNumber", "Volume", "ChangeFlag",
+                "ReturnAmount", "ReturnUnit",
+                "InvoiceNumber", "ReturnInvoiceNumber",
+                // sửa giờ tay — showTimeDialog(), một đường riêng ngoài switch hộp thoại
+                "StartTime", "EndTime",
+                // chọn nhân viên
+                "DriverId", "DriverName", "OperatorId", "OperatorName",
+                // chọn hãng bay — setAirline(). AirlineId là định danh vô hướng; AirlineModel
+                // cố ý để ngoài, xem ghi chú đầu khối.
+                "AirlineId", "Currency", "ProductName", "Unit",
+                // chọn mẫu hoá đơn — setInvoiceForm()
+                "InvoiceFormId", "FormNo", "PCode", "PName", "PrintTemplate", "Sign"}),
+
+        /**
+         * Đúng tập trường các hộp thoại của {@code RefuelDetailActivity} cho phép nhập.
+         *
+         * <p>KHÔNG gồm số đồng hồ, sản lượng, trạng thái hay giờ bắt đầu/kết thúc: những thứ
+         * đó thuộc thiết bị và đường End ({@link Scope#END}), người dùng không gõ ở đây.
+         *
+         * <p>Thêm ô nhập mới trên màn hình đó thì PHẢI thêm khoá ở đây, nếu không thay đổi
+         * sẽ bị bỏ im lặng.
+         */
+        DETAIL(new String[]{
+                "AircraftCode", "AircraftType", "ParkingLot", "InvoiceNameCharter",
+                "ManualTemperature", "Temperature", "Density", "QualityNo",
+                "DriverId", "DriverName", "OperatorId", "OperatorName"});
 
         private final String[] keys;
 
@@ -218,6 +277,52 @@ public final class RefuelFieldPatch {
         } catch (RuntimeException ignored) {
         }
         return changed;
+    }
+
+    /**
+     * Các trường người dùng đã đổi nhưng NẰM NGOÀI scope — tức là chúng sẽ bị đường patch
+     * BỎ IM LẶNG.
+     *
+     * <p>Vì sao cần: khi lưu cả gói bị chặn, máy tự thử lại bằng patch theo scope. Patch báo
+     * thành công, nhưng những trường ngoài scope không hề được ghi — người dùng không nhận
+     * được tín hiệu nào và chỉ phát hiện khi mở lại thấy giá trị cũ. Đúng hình dạng mất mát
+     * của tỉ trọng / nhiệt độ đo được ngày 06-09-2026, chỉ khác cơ chế.
+     *
+     * <p>Chủ dự án chốt 06-09-2026: dùng để CẢNH BÁO, tuyệt đối không dùng để chặn. Thời gian
+     * trên sân rất gấp; chặn ở đây là làm dở dang cả nghiệp vụ vì một trường phụ.
+     *
+     * <p>Chỉ xét các khoá vô hướng có mặt ở ÍT NHẤT một trong hai bản: khoá vắng cả hai bên
+     * là không có gì để nói, còn object lồng thì round-trip của model đã làm nó khác nền sẵn
+     * nên so ở đây chỉ sinh báo động giả (xem ghi chú ở {@link Scope#PREVIEW}).
+     */
+    public static List<String> droppedKeysOutsideScope(Scope scope, String baseJson,
+                                                       RefuelItemData ours) {
+        List<String> dropped = new ArrayList<>();
+        if (ours == null || scope == null || isBlank(baseJson)) return dropped;
+
+        java.util.Set<String> inScope = new java.util.HashSet<>(java.util.Arrays.asList(scope.keys));
+        try {
+            com.google.gson.JsonObject base =
+                    com.google.gson.JsonParser.parseString(baseJson).getAsJsonObject();
+            com.google.gson.JsonObject mine =
+                    com.google.gson.JsonParser.parseString(ours.toJson()).getAsJsonObject();
+
+            java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+            for (String k : base.keySet()) keys.add(k);
+            for (String k : mine.keySet()) keys.add(k);
+
+            for (String key : keys) {
+                if (inScope.contains(key)) continue;
+                com.google.gson.JsonElement a = base.get(key);
+                com.google.gson.JsonElement b = mine.get(key);
+                // Object/array lồng nhau: bỏ qua, xem javadoc.
+                if ((a != null && (a.isJsonObject() || a.isJsonArray()))
+                        || (b != null && (b.isJsonObject() || b.isJsonArray()))) continue;
+                if (!RefuelValues.equal(key, a, b)) dropped.add(key);
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return dropped;
     }
 
     private static boolean isDone(com.google.gson.JsonObject row) {

@@ -1,6 +1,9 @@
 package com.megatech.fms.helpers;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -16,6 +19,7 @@ import com.liquidcontrols.lcr.iq.sdk.ResponseField;
 import com.liquidcontrols.lcr.iq.sdk.SDKDeviceException;
 import com.liquidcontrols.lcr.iq.sdk.WiFiConnectionOptions;
 import com.liquidcontrols.lcr.iq.sdk.interfaces.CommandListener;
+import com.liquidcontrols.lcr.iq.sdk.lc.api.device.InternalEvent;
 import com.liquidcontrols.lcr.iq.sdk.interfaces.DeviceCommunicationListener;
 import com.liquidcontrols.lcr.iq.sdk.interfaces.DeviceConnectionListener;
 import com.liquidcontrols.lcr.iq.sdk.interfaces.DeviceListener;
@@ -50,11 +54,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Queue;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +99,10 @@ public class LCRReader {
     public LCRReader(Context ctx,String ipAddress, int port)
     {
         this.dataListener = null;
-        this.context = ctx;
+        // Đồng hồ dùng chung cho cả ứng dụng (xem create()), nên SDK phải gắn với Context của
+        // ứng dụng chứ không phải của màn hình đầu tiên tạo ra nó — màn hình đó sẽ chết trước.
+        Context app = ctx.getApplicationContext();
+        this.context = app != null ? app : ctx;
         this.wifiIpAddress = ipAddress;
         this.wifiPort = port;
         initLCR();
@@ -105,7 +112,36 @@ public class LCRReader {
     private static LCRDataModel lastData;
     private static LCRReader _reader;
     private final String serialFieldName = "METERID";
-    private final Queue<String> requestFields = new LinkedList<>();
+
+    /**
+     * Các trường đang CHỜ gửi yêu cầu đọc tới SDK. Chỉ đọc/ghi trên luồng giao diện — luồng
+     * SDK dùng để gọi mọi listener — xem {@link #onMainThread}.
+     */
+    private final Set<String> pendingFields = new LinkedHashSet<>();
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    /**
+     * Chạy việc đăng ký trường trên luồng giao diện.
+     *
+     * <p>Callback của SDK được đẩy về main looper, còn các màn hình gọi {@code requestData()}
+     * cả từ luồng Timer lẫn luồng nền. Hai phía cùng sửa một tập hợp không an toàn luồng thì
+     * có lúc ném exception — và exception trong {@code TimerTask} giết luôn Timer, tức vòng
+     * tự hỏi lại dữ liệu của màn tra nạp tắt im lặng.
+     */
+    private void onMainThread(Runnable task) {
+        if (Looper.myLooper() == Looper.getMainLooper()) task.run();
+        else mainHandler.post(task);
+    }
+
+    /** SDK đã khởi tạo xong (init trả về không lỗi). */
+    private volatile boolean sdkReady = false;
+
+    private boolean isSameAddress(String ip, int port) {
+        return Objects.equals(ip == null ? null : ip.trim(),
+                wifiIpAddress == null ? null : wifiIpAddress.trim())
+                && wifiPort != null && wifiPort == port;
+    }
     /**
      * Device connection listener
      */
@@ -130,8 +166,9 @@ public class LCRReader {
                     + " LCP Device Address : "
                     + deviceInfo.getDeviceAddress().toString();
 
-            raiseError(logText);
+            logConnection(logText);
             onConnected();
+            refreshStatusListeners();
         }
 
         /**
@@ -154,9 +191,10 @@ public class LCRReader {
             if (cause != null) {
                 causeString = cause.getLocalizedMessage();
             }
-            raiseError("Device on DISCONNECTED : " + deviceId + " Cause : " + causeString);
-            if (connectionListener != null)
-                connectionListener.onDisconnected();
+            logConnection("Device on DISCONNECTED : " + deviceId + " Cause : " + causeString);
+            LCRConnectionListener connection = connectionListener;
+            if (connection != null)
+                connection.onDisconnected();
         }
 
         /**
@@ -178,9 +216,10 @@ public class LCRReader {
             if (cause != null) {
                 errorMsg = cause.getLocalizedMessage();
             }
-            raiseError("Device on ERROR : " + deviceId + " Cause : " + errorMsg);
-            if (connectionListener != null)
-                connectionListener.onError();
+            logConnection("Device on ERROR : " + deviceId + " Cause : " + errorMsg);
+            LCRConnectionListener connection = connectionListener;
+            if (connection != null)
+                connection.onError();
         }
 
 
@@ -201,7 +240,7 @@ public class LCRReader {
             //textViewDeviceConnectionStateData.setText(objToStrWithNullCheck(newValue));
 
             onConnectionStateChanged(newValue);
-            raiseError("Device connection state changed : " + oldValue + " -> " + newValue);
+            logConnection("Device connection state changed : " + oldValue + " -> " + newValue);
         }
 
         /**
@@ -233,9 +272,10 @@ public class LCRReader {
 //            }
             //textViewNetworkConnectionStateData.setText(newValue.toString());
 
-            if (newValue == LCR_THREAD_CONNECTION_STATE.ERROR || newValue == LCR_THREAD_CONNECTION_STATE.DISCONNECTED)
-                onError();
-            raiseError("Network connection state changed : " + oldValue + " -> " + newValue);
+            // CHỈ ghi vết, như demo chính hãng. Mạng rớt là việc SDK tự nối lại (5 rồi 10
+            // giây); báo lỗi ra màn hình ở đây là bật đỏ cho một nhịp SDK đang tự lo được.
+            // Mất kết nối THẬT đến qua deviceOnDisconnect / deviceOnError ở trên.
+            logConnection("Network connection state changed : " + oldValue + " -> " + newValue);
         }
     };
     /**
@@ -370,7 +410,7 @@ public class LCRReader {
         }
 
     };
-    private boolean fieldAvail = false;
+    private volatile boolean fieldAvail = false;
     /**
      * Listener to handle all Field operation events
      */
@@ -486,11 +526,18 @@ public class LCRReader {
                 if (dataListener != null) {
                     try {
                         double qty = numberFormat.parse(responseField.getNewValue()).doubleValue();
+                        // Đọc + phân tích được là trường CÒN SỐNG, kể cả khi giá trị bị bộ lọc
+                        // loại ngay sau đó: đầu mẻ Gross = 0 (chưa mở vòi) là bình thường.
+                        markMeterRead(FIELD_CHANGE.GROSSQTY);
                         if (qty > 0  &&  Math.abs(qty-model.getGrossQty())<10000) {
                             model.setGrossQty(qty);
+                            markMeterAccepted(FIELD_CHANGE.GROSSQTY);
                             onDataChanged(model, FIELD_CHANGE.GROSSQTY);
+                        } else {
+                            markMeterFiltered(FIELD_CHANGE.GROSSQTY);
                         }
                     } catch (ParseException e) {
+                        markMeterFail(FIELD_CHANGE.GROSSQTY);
                     }
                 }
             }
@@ -539,11 +586,24 @@ public class LCRReader {
                     try {
                         double value = numberFormat.parse(responseField.getNewValue()).doubleValue();
 
-                        if (Math.abs(value- model.getEndMeterNumber() ) <1000 || model.getEndMeterNumber()==0) {
+                        markMeterRead(FIELD_CHANGE.TOTALIZER);
+                        double dangGiu = model.getEndMeterNumber();
+                        if (totalizerFilter.accept(dangGiu, value)) {
+                            // Nhảy hơn 1000 mà vẫn được nhận nghĩa là vừa LẤY LẠI MỐC; ca đối
+                            // soát sau này phải thấy được chỗ số tổng nhảy một phát.
+                            if (totalizerFilter.justRebased(dangGiu, value))
+                                raiseError(String.format(Locale.US,
+                                        "Totalizer lay lai moc: %.0f -> %.0f", dangGiu, value));
                             model.setEndMeterNumber(value);
+                            // Chỉ giá trị QUA được bộ lọc mới chứng minh số tổng còn theo kịp
+                            // thiết bị; "đọc được" ở trên không đủ (xem MeterFieldHealth).
+                            markMeterAccepted(FIELD_CHANGE.TOTALIZER);
                             onDataChanged(model, FIELD_CHANGE.TOTALIZER);
+                        } else {
+                            markMeterFiltered(FIELD_CHANGE.TOTALIZER);
                         }
                     } catch (ParseException e) {
+                        markMeterFail(FIELD_CHANGE.TOTALIZER);
                     }
 
                 }
@@ -555,8 +615,10 @@ public class LCRReader {
                 if (dataListener != null) {
                     try {
                         model.setTemperature(numberFormat.parse(responseField.getNewValue()).doubleValue());
+                        markMeterRead(FIELD_CHANGE.TEMPERATURE);
                         onDataChanged(model, FIELD_CHANGE.TEMPERATURE);
                     } catch (ParseException e) {
+                        markMeterFail(FIELD_CHANGE.TEMPERATURE);
                     }
                 }
             }
@@ -595,11 +657,15 @@ public class LCRReader {
                 if (dataListener != null) {
                     try {
                         String ticketNum = responseField.getNewValue();
+                        markMeterRead(FIELD_CHANGE.TICKETNUMBER);
                         if (ticketNum != null && !ticketNum.isEmpty()) {
                             model.setTicketNumber(ticketNum);
                             onDataChanged(model, FIELD_CHANGE.TICKETNUMBER);
+                        } else {
+                            markMeterFiltered(FIELD_CHANGE.TICKETNUMBER);
                         }
                     } catch (Exception e) {
+                        markMeterFail(FIELD_CHANGE.TICKETNUMBER);
                         raiseError("Error parsing TICKETNUMBER: " + e.getLocalizedMessage());
                     }
                 }
@@ -677,6 +743,8 @@ public class LCRReader {
                     , requestField.getItemToRequest().getFieldName()
                     , cause.getLocalizedMessage());
 
+            markMeterFail(requestField.getItemToRequest().getFieldName());
+
             // Write log text
             raiseError(logString);
             //request field again
@@ -722,10 +790,6 @@ public class LCRReader {
 
             // Logging data request add success event
             raiseError("Field data request add success : " + requestField.getItemToRequest().getFieldName());
-
-            //remove queue top and process next request field
-            requestFields.remove(requestField.getItemToRequest().getFieldName());
-            processFieldQueue();
         }
 
         /**
@@ -743,11 +807,17 @@ public class LCRReader {
                 @NonNull RequestField requestField,
                 @NonNull Throwable cause) {
 
+            markMeterFail(requestField.getItemToRequest().getFieldName());
+
             // Logging data request add failed
             raiseError("Field data request add failed : "
                     + requestField.getItemToRequest().getFieldName()
                     + "\nCause :"
                     + cause.getLocalizedMessage());
+
+            // Xếp lại để thử ở lần nối/nhận danh sách trường kế tiếp — KHÔNG thử lại ngay (một
+            // trường lỗi cố định sẽ thành vòng lặp) và KHÔNG chặn trường nào khác.
+            pendingFields.add(requestField.getItemToRequest().getFieldName());
         }
 
         /**
@@ -875,18 +945,19 @@ public class LCRReader {
                 @NonNull String deviceId,
                 @NonNull DeviceInfo deviceInfo,
                 @NonNull LCRCommunicationException cause) {
-            /*
-            Log.e("ERROR_EVENT", "---------------------------------");
-            Log.e("ERROR_EVENT", "Error event from : " + deviceId);
-            Log.e("ERROR_EVENT", "-------- event data start--------");
-            // Print events trace to lead up in error (not complete trace yet)
-            Integer lineNumber = 1;
-            for(InternalEvent event : cause.getEvents()) {
-                // Print events (all type of events)
-                Log.e("ERROR_EVENT", lineNumber++ + " - " + event.getData());
+            // Như demo chính hãng: in chuỗi sự kiện dẫn tới lỗi. Đây là dấu vết DUY NHẤT nói
+            // được vì sao đồng hồ không trả lời (timeout, retry, mã trả về LCP) — thiếu nó
+            // thì "mất kết nối" ngoài hiện trường không có cách nào lần ra nguyên nhân.
+            StringBuilder trace = new StringBuilder("Communication error from ")
+                    .append(deviceId).append(" : ").append(cause.getLocalizedMessage());
+            List<InternalEvent> events = cause.getEvents();
+            if (events != null) {
+                int lineNumber = 1;
+                for (InternalEvent event : events)
+                    trace.append("\n  ").append(lineNumber++).append(" - ")
+                            .append(objToStrWithNullCheck(event == null ? null : event.toShortFormat()));
             }
-            Log.e("ERROR_EVENT", "--------- event data end ---------");
-            */
+            logConnection(trace.toString());
         }
 
         /**
@@ -906,30 +977,27 @@ public class LCRReader {
                 @Nullable LCR_COMMUNICATION_STATUS newValue,
                 @Nullable LCR_COMMUNICATION_STATUS oldValue) {
 
-            raiseError("Communication status changed: " + oldValue + " -> " + newValue);
-            if (newValue == LCR_COMMUNICATION_STATUS.ERROR)
-                onError();
-            if (((oldValue == LCR_COMMUNICATION_STATUS.ERROR || oldValue == LCR_COMMUNICATION_STATUS.RETRY)
-                    && (newValue == LCR_COMMUNICATION_STATUS.OK || newValue == LCR_COMMUNICATION_STATUS.QUEUED))
-            )
-            {
-                onConnected();
-            }
+            // CHỈ ghi vết, như demo chính hãng. Một bản tin lỗi/timeout là việc SDK tự thử lại
+            // (trạng thái RETRY); trước đây app bật đỏ "mất kết nối" ngay tại đây, rồi lại
+            // "đã kết nối" khi bản tin kế tiếp thành công — dấu kết nối nhấp nháy trong khi
+            // thiết bị chưa hề rời mạng. Mất kết nối THẬT đến qua deviceOnDisconnect /
+            // deviceOnError. Chủ dự án chốt ngày 2026-09-14.
+            logConnection("Communication status changed: " + oldValue + " -> " + newValue);
         }
     };
 
-    private boolean isError = false;
-
     private void onDeviceAdded(boolean failed) {
-        if (connectionListener != null)
-            connectionListener.onDeviceAdded(false);
+        LCRConnectionListener connection = connectionListener;
+        if (connection != null)
+            connection.onDeviceAdded(false);
         if (!failed)
             doConnectDevice();
     }
     private LCR_DEVICE_STATE current_device_state;
     private void onCommandError(LCR_COMMAND command) {
-        if (connectionListener!=null)
-            connectionListener.onCommandError(command);
+        LCRConnectionListener connection = connectionListener;
+        if (connection != null)
+            connection.onCommandError(command);
     }
     /**
      * Listener for most of Device status and state information
@@ -1069,24 +1137,64 @@ public class LCRReader {
         model = new LCRDataModel();
     }
 
+    /**
+     * Lấy đồng hồ dùng chung cho một màn hình tra nạp / in, và bắt đầu phiên đọc mới.
+     *
+     * <p>Cả ứng dụng chỉ có MỘT {@link LcrSdk}. SDK chạy trên một service dùng chung: mọi
+     * {@code LcrSdk} cùng trỏ vào một thiết bị {@code "LCR.iQ"}, và {@code removeAllListeners}
+     * xoá listener của CẢ service. Trước đây mỗi {@code renew = true} dựng thêm một SDK mà
+     * không huỷ cái cũ (listener cũ vẫn chạy, {@code addDevice} lần hai bị SDK từ chối), còn
+     * màn Cài đặt dựng riêng một cái rồi {@code destroy()} — gỡ luôn thiết bị và listener mà
+     * màn tra nạp đang dùng. Demo chính hãng chỉ có một SDK, init một lần, huỷ một lần.
+     *
+     * @param renew true để thử khởi tạo lại SDK nếu lần trước thất bại (chỉ gọi từ chỗ chắc
+     *              chắn đang foreground — xem {@link #init()}). KHÔNG còn dựng SDK mới.
+     */
     public static LCRReader create(Context ctx, String ip, int port, boolean renew) {
+        LCRReader reader = obtain(ctx, ip, port, renew);
 
-        if (_reader == null || renew)
-            _reader = new LCRReader(ctx, ip, port);
+        reader.reset();
 
-        _reader.reset();
-
-        if (_reader.getConnected())
-            _reader.onConnected();
+        if (reader.getConnected())
+            reader.onConnected();
 
 
-        if (_reader.isDeviceError()) {
-            _reader.doConnectDevice();
+        if (reader.isDeviceError()) {
+            reader.doConnectDevice();
         }
 
 
-        return _reader;
+        return reader;
 
+    }
+
+    /**
+     * Đồng hồ dùng chung, KHÔNG mở phiên đọc mới — cho màn Cài đặt kiểm tra IP.
+     *
+     * <p>Khác {@link #create}: không gọi {@code reset()}, nên bấm "Kiểm tra" giữa lúc một mẻ
+     * đang chạy không xoá trạng thái của mẻ đó.
+     */
+    public static LCRReader shared(Context ctx, String ip, int port) {
+        return obtain(ctx, ip, port, true);
+    }
+
+    private static synchronized LCRReader obtain(Context ctx, String ip, int port, boolean retryInit) {
+        // Đổi địa chỉ (người dùng vừa đổi IP ở màn Cài đặt) là lúc DUY NHẤT dựng lại SDK: thiết
+        // bị đã thêm vào SDK mang theo địa chỉ cũ. Huỷ hẳn cái cũ trước, không để hai SDK sống.
+        if (_reader != null && !_reader.isSameAddress(ip, port)) {
+            Logger.appendLog("LCR", "Đổi địa chỉ đồng hồ " + _reader.wifiIpAddress + ":"
+                    + _reader.wifiPort + " -> " + ip + ":" + port + " — dựng lại kết nối");
+            _reader.destroy();
+            _reader = null;
+        }
+        if (_reader == null) {
+            _reader = new LCRReader(ctx, ip, port);
+        } else if (retryInit && !_reader.sdkReady) {
+            // Lần khởi tạo trước bị Android từ chối (service lúc tiến trình ở background):
+            // thử lại trên CHÍNH SDK đó, không dựng SDK thứ hai.
+            _reader.init();
+        }
+        return _reader;
     }
 
     public boolean isDeviceError() {
@@ -1095,34 +1203,52 @@ public class LCRReader {
                 || state == LCR_DEVICE_CONNECTION_STATE.DISCONNECTED;
     }
 
+    /** Gửi yêu cầu đọc cho mọi trường đang chờ. Xem {@link #drainPendingFields()}. */
     private void processFieldQueue() {
-        if (requestFields != null) {
-            if (requestFields.size() > 0) {
-                String fieldName = requestFields.peek();
-                try {
-                    requestFieldData(lcrSdk.fieldToolsFindField(getDeviceId(), fieldName, new AsyncCallback() {
-                        @Override
-                        public void onAsyncReturn(@Nullable Throwable throwable) {
-                            if (throwable != null) {
-                                Logger.appendLog("LCR", "fieldToolsFindField " + fieldName + " failed: " + throwable.getLocalizedMessage());
-                                requestFieldCompleted(fieldName);
-                            }
-
-
-                            if (fieldName == "DBMNODE" && throwable == null)
-                                isLCR600 = true;
-                        }
-                    }));
-
-                } catch (Exception ex) {
-                }
-            }
-        }
+        onMainThread(this::drainPendingFields);
     }
 
-    private void requestFieldCompleted(String fieldName) {
-        requestFields.remove(fieldName);
-        processFieldQueue();
+    /**
+     * Gửi yêu cầu đọc cho MỌI trường đang chờ, mỗi trường độc lập — đúng cách demo chính hãng
+     * làm; SDK tự xếp hàng các yêu cầu bên trong.
+     *
+     * <p>Trước đây app tự dựng một hàng đợi NỐI TIẾP: trường sau chỉ được gửi khi trường trước
+     * báo {@code onFieldDataRequestAddSuccess}. Một trường đăng ký thất bại thì nằm lì ở đầu
+     * hàng và mọi trường phía sau không bao giờ được gửi — đúng cái ca "SALENUMBER trống suốt
+     * mẻ" mà màn tra nạp phải vá bằng cách hỏi lại mỗi phút (SALENUMBER xếp SAU sáu trường của
+     * {@code requestData()}). Hàng đợi đó còn gửi lại trường đầu hàng mỗi lần được gọi, và SDK
+     * hiểu mỗi lần như một yêu cầu ghi đè: xoá yêu cầu cũ, đếm lại chu kỳ từ đầu.
+     */
+    private void drainPendingFields() {
+        if (!fieldAvail || lcrSdk == null || pendingFields.isEmpty()) return;
+        List<String> names = new ArrayList<>(pendingFields);
+        pendingFields.clear();
+        for (String fieldName : names)
+            requestFieldByName(fieldName);
+    }
+
+    private void requestFieldByName(final String fieldName) {
+        FieldItem field;
+        try {
+            field = lcrSdk.fieldToolsFindField(getDeviceId(), fieldName, new AsyncCallback() {
+                @Override
+                public void onAsyncReturn(@Nullable Throwable throwable) {
+                    if (throwable != null)
+                        Logger.appendLog("LCR", "fieldToolsFindField " + fieldName + " failed: " + throwable.getLocalizedMessage());
+                }
+            });
+        } catch (Exception ex) {
+            // SDK chưa sẵn sàng: giữ lại, lần nối / nhận danh sách trường kế tiếp gửi lại.
+            Logger.appendLog("LCR", "fieldToolsFindField " + fieldName + " lỗi: " + Logger.describe(ex));
+            pendingFields.add(fieldName);
+            return;
+        }
+        // Thiết bị không có trường này (đời máy khác): bỏ, như trước đây.
+        if (field == null) return;
+
+        if ("DBMNODE".equals(fieldName))
+            isLCR600 = true;
+        requestFieldData(field);
     }
 
     public boolean isLCR600() {
@@ -1151,30 +1277,79 @@ public class LCRReader {
         void onStop();
     }
 
-    private LCRDataListener dataListener;
+    // volatile: màn hình gắn listener từ cả luồng nền, SDK gọi chúng trên luồng giao diện.
+    private volatile LCRDataListener dataListener;
 
     public void setFieldDataListener(LCRDataListener listener) {
         this.dataListener = listener;
     }
 
-    private LCRConnectionListener connectionListener;
+    private volatile LCRConnectionListener connectionListener;
 
     public void setConnectionListener(LCRConnectionListener connectionListener) {
         this.connectionListener = connectionListener;
     }
 
-    private LCRStateListener stateListener;
+    private volatile LCRStateListener stateListener;
 
     public void setStateListener(LCRStateListener stateListener) {
         this.stateListener = stateListener;
     }
 
+    /**
+     * Gỡ listener CỦA CHÍNH màn hình gọi — chỉ khi nó còn là listener đang gắn.
+     *
+     * <p>Đồng hồ dùng chung giữa các màn hình, và Android gọi {@code onDestroy} của màn cũ
+     * MUỘN, thường sau khi màn mới đã gắn listener của nó. {@code setXxxListener(null)} lúc đó
+     * gỡ nhầm listener của màn mới: màn tra nạp đứng số mà dấu kết nối vẫn xanh.
+     */
+    public void removeListeners(LCRDataListener data, LCRConnectionListener connection,
+                                LCRStateListener state) {
+        synchronized (this) {
+            if (data != null && dataListener == data) dataListener = null;
+            if (connection != null && connectionListener == connection) connectionListener = null;
+            if (state != null && stateListener == state) stateListener = null;
+        }
+    }
+
+    public LCRDataListener getFieldDataListener() {
+        return dataListener;
+    }
+
+    public LCRConnectionListener getConnectionListener() {
+        return connectionListener;
+    }
+
+    /**
+     * Trả listener về như trước khi một màn hình MƯỢN tạm — chỉ khi listener đang gắn vẫn là
+     * cái đã mượn. Dùng cho nút Kiểm tra ở màn Cài đặt: màn tra nạp có thể đang nằm bên dưới,
+     * mượn xong không trả là màn tra nạp mất số cho tới hết mẻ.
+     */
+    public void restoreListeners(LCRDataListener borrowedData, LCRDataListener previousData,
+                                 LCRConnectionListener borrowedConnection,
+                                 LCRConnectionListener previousConnection) {
+        synchronized (this) {
+            if (borrowedData != null && dataListener == borrowedData) dataListener = previousData;
+            if (borrowedConnection != null && connectionListener == borrowedConnection)
+                connectionListener = previousConnection;
+        }
+    }
+
     private LCRDataModel model = new LCRDataModel();
+
+    /**
+     * Bộ lọc nhiễu của số tổng.
+     *
+     * <p>Sống cùng {@code model} vì nó lọc theo mốc của chính {@code model}: hai thứ này mà
+     * lệch vòng đời nhau thì bộ lọc so với một mốc không còn tồn tại.
+     */
+    private final TotalizerFilter totalizerFilter = new TotalizerFilter();
 
     private void onFieldAddSucess(RequestField requestField) {
 
-        if (dataListener != null)
-            dataListener.onFieldAddSucess(requestField.getItemToRequest().getFieldName());
+        LCRDataListener data = dataListener;
+        if (data != null)
+            data.onFieldAddSucess(requestField.getItemToRequest().getFieldName());
 
     }
 
@@ -1197,8 +1372,12 @@ public class LCRReader {
 
     private void onConnectionStateChanged(LCR_DEVICE_CONNECTION_STATE state) {
         raiseError("onConnectionStateChanged " + state);
-        if (connectionListener !=null)
-            connectionListener.onConnectionStateChange( state);
+        // Đổi trạng thái kết nối là ranh giới của một phiên đọc: chuỗi lệch đang dở dang
+        // thuộc về phiên cũ, cộng dồn sang phiên mới sẽ lấy mốc sớm hơn thiết kế.
+        totalizerFilter.reset();
+        LCRConnectionListener connection = connectionListener;
+        if (connection != null)
+            connection.onConnectionStateChange( state);
 
     }
 
@@ -1218,7 +1397,13 @@ public class LCRReader {
         init();
     }
 
-    public void destroy() {
+    /**
+     * Huỷ hẳn SDK. Chỉ {@link #obtain} gọi, khi đổi địa chỉ đồng hồ — màn hình KHÔNG được tự
+     * gọi: SDK và thiết bị là của chung cả ứng dụng, {@code removeAllListeners} xoá listener
+     * của cả service.
+     */
+    void destroy() {
+        sdkReady = false;
 
         if (lcrSdk != null) {
             doDisconnectDevice();
@@ -1272,7 +1457,6 @@ public class LCRReader {
     }
 
     private void onConnected() {
-        //lcrSdk.addListener(deviceStatusListener);
         if (!isLCR600 && fieldAvail) {
             lcrSdk.fieldToolsFindField(getDeviceId(), "DBMNODE", new AsyncCallback() {
                 @Override
@@ -1283,14 +1467,35 @@ public class LCRReader {
         }
 
         raiseError("onConnected");
-        if (connectionListener != null)
-            connectionListener.onConnected();
+        LCRConnectionListener connection = connectionListener;
+        if (connection != null)
+            connection.onConnected();
         if (current_device_state == LCR_DEVICE_STATE.STATE_RUN) {
             onStarted();
         }
 
         processFieldQueue();
-        isError = false;
+    }
+
+    /**
+     * Lấy lại trạng thái thiết bị SDK đang giữ, ngay sau khi nối — như
+     * {@code refreshStatusListeners()} của demo chính hãng.
+     *
+     * <p>SDK không nhân đôi listener đã gắn: gắn lại chỉ PHÁT LẠI giá trị mới nhất. Đồng hồ
+     * đổi trạng thái trong lúc mất kết nối (ví dụ đã về END_DELIVERY) thì đây là đường để app
+     * biết; không có nó app kẹt ở trạng thái cũ cho tới lần đổi kế tiếp.
+     *
+     * <p>CỐ Ý không phát lại {@code switchStateListener}: listener đó tự gửi lệnh RUN khi
+     * công tắc rời vị trí PRINT. Phát lại một lần chuyển công tắc đã cũ là tự khởi động một
+     * mẻ mới trên đồng hồ.
+     */
+    private void refreshStatusListeners() {
+        if (lcrSdk == null) return;
+        try {
+            lcrSdk.addListener(deviceStatusListener);
+        } catch (Exception ex) {
+            logConnection("Không làm mới được trạng thái thiết bị: " + Logger.describe(ex));
+        }
     }
 
     private boolean isStopped = false;
@@ -1298,16 +1503,6 @@ public class LCRReader {
 
     public void end() {
         end(false);
-    }
-
-    private void onError() {
-        raiseError("onError");
-        if (connectionListener != null && !isError) {
-            isError = true;
-            //fieldAvail = false;
-            connectionListener.onError();
-        }
-
     }
 
     private void sendCommand(LCR_COMMAND command) {
@@ -1358,18 +1553,12 @@ public class LCRReader {
     }
 
     private void addRequestQueue(String fieldName) {
-        if (!requestFields.contains(fieldName))
-            requestFields.add(fieldName);
+        onMainThread(() -> pendingFields.add(fieldName));
     }
 
     private void requestFieldData(String fieldName) {
-
-        requestFields.add(fieldName);
-        if (fieldAvail) {
-            processFieldQueue();
-        }
-
-
+        addRequestQueue(fieldName);
+        processFieldQueue();
     }
     public void requestSaleNumberAndTicket() {
         raiseError("Request SALENUMBER and TICKETNUMBER");
@@ -1440,6 +1629,9 @@ public class LCRReader {
                         public void onAsyncReturn(@Nullable Throwable throwable) {
                             if (throwable != null) {
                                 raiseError("SDK : Request command for field " + field.getFieldName() + " failed : " + throwable.getLocalizedMessage());
+                                // SDK không nhận được yêu cầu: giữ lại cho lần nối kế tiếp,
+                                // không chặn trường nào khác.
+                                addRequestQueue(field.getFieldName());
                             } else {
                                 raiseError("SDK : Request command for field " + field.getFieldName() + " success");
                             }
@@ -1564,9 +1756,9 @@ public class LCRReader {
         //requestData();
         alreadyStarted = true;
         lastData = null;
-        if (stateListener !=null ){
-                stateListener.onStart();
-        }
+        LCRStateListener state = stateListener;
+        if (state != null)
+            state.onStart();
 
     }
 
@@ -1590,7 +1782,7 @@ public class LCRReader {
         public void onDeviceAddSuccess(@NonNull String deviceId) {
 
             // Logging success
-            raiseError("Add device success : " + deviceId);
+            logConnection("Add device success : " + deviceId);
 
             // Set user interface objects for device add success
             //doUIActionsForDeviceAddSuccess();
@@ -1609,7 +1801,7 @@ public class LCRReader {
                 strCause = cause.getMessage();
             }
             // Logging add device error
-            raiseError("Add device failed : " + strCause);
+            logConnection("Add device failed : " + strCause);
             onDeviceAdded(true);
         }
 
@@ -1620,7 +1812,7 @@ public class LCRReader {
         @Override
         public void onDeviceRemoveSuccess(@NonNull String deviceId) {
             // Logging actions
-            raiseError("Remove device success");
+            logConnection("Remove device success");
 
         }
 
@@ -1637,13 +1829,45 @@ public class LCRReader {
                 strCause = cause.getMessage();
             }
             // Logging remove device error
-            raiseError("Remove device failed : " + strCause);
+            logConnection("Remove device failed : " + strCause);
 
         }
     };
 
+    /**
+     * Khởi tạo SDK đồng hồ.
+     *
+     * <p>Cái bẫy ở đây: {@code lcrSdk.init(...)} NHÌN như bất đồng bộ — nó nhận
+     * {@link AsyncCallback} và callback có tham số {@code Throwable error}, nên ai đọc cũng
+     * tưởng lỗi sẽ về theo đường đó. Không phải. Bên trong SDK, {@code init} chạy
+     * {@code checkBound → ensureBound → bindService → startService} NGAY LẬP TỨC và ĐỒNG BỘ,
+     * trước khi có bất kỳ callback nào.
+     *
+     * <p>Từ Android 12, khởi động service thường khi tiến trình đang ở background bị hệ thống
+     * từ chối bằng {@code BackgroundServiceStartNotAllowedException}. Đo trên máy thật
+     * 06-09-2026 (bản 119): exception bay thẳng ra khỏi lời gọi này, xuyên qua constructor
+     * {@code LCRReader} tới {@code MainActivity.onCreate}, không một khối catch nào trên
+     * đường đi. {@code ActivityThread} bọc lại thành "Unable to start activity" và giết tiến
+     * trình — người dùng thấy app mở lên rồi tắt ngay.
+     *
+     * <p>Chưa nối được đồng hồ là chuyện chấp nhận được: lần mở màn hình sau
+     * {@code LCRReader.create(..., renew = true)} gọi lại hàm này trên cùng SDK (cờ
+     * {@link #sdkReady} còn false) nên tự có cơ hội thử lại.
+     * Chết app thì không chấp nhận được.
+     */
     private void init() {
         Log.e("D", "call init()");
+        try {
+            initSdk();
+        } catch (Exception ex) {
+            Logger.appendLog("LCR",
+                    "Không khởi tạo được SDK đồng hồ: " + ex.getClass().getSimpleName()
+                            + " - " + ex.getMessage());
+            raiseError("Không khởi tạo được SDK đồng hồ: " + ex.getMessage());
+        }
+    }
+
+    private void initSdk() {
         lcrSdk.init(new AsyncCallback() {
             @Override
             public void onAsyncReturn(@Nullable Throwable error) {
@@ -1651,9 +1875,10 @@ public class LCRReader {
                 if (error != null) {
                     // Error at init
                     String strError = "ERROR INIT SDK : " + error.getLocalizedMessage();
-                    raiseError(strError);
+                    logConnection(strError);
 
                 } else {
+                    sdkReady = true;
                     // Add listeners to receive data from SDK
                     addSDKListeners();
                     // Add device to communicate with
@@ -1706,9 +1931,9 @@ public class LCRReader {
         isStopped = false;
         alreadyStarted = false;
         stopRequestData();
-        if (stateListener != null) {
-            stateListener.onStop();
-        }
+        LCRStateListener state = stateListener;
+        if (state != null)
+            state.onStop();
 
 
     }
@@ -1784,12 +2009,18 @@ public class LCRReader {
                 || field_change == FIELD_CHANGE.SERIAL
                 || field_change == FIELD_CHANGE.SALENUMBER        // ← THÊM DÒNG NÀY
                 || field_change == FIELD_CHANGE.TICKETNUMBER      // ← THÊM DÒNG NÀY
-        )
+        ) {
             removeFieldData(lcrSdk.fieldToolsFindField(getDeviceId(), field_change.toString()));
+            // Trường vừa bị gỡ thì từ giờ KHÔNG còn số mới, và đó là đúng thiết kế. Không
+            // báo cho phép đo biết thì 15 giây sau nó kết luận trường đã chết — đúng ca
+            // TICKETNUMBER làm màn hình bôi cam giữa lúc đồng hồ vẫn chạy bình thường.
+            markMeterRetired(field_change);
+        }
 
 
-        if (dataListener != null)
-            dataListener.onDataChanged(model, field_change);
+        LCRDataListener data = dataListener;
+        if (data != null)
+            data.onDataChanged(model, field_change);
     }
 
     private boolean alreadyStarted = false;
@@ -1808,9 +2039,86 @@ public class LCRReader {
 
     private void raiseError(String errorMsg) {
         Log.e("FMS", errorMsg);
-        if (dataListener != null)
-            dataListener.onErrorMessage(errorMsg);
+        LCRDataListener listener = dataListener;
+        if (listener != null)
+            listener.onErrorMessage(errorMsg);
 
+    }
+
+    /**
+     * Ghi vết KẾT NỐI thẳng vào nhật ký, không qua listener của màn hình.
+     *
+     * <p>{@link #raiseError} chỉ tới được nhật ký khi có màn hình đang nghe và màn hình đó chịu
+     * ghi — màn chính và màn Cài đặt bỏ trống, nên mất kết nối lúc đứng ở đó không để lại dấu
+     * vết nào. Kết nối là chuyện của cả ứng dụng, không của riêng màn hình nào.
+     */
+    private void logConnection(String message) {
+        Log.e("FMS", message);
+        Logger.appendLog("LCR", message);
+    }
+
+    /**
+     * Ánh xạ trường của SDK sang trường được theo dõi sức khoẻ.
+     *
+     * @return null khi trường không nằm trong diện theo dõi — chỉ đo những trường mà người
+     *         vận hành thực sự nhìn trên màn hình tra nạp.
+     */
+    private static MeterFieldHealth.Field healthField(FIELD_CHANGE field) {
+        if (field == null) return null;
+        switch (field) {
+            case GROSSQTY: return MeterFieldHealth.Field.GROSSQTY;
+            case TOTALIZER: return MeterFieldHealth.Field.TOTALIZER;
+            case TEMPERATURE: return MeterFieldHealth.Field.TEMPERATURE;
+            case TICKETNUMBER: return MeterFieldHealth.Field.TICKET;
+            default: return null;
+        }
+    }
+
+    private static MeterFieldHealth.Field healthField(String sdkFieldName) {
+        if (sdkFieldName == null) return null;
+        for (FIELD_CHANGE f : FIELD_CHANGE.values())
+            if (sdkFieldName.equals(f.toString())) return healthField(f);
+        return null;
+    }
+
+    /**
+     * Mốc thời gian ĐƠN ĐIỆU. Đồng bộ NTP nhảy tiến vài phút sẽ làm mọi phép so theo thời
+     * gian trôi mất tác dụng, nên tuyệt đối không dùng {@code System.currentTimeMillis()}.
+     */
+    private static long healthNow() {
+        return SystemClock.elapsedRealtime();
+    }
+
+    private static void markMeterRead(FIELD_CHANGE field) {
+        MeterFieldHealth.Field f = healthField(field);
+        if (f != null) MeterFieldHealth.shared().markRead(f, healthNow());
+    }
+
+    /** Giá trị đã qua bộ lọc và được ghi vào mô hình. */
+    private static void markMeterAccepted(FIELD_CHANGE field) {
+        MeterFieldHealth.Field f = healthField(field);
+        if (f != null) MeterFieldHealth.shared().markAccepted(f, healthNow());
+    }
+
+    /** Trường đã bị gỡ khỏi hàng đợi đọc: dừng đếm độ tươi, không kết luận là chết. */
+    private static void markMeterRetired(FIELD_CHANGE field) {
+        MeterFieldHealth.Field f = healthField(field);
+        if (f != null) MeterFieldHealth.shared().markRetired(f);
+    }
+
+    private static void markMeterFiltered(FIELD_CHANGE field) {
+        MeterFieldHealth.Field f = healthField(field);
+        if (f != null) MeterFieldHealth.shared().markFiltered(f, healthNow());
+    }
+
+    private static void markMeterFail(FIELD_CHANGE field) {
+        MeterFieldHealth.Field f = healthField(field);
+        if (f != null) MeterFieldHealth.shared().markFail(f, healthNow());
+    }
+
+    private static void markMeterFail(String sdkFieldName) {
+        MeterFieldHealth.Field f = healthField(sdkFieldName);
+        if (f != null) MeterFieldHealth.shared().markFail(f, healthNow());
     }
 
     public  enum FIELD_CHANGE {
@@ -1881,7 +2189,7 @@ public class LCRReader {
 
             // Device level network status change is reported also in DeviceConnectionListener#deviceNetworkStateChanged
 
-            raiseError("Network connection state change : " + oldValue + " -> " + newValue);
+            logConnection("Network connection state change : " + oldValue + " -> " + newValue);
         }
 
         /**
@@ -1897,7 +2205,7 @@ public class LCRReader {
                 @NonNull List<DeviceInfo> attachedDevices) {
 
             // Logging network connect
-            raiseError("Network connected : " + networkType.name());
+            logConnection("Network connected : " + networkType.name());
         }
 
         /**
@@ -1919,7 +2227,7 @@ public class LCRReader {
                 strCause = cause.getMessage();
             }
             // Logging network disconnecting
-            raiseError("Network disconnected : " + networkType.name() + " : " + strCause);
+            logConnection("Network disconnected : " + networkType.name() + " : " + strCause);
         }
 
         /**
@@ -1941,9 +2249,9 @@ public class LCRReader {
                 strCause = cause.getMessage();
             }
             // Logging network error
-            raiseError("Network error : " + networkType.name() + " : " + strCause);
-
-            onError();
+            // CHỈ ghi vết, như demo chính hãng. Thiết bị hỏng theo mạng thì SDK báo tiếp qua
+            // deviceOnError — đó mới là chỗ bật đỏ.
+            logConnection("Network error : " + networkType.name() + " : " + strCause);
         }
     };
 }
