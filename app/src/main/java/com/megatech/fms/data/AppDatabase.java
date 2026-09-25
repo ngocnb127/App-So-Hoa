@@ -18,7 +18,9 @@ import com.megatech.fms.data.dao.AirportsDao;
 import com.megatech.fms.data.dao.BM2503Dao;
 import com.megatech.fms.data.dao.BM2504Dao;
 import com.megatech.fms.data.dao.BM2505Dao;
+import com.megatech.fms.data.dao.BM2506Dao;
 import com.megatech.fms.data.dao.BM2508Dao;
+import com.megatech.fms.data.dao.BM2509Dao;
 import com.megatech.fms.data.dao.BM7501Dao;
 import com.megatech.fms.data.dao.CheckTrucksDao;
 import com.megatech.fms.data.dao.FlightDao;
@@ -40,7 +42,9 @@ import com.megatech.fms.data.entity.BM2503;
 import com.megatech.fms.data.entity.BM2504;
 import com.megatech.fms.data.entity.BM2505;
 import com.megatech.fms.data.entity.BM2505Container;
+import com.megatech.fms.data.entity.BM2506;
 import com.megatech.fms.data.entity.BM2508;
+import com.megatech.fms.data.entity.BM2509;
 import com.megatech.fms.data.entity.BM7501;
 import com.megatech.fms.data.entity.CheckTrucks;
 import com.megatech.fms.data.entity.Flight;
@@ -79,9 +83,11 @@ import com.megatech.fms.data.entity.Product;
         Review.class,
         BM2505Container.class,
         Product.class,
-        TruckInvoice.class
+        TruckInvoice.class,
+        BM2506.class,
+        BM2509.class
         },
-        version = 13,
+        version = 14,
         exportSchema = false
         )
 @TypeConverters({Converters.class,
@@ -250,6 +256,25 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    /** Thêm bảng BM2506 (biên bản lấy mẫu) và BM2509 (kiểm tra đối chứng). Chỉ tạo bảng mới. */
+    static final Migration MIGRATION_13_14 = new Migration(13, 14) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            for (String table : new String[]{"BM2506", "BM2509"})
+                database.execSQL("CREATE TABLE IF NOT EXISTS " + table + " ("
+                        + "time INTEGER,"
+                        + "truckId INTEGER NOT NULL,"
+                        + "id INTEGER NOT NULL,"
+                        + "localId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+                        + "jsonData TEXT,"
+                        + "isSynced INTEGER NOT NULL,"
+                        + "isLocalModified INTEGER NOT NULL,"
+                        + "dateUpdated INTEGER,"
+                        + "isDeleted INTEGER NOT NULL,"
+                        + "uniqueId TEXT)");
+        }
+    };
+
     public abstract RefuelItemDao refuelItemDao();
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
@@ -261,7 +286,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, BuildConfig.DB_FILE)
-                            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                             .fallbackToDestructiveMigration()  // lưới an toàn cho máy version cổ
                             .build();
                 }
@@ -289,6 +314,8 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract BM2504Dao bm2504Dao();
     public abstract ProductDao ProductDao();
     public abstract BM2508Dao bm2508Dao();
+    public abstract BM2506Dao bm2506Dao();
+    public abstract BM2509Dao bm2509Dao();
 
     public abstract CheckTrucksDao checkTrucksDao();
 

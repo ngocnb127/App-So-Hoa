@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BM 25.09/NLHK - Phiếu kiểm tra đối chứng nhiên liệu JET A-1 trên xe tra nạp -->
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <import type="android.view.View" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2509Model" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/bm_new_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:text="@string/back" />
+
+            <TextView
+                style="?android:attr/textAppearanceLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/bm2509_title"
+                android:textColor="@color/colorWhite" />
+
+            <Button
+                android:id="@+id/bm_new_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="16dp"
+                android:text="@string/save" />
+        </androidx.appcompat.widget.Toolbar>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/time" />
+
+                    <TextView
+                        android:id="@+id/b2509_time"
+                        style="@style/BMFormValue"
+                        android:text='@{DateUtils.formatDate(mItem.time,"HH:mm dd/MM/yyyy")}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/truck_no" />
+
+                    <TextView
+                        android:id="@+id/b2509_truck_no"
+                        style="@style/BMFormLabel"
+                        android:text='@{mItem.truckNo}' />
+                </TableRow>
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_flight" />
+
+                    <TextView
+                        android:id="@+id/b2509_flight"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.flightCode == null ? "" : mItem.flightCode + (mItem.aircraftCode == null ? "" : " / " + mItem.aircraftCode)}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2505_checker" />
+
+                    <Spinner
+                        android:id="@+id/b2509_operator"
+                        android:layout_width="0dp"
+                        android:layout_height="34dp"
+                        android:layout_weight=".25"
+                        android:padding="5dp" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/appearance_check" />
+
+                    <RadioGroup
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight=".25"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/b2509_appearance_cb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked='@{"C&amp;B".equals(mItem.appearanceCheck)}'
+                            android:text="C&amp;B" />
+
+                        <RadioButton
+                            android:id="@+id/b2509_appearance_other"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked='@{!"C&amp;B".equals(mItem.appearanceCheck)}'
+                            android:text="@string/other" />
+                    </RadioGroup>
+
+                    <TextView
+                        android:id="@+id/b2509_appearance"
+                        style="@style/BMFormValue"
+                        android:layout_weight=".5"
+                        android:text="@{mItem.appearanceCheck}"
+                        android:visibility='@{"C&amp;B".equals(mItem.appearanceCheck) ? View.INVISIBLE : View.VISIBLE}' />
+                </TableRow>
+
+                <TextView
+                    style="@style/BMFormSection"
+                    android:text="@string/bm2509_last_refuel" />
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_doc_no" />
+
+                    <TextView
+                        android:id="@+id/b2509_doc_no"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.documentNo}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_last_density15" />
+
+                    <TextView
+                        android:id="@+id/b2509_last_density15"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%.1f", mItem.lastDensity15)}' />
+                </TableRow>
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_remain_qty" />
+
+                    <TextView
+                        android:id="@+id/b2509_remain_qty"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%,.0f", mItem.remainQuantity)}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_avg_density" />
+
+                    <TextView
+                        android:id="@+id/b2509_avg_density"
+                        style="@style/BMFormLabel"
+                        android:text='@{String.format("%.1f", mItem.avgDensity)}' />
+                </TableRow>
+
+                <TextView
+                    style="@style/BMFormSection"
+                    android:text="@string/bm2509_last_tank" />
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_cert_no" />
+
+                    <TextView
+                        android:id="@+id/b2509_cert_no"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.releaseCertNo}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_tank_density15" />
+
+                    <TextView
+                        android:id="@+id/b2509_tank_density15"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%.1f", mItem.tankDensity15)}' />
+                </TableRow>
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_load_qty" />
+
+                    <TextView
+                        android:id="@+id/b2509_load_qty"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%,.0f", mItem.loadQuantity)}' />
+                </TableRow>
+
+                <TextView
+                    style="@style/BMFormSection"
+                    android:text="@string/bm2509_apron" />
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_temperature" />
+
+                    <TextView
+                        android:id="@+id/b2509_temperature"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%.1f", mItem.temperature)}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_density" />
+
+                    <TextView
+                        android:id="@+id/b2509_density"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%.1f", mItem.density)}' />
+                </TableRow>
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_density15" />
+
+                    <TextView
+                        android:id="@+id/b2509_density15"
+                        style="@style/BMFormValue"
+                        android:text='@{String.format("%.1f", mItem.density15)}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_density_diff" />
+
+                    <TextView
+                        android:id="@+id/b2509_density_diff"
+                        style="@style/BMFormLabel"
+                        android:text='@{String.format("%.1f", mItem.densityDiff)}' />
+                </TableRow>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

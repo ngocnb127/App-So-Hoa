@@ -14,7 +14,9 @@ import com.megatech.fms.model.BM2503Model;
 import com.megatech.fms.model.BM2504Model;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
+import com.megatech.fms.model.BM2506Model;
 import com.megatech.fms.model.BM2508Model;
+import com.megatech.fms.model.BM2509Model;
 import com.megatech.fms.model.CheckTrucksModel;
 import com.megatech.fms.model.FlightData;
 import com.megatech.fms.model.InvoiceFormModel;
@@ -1290,6 +1292,52 @@ public class HttpClient {
 
         } catch (Exception e) {
 
+        }
+        return null;
+    }
+
+    // ===== BM2506 / BM2509 =====
+    public BM2506Model postBM2506(BM2506Model model) {
+        return postForm("api/bm2506", model, BM2506Model.class);
+    }
+
+    public BM2509Model postBM2509(BM2509Model model) {
+        return postForm("api/bm2509", model, BM2509Model.class);
+    }
+
+    public List<BM2506Model> getBM2506List() {
+        return getFormList("api/bm2506/", BM2506Model.class);
+    }
+
+    public List<BM2509Model> getBM2509List() {
+        return getFormList("api/bm2509/", BM2509Model.class);
+    }
+
+    private <T> T postForm(String path, Object model, Class<T> cls) {
+        try {
+            HttpResponse response = sendPOST(API_BASE_URL + path, gson.toJson(model));
+            if (response.getResponseCode() == HttpURLConnection.HTTP_OK)
+                return gson.fromJson(response.getData(), cls);
+            Log.e("post " + path, "HTTP " + response.getResponseCode() + " " + response.getData());
+        } catch (Exception e) {
+            Log.e("post " + path, Log.getStackTraceString(e));
+        }
+        return null;
+    }
+
+    private <T> List<T> getFormList(String path, Class<T> cls) {
+        try {
+            HttpResponse response = sendGET(API_BASE_URL + path + setting.getTruckId());
+            if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                JSONArray arr = new JSONArray(response.getData());
+                List<T> lst = new ArrayList<>();
+                for (int i = 0; i < arr.length(); i++)
+                    lst.add(gson.fromJson(arr.getJSONObject(i).toString(), cls));
+                return lst;
+            }
+            Log.e("get " + path, "HTTP " + response.getResponseCode());
+        } catch (Exception e) {
+            Log.e("get " + path, Log.getStackTraceString(e));
         }
         return null;
     }

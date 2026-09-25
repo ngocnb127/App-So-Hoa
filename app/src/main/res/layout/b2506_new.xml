@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BM 25.06/NLHK - Biên bản lấy và giao nhận mẫu -->
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="com.megatech.fms.helpers.DateUtils" />
+
+        <variable
+            name="mItem"
+            type="com.megatech.fms.model.BM2506Model" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="@color/colorPrimary"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/bm_new_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_exit"
+                android:text="@string/back" />
+
+            <TextView
+                style="?android:attr/textAppearanceLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/bm2506_title"
+                android:textColor="@color/colorWhite" />
+
+            <Button
+                android:id="@+id/bm_new_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="16dp"
+                android:text="@string/save" />
+        </androidx.appcompat.widget.Toolbar>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_sample_no" />
+
+                    <TextView
+                        android:id="@+id/b2506_sample_no"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.sampleNo}" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_time" />
+
+                    <TextView
+                        android:id="@+id/b2506_time"
+                        style="@style/BMFormValue"
+                        android:text='@{DateUtils.formatDate(mItem.time,"dd/MM/yyyy HH:mm")}' />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_taken_by" />
+
+                    <Spinner
+                        android:id="@+id/b2506_operator"
+                        android:layout_width="0dp"
+                        android:layout_height="34dp"
+                        android:layout_weight=".25"
+                        android:padding="5dp" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_place" />
+
+                    <TextView
+                        android:id="@+id/b2506_place"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.place}" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_location" />
+
+                    <TextView
+                        android:id="@+id/b2506_location"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.location}" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_sample_type" />
+
+                    <TextView
+                        android:id="@+id/b2506_sample_type"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.sampleType}" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_grade" />
+
+                    <TextView
+                        android:id="@+id/b2506_grade"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.grade}" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_flight" />
+
+                    <TextView
+                        android:id="@+id/b2506_flight"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.flightCode == null ? "" : mItem.flightCode + (mItem.aircraftCode == null ? "" : " / " + mItem.aircraftCode)}' />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_retention_seal" />
+
+                    <TextView
+                        android:id="@+id/b2506_retention_seal"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.retentionSealNo}" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_delivery_seal" />
+
+                    <TextView
+                        android:id="@+id/b2506_delivery_seal"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.deliverySealNo}" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#efefef"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_deliverer" />
+
+                    <TextView
+                        android:id="@+id/b2506_deliverer"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.delivererName}" />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2506_recipient" />
+
+                    <TextView
+                        android:id="@+id/b2506_recipient"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.recipientName}" />
+                </TableRow>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

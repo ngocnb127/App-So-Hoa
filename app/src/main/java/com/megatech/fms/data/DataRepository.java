@@ -15,7 +15,9 @@ import com.megatech.fms.data.entity.BM2503;
 import com.megatech.fms.data.entity.BM2504;
 import com.megatech.fms.data.entity.BM2505;
 import com.megatech.fms.data.entity.BM2505Container;
+import com.megatech.fms.data.entity.BM2506;
 import com.megatech.fms.data.entity.BM2508;
+import com.megatech.fms.data.entity.BM2509;
 import com.megatech.fms.data.entity.CheckTrucks;
 import com.megatech.fms.data.entity.Flight;
 import com.megatech.fms.data.entity.Invoice;
@@ -38,7 +40,9 @@ import com.megatech.fms.model.BM2503Model;
 import com.megatech.fms.model.BM2504Model;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
+import com.megatech.fms.model.BM2506Model;
 import com.megatech.fms.model.BM2508Model;
+import com.megatech.fms.model.BM2509Model;
 import com.megatech.fms.model.CheckTrucksModel;
 import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.model.LogEntryModel;
@@ -681,6 +685,8 @@ public class DataRepository {
                         "SELECT count(0) FROM BM2504 WHERE isLocalModified = 1 UNION ALL " +
                         "SELECT count(0) FROM BM2505 WHERE isLocalModified = 1 UNION ALL " +
                         "SELECT count(0) FROM BM2508 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2506 WHERE isLocalModified = 1 UNION ALL " +
+                        "SELECT count(0) FROM BM2509 WHERE isLocalModified = 1 UNION ALL " +
                         "SELECT count(0) FROM CheckTrucks WHERE isLocalModified = 1" +
                         ")");
         Cursor cs = db.query(query);
@@ -892,6 +898,91 @@ public class DataRepository {
             });
         });
     }
+    // ===== BM2506 / BM2509 =====
+    private long[] getDayRange(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        long start = cal.getTime().getTime();
+        cal.add(Calendar.DATE, 1);
+        return new long[]{start, cal.getTime().getTime()};
+    }
+
+    public List<BM2506Model> getBM2506List(Date date) {
+        long[] range = getDayRange(date);
+        List<BM2506Model> returnList = new ArrayList<>();
+        for (BM2506 item : db.bm2506Dao().getAll(range[0], range[1]))
+            returnList.add(item.toModel());
+        return returnList;
+    }
+
+    public List<BM2509Model> getBM2509List(Date date) {
+        long[] range = getDayRange(date);
+        List<BM2509Model> returnList = new ArrayList<>();
+        for (BM2509 item : db.bm2509Dao().getAll(range[0], range[1]))
+            returnList.add(item.toModel());
+        return returnList;
+    }
+
+    public void insertBM2506(BM2506 model) {
+        BM2506 item = db.bm2506Dao().get(model.getId(), model.getLocalId());
+        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
+            db.bm2506Dao().insert(model);
+        } else {
+            model.setLocalId(item.getLocalId());
+            db.bm2506Dao().update(model);
+        }
+    }
+
+    public void insertBM2509(BM2509 model) {
+        BM2509 item = db.bm2509Dao().get(model.getId(), model.getLocalId());
+        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
+            db.bm2509Dao().insert(model);
+        } else {
+            model.setLocalId(item.getLocalId());
+            db.bm2509Dao().update(model);
+        }
+    }
+
+    public void mergeRemoteBM2506(BM2506 remote) {
+        BM2506 local = db.bm2506Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2506Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2506Dao().update(remote);
+        }
+    }
+
+    public void mergeRemoteBM2509(BM2509 remote) {
+        BM2509 local = db.bm2509Dao().get(remote.getId(), remote.getLocalId());
+        if (local == null) {
+            db.bm2509Dao().insert(remote);
+        } else if (!local.isLocalModified()) {
+            remote.setLocalId(local.getLocalId());
+            db.bm2509Dao().update(remote);
+        }
+    }
+
+    public List<BM2506> getModifiedBM2506() {
+        return db.bm2506Dao().getModified();
+    }
+
+    public List<BM2509> getModifiedBM2509() {
+        return db.bm2509Dao().getModified();
+    }
+
+    public void deleteBM2506(int[] ids) {
+        db.bm2506Dao().delete(ids);
+    }
+
+    public void deleteBM2509(int[] ids) {
+        db.bm2509Dao().delete(ids);
+    }
+
     //2503
     public List<BM2503Model> getBM2503List(Date date) {
 

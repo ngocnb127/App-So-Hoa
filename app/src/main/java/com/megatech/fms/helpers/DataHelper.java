@@ -17,7 +17,9 @@ import com.megatech.fms.data.entity.BM2503;
 import com.megatech.fms.data.entity.BM2504;
 import com.megatech.fms.data.entity.BM2505;
 import com.megatech.fms.data.entity.BM2505Container;
+import com.megatech.fms.data.entity.BM2506;
 import com.megatech.fms.data.entity.BM2508;
+import com.megatech.fms.data.entity.BM2509;
 import com.megatech.fms.data.entity.CheckTrucks;
 import com.megatech.fms.data.entity.Flight;
 import com.megatech.fms.data.entity.Invoice;
@@ -36,7 +38,9 @@ import com.megatech.fms.model.BM2503Model;
 import com.megatech.fms.model.BM2504Model;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
+import com.megatech.fms.model.BM2506Model;
 import com.megatech.fms.model.BM2508Model;
+import com.megatech.fms.model.BM2509Model;
 import com.megatech.fms.model.CheckTrucksModel;
 import com.megatech.fms.model.FlightModel;
 import com.megatech.fms.model.InvoiceFormModel;
@@ -928,6 +932,38 @@ public class DataHelper {
 
                 }
 
+            });
+
+            // =====================
+            // SYNC BM2506 / BM2509
+            // =====================
+            startSyncTask("bm2506", () -> {
+                for (BM2506 item : requireRepository().getModifiedBM2506()) {
+                    BM2506Model newData = requireHttpClient().postBM2506(item.toModel());
+                    if (newData != null) {
+                        item.setLocalModified(false);
+                        item.setId(newData.getId());
+                        requireRepository().insertBM2506(item);
+                    }
+                }
+                List<BM2506Model> lstModel = requireHttpClient().getBM2506List();
+                if (lstModel != null)
+                    for (BM2506Model model : lstModel)
+                        requireRepository().mergeRemoteBM2506(BM2506.fromModel(model));
+            });
+            startSyncTask("bm2509", () -> {
+                for (BM2509 item : requireRepository().getModifiedBM2509()) {
+                    BM2509Model newData = requireHttpClient().postBM2509(item.toModel());
+                    if (newData != null) {
+                        item.setLocalModified(false);
+                        item.setId(newData.getId());
+                        requireRepository().insertBM2509(item);
+                    }
+                }
+                List<BM2509Model> lstModel = requireHttpClient().getBM2509List();
+                if (lstModel != null)
+                    for (BM2509Model model : lstModel)
+                        requireRepository().mergeRemoteBM2509(BM2509.fromModel(model));
             });
 
             // =====================
@@ -2677,6 +2713,39 @@ public class DataHelper {
         // call synchronize to update remote database
         Synchronize();
         return true;
+    }
+
+    // ===== BM2506 / BM2509 =====
+    public static List<BM2506Model> getBM2506List(Date date) {
+        return requireRepository().getBM2506List(date);
+    }
+
+    public static List<BM2509Model> getBM2509List(Date date) {
+        return requireRepository().getBM2509List(date);
+    }
+
+    public static void postBM2506(BM2506Model model) {
+        BM2506 localModel = BM2506.fromModel(model);
+        localModel.setLocalModified(true);
+        requireRepository().insertBM2506(localModel);
+        Synchronize();
+    }
+
+    public static void postBM2509(BM2509Model model) {
+        BM2509 localModel = BM2509.fromModel(model);
+        localModel.setLocalModified(true);
+        requireRepository().insertBM2509(localModel);
+        Synchronize();
+    }
+
+    public static void deleteBM2506(int[] ids) {
+        requireRepository().deleteBM2506(ids);
+        Synchronize();
+    }
+
+    public static void deleteBM2509(int[] ids) {
+        requireRepository().deleteBM2509(ids);
+        Synchronize();
     }
 
     // ===== BM2503 =====

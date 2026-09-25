@@ -26,4 +26,32 @@
 
     <style name="AppTheme.NoActionBar.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+    <!-- BM 25.06 / 25.09 -->
+    <style name="BMFormLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">.25</item>
+        <item name="android:padding">5dp</item>
+        <item name="android:textAppearance">?android:attr/textAppearanceMedium</item>
+    </style>
+
+    <style name="BMFormValue" parent="BMFormLabel">
+        <item name="android:drawableStart">@drawable/ic_edit</item>
+        <item name="android:focusable">false</item>
+        <item name="android:hint">@string/touch_to_edit</item>
+    </style>
+
+    <style name="BMFormSection" parent="BMFormLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_weight">0</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:background">#dddddd</item>
+    </style>
+
+    <style name="BMFormCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">.2</item>
+        <item name="android:padding">5dp</item>
+    </style>
 </resources>

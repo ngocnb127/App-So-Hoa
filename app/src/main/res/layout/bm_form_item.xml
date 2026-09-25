@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingLeft="10dp">
+
+    <CheckBox
+        android:id="@+id/bm_item_chk"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".05"
+        android:focusable="false"
+        android:focusableInTouchMode="false" />
+
+    <TextView
+        android:id="@+id/bm_col1"
+        style="@style/BMFormCell" />
+
+    <TextView
+        android:id="@+id/bm_col2"
+        style="@style/BMFormCell" />
+
+    <TextView
+        android:id="@+id/bm_col3"
+        style="@style/BMFormCell" />
+
+    <TextView
+        android:id="@+id/bm_col4"
+        style="@style/BMFormCell" />
+
+    <TextView
+        android:id="@+id/bm_col5"
+        style="@style/BMFormCell" />
+</LinearLayout>

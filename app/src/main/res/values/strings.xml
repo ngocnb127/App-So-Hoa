@@ -698,4 +698,33 @@
         <item>Sai hành trình</item>
         <item>Lý do khác</item>
     </string-array>
+    <string name="bm2506_title">Biên bản lấy và giao nhận mẫu</string>
+    <string name="bm2506_sample_no">1. Mẫu số</string>
+    <string name="bm2506_time">2. Thời gian lấy mẫu</string>
+    <string name="bm2506_taken_by">3. Người lấy mẫu</string>
+    <string name="bm2506_place">4. Địa điểm lấy mẫu</string>
+    <string name="bm2506_location">5. Vị trí (ngăn xe)</string>
+    <string name="bm2506_sample_type">6. Loại mẫu</string>
+    <string name="bm2506_grade">7. Chủng loại nhiên liệu</string>
+    <string name="bm2506_flight">8. Số chuyến bay phục vụ</string>
+    <string name="bm2506_retention_seal">9. Số niêm phong mẫu lưu</string>
+    <string name="bm2506_delivery_seal">10. Số niêm phong mẫu giao KH</string>
+    <string name="bm2506_deliverer">Người giao mẫu</string>
+    <string name="bm2506_recipient">Người nhận mẫu</string>
+    <string name="bm2509_title">Phiếu kiểm tra đối chứng nhiên liệu JET A-1 trên xe tra nạp</string>
+    <string name="bm2509_flight">Chuyến bay/Tàu bay</string>
+    <string name="bm2509_last_refuel">Chuyến tra nạp trước</string>
+    <string name="bm2509_last_tank">Bể cấp hàng gần nhất</string>
+    <string name="bm2509_apron">Đo tại sân đỗ cho lần tra nạp này</string>
+    <string name="bm2509_doc_no">[1] Số chứng từ</string>
+    <string name="bm2509_last_density15">[2] KLR ở 15°C</string>
+    <string name="bm2509_remain_qty">[3] Lượng NL còn lại trên xe</string>
+    <string name="bm2509_cert_no">[4] Số CNXH</string>
+    <string name="bm2509_tank_density15">[5] KLR ở 15°C</string>
+    <string name="bm2509_load_qty">[6] Lượng NL cấp lên xe</string>
+    <string name="bm2509_avg_density">[7] KLR trung bình</string>
+    <string name="bm2509_temperature">[8] Nhiệt độ quan sát (°C)</string>
+    <string name="bm2509_density">[9] KLR quan sát</string>
+    <string name="bm2509_density15">[10] KLR ở 15°C</string>
+    <string name="bm2509_density_diff">[11] Chênh lệch KLR</string>
 </resources>
