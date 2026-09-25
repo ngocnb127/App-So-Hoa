@@ -53,10 +53,12 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.List;
 
 import okhttp3.OkHttpClient;
@@ -1296,38 +1298,43 @@ public class HttpClient {
         return null;
     }
 
-    // ===== BM2506 / BM2509 =====
-    public BM2506Model postBM2506(BM2506Model model) {
-        return postForm("api/bm2506", model, BM2506Model.class);
+    // ===== BM2506 / BM2509 (API_DOC_AppSoHoa mục 4.5, 4.6) =====
+
+    /** POST api/bm2506 — trả cả mã HTTP và body (kể cả body lỗi {"Success":false,"Message":...}). */
+    public HttpResponse postBM2506(BM2506Model model) {
+        return sendFormJson("POST", API_BASE_URL + "api/bm2506", gson.toJson(model));
     }
 
-    public BM2509Model postBM2509(BM2509Model model) {
-        return postForm("api/bm2509", model, BM2509Model.class);
+    public HttpResponse postBM2509(BM2509Model model) {
+        return sendFormJson("POST", API_BASE_URL + "api/bm2509", gson.toJson(model));
     }
 
-    public List<BM2506Model> getBM2506List() {
-        return getFormList("api/bm2506/", BM2506Model.class);
+    public List<BM2506Model> getBM2506List(Date from, Date to) {
+        return getFormList("api/bm2506", from, to, BM2506Model.class);
     }
 
-    public List<BM2509Model> getBM2509List() {
-        return getFormList("api/bm2509/", BM2509Model.class);
+    public List<BM2509Model> getBM2509List(Date from, Date to) {
+        return getFormList("api/bm2509", from, to, BM2509Model.class);
     }
 
-    private <T> T postForm(String path, Object model, Class<T> cls) {
+    /** GET api/bm2509/truckinfo — gợi ý [2], [4], [6]; null khi lỗi/offline. */
+    public JSONObject getBM2509TruckInfo(int truckId, int editingId) {
+        HttpResponse response = sendFormJson("GET", API_BASE_URL + "api/bm2509/truckinfo?truckId=" + truckId + "&id=" + editingId, null);
         try {
-            HttpResponse response = sendPOST(API_BASE_URL + path, gson.toJson(model));
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK)
-                return gson.fromJson(response.getData(), cls);
-            Log.e("post " + path, "HTTP " + response.getResponseCode() + " " + response.getData());
+                return new JSONObject(response.getData());
         } catch (Exception e) {
-            Log.e("post " + path, Log.getStackTraceString(e));
+            Log.e("bm2509 truckinfo", Log.getStackTraceString(e));
         }
         return null;
     }
 
-    private <T> List<T> getFormList(String path, Class<T> cls) {
+    private <T> List<T> getFormList(String path, Date from, Date to, Class<T> cls) {
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        String url = API_BASE_URL + path + "?from=" + fmt.format(from) + "&to=" + fmt.format(to)
+                + "&truckId=" + currentSetting().getTruckId();
+        HttpResponse response = sendFormJson("GET", url, null);
         try {
-            HttpResponse response = sendGET(API_BASE_URL + path + setting.getTruckId());
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 JSONArray arr = new JSONArray(response.getData());
                 List<T> lst = new ArrayList<>();
@@ -1335,11 +1342,42 @@ public class HttpClient {
                     lst.add(gson.fromJson(arr.getJSONObject(i).toString(), cls));
                 return lst;
             }
-            Log.e("get " + path, "HTTP " + response.getResponseCode());
+            Log.e("get " + path, "HTTP " + response.getResponseCode() + " " + response.getData());
         } catch (Exception e) {
             Log.e("get " + path, Log.getStackTraceString(e));
         }
         return null;
+    }
+
+    /** Gửi JSON và đọc body cả khi lỗi. Mất mạng/timeout -> mã 0. */
+    private HttpResponse sendFormJson(String method, String url, String body) {
+        HttpURLConnection con = createConnection(url, method, "application/json; charset=utf-8");
+        if (con == null)
+            return new HttpResponse(0, null);
+        try {
+            if (body != null) {
+                con.setDoOutput(true);
+                try (OutputStream os = con.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            int code = con.getResponseCode();
+            InputStream stream = code < 400 ? con.getInputStream() : con.getErrorStream();
+            StringBuilder data = new StringBuilder();
+            if (stream != null) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = in.readLine()) != null)
+                        data.append(line);
+                }
+            }
+            return new HttpResponse(code, data.toString());
+        } catch (IOException e) {
+            Log.e(method + " " + url, "" + e.getMessage());
+            return new HttpResponse(0, null);
+        } finally {
+            con.disconnect();
+        }
     }
 
     //2503

@@ -1,7 +1,7 @@
 package com.megatech.fms;
 
+import android.os.AsyncTask;
 import android.view.View;
-import android.widget.Spinner;
 
 import com.megatech.fms.helpers.DataHelper;
 import com.megatech.fms.model.BM2509Model;
@@ -10,20 +10,18 @@ import java.util.Date;
 
 public class B2509NewItemFragement extends BMFormItemFragment<BM2509Model> {
 
-    private static final String CB = "C&B";
+    private final boolean isNew;
 
     public B2509NewItemFragement() {
         super(new BM2509Model());
-        FMSApplication app = FMSApplication.getApplication();
+        isNew = true;
         model.setTime(new Date());
-        model.setTruckId(app.getTruckId());
-        model.setTruckNo(app.getTruckNo());
-        model.setOperatorId(app.getUser().getUserId());
-        model.setOperatorName(app.getUser().getUserName());
+        model.setTruckId(FMSApplication.getApplication().getTruckId());
     }
 
     public B2509NewItemFragement(BM2509Model model) {
         super(model);
+        isNew = false;
     }
 
     @Override
@@ -33,10 +31,25 @@ public class B2509NewItemFragement extends BMFormItemFragment<BM2509Model> {
 
     @Override
     protected void bindViews(View view) {
-        bindUserSpinner((Spinner) view.findViewById(R.id.b2509_operator), model.getOperatorId(), user -> {
-            model.setOperatorId(user.getId());
-            model.setOperatorName(user.getName());
-        });
+        if (!isNew)
+            return;
+        // điền sẵn [2], [4], [6] theo xe (api/bm2509/truckinfo), chỉ vào ô đang trống
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                try {
+                    DataHelper.fillBM2509Suggestions(model);
+                } catch (Exception ignored) {
+                }
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void unused) {
+                if (binding != null)
+                    refresh();
+            }
+        }.execute();
     }
 
     @Override
@@ -44,18 +57,25 @@ public class B2509NewItemFragement extends BMFormItemFragment<BM2509Model> {
         if (id == R.id.b2509_time)
             pickTime(model.getTime(), model::setTime);
         else if (id == R.id.b2509_flight)
-            selectFlight(flight -> {
+            chooseFlight(R.string.bm2509_flight_no, model.getFlightNo(), flight -> {
                 model.setFlightId(flight.getId());
-                model.setFlightCode(flight.getFlightCode());
-                model.setAircraftCode(flight.getAircraftCode());
+                model.setFlightNo(flight.getFlightCode());
+                model.setAcReg(flight.getAircraftCode());
+            }, flightNo -> {
+                model.setFlightId(null);
+                model.setFlightNo(flightNo);
             });
+        else if (id == R.id.b2509_ac_reg)
+            editText(R.string.bm2509_ac_reg, model.getAcReg(), model::setAcReg);
         else if (id == R.id.b2509_appearance_cb) {
-            model.setAppearanceCheck(CB);
+            model.setAppearanceCheck(true);
+            model.setAppearanceOther(null);
             refresh();
-        } else if (id == R.id.b2509_appearance_other || id == R.id.b2509_appearance)
-            editText(R.string.appearance_check, CB.equals(model.getAppearanceCheck()) ? "" : model.getAppearanceCheck(),
-                    value -> model.setAppearanceCheck(value.isEmpty() ? CB : value));
-        else if (id == R.id.b2509_doc_no)
+        } else if (id == R.id.b2509_appearance_other || id == R.id.b2509_appearance) {
+            model.setAppearanceCheck(false);
+            refresh();
+            editText(R.string.appearance_check, model.getAppearanceOther(), model::setAppearanceOther);
+        } else if (id == R.id.b2509_doc_no)
             editText(R.string.bm2509_doc_no, model.getDocumentNo(), model::setDocumentNo);
         else if (id == R.id.b2509_last_density15)
             editNumber(R.string.bm2509_last_density15, model.getLastDensity15(), v -> {
@@ -80,14 +100,16 @@ public class B2509NewItemFragement extends BMFormItemFragment<BM2509Model> {
                 model.calculate();
             });
         else if (id == R.id.b2509_temperature)
-            editNumber(R.string.bm2509_temperature, model.getTemperature(), model::setTemperature);
+            editNumber(R.string.bm2509_temperature, model.getObsTemperature(), model::setObsTemperature);
         else if (id == R.id.b2509_density)
-            editNumber(R.string.bm2509_density, model.getDensity(), model::setDensity);
+            editNumber(R.string.bm2509_density, model.getObsDensity(), model::setObsDensity);
         else if (id == R.id.b2509_density15)
             editNumber(R.string.bm2509_density15, model.getDensity15(), v -> {
                 model.setDensity15(v);
                 model.calculate();
             });
+        else if (id == R.id.b2509_note)
+            editText(R.string.note, model.getNote(), model::setNote);
     }
 
     @Override

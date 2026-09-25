@@ -713,6 +713,10 @@
     <string name="bm2506_recipient">Người nhận mẫu</string>
     <string name="bm2509_title">Phiếu kiểm tra đối chứng nhiên liệu JET A-1 trên xe tra nạp</string>
     <string name="bm2509_flight">Chuyến bay/Tàu bay</string>
+    <string name="bm2509_flight_no">Chuyến bay (Flight No.)</string>
+    <string name="bm2509_ac_reg">Tàu bay (A.C regit.)</string>
+    <string name="bm_select_flight">Chọn chuyến bay</string>
+    <string name="bm_enter_flight_no">Nhập tay số hiệu chuyến bay</string>
     <string name="bm2509_last_refuel">Chuyến tra nạp trước</string>
     <string name="bm2509_last_tank">Bể cấp hàng gần nhất</string>
     <string name="bm2509_apron">Đo tại sân đỗ cho lần tra nạp này</string>

@@ -28,6 +28,19 @@ public interface BM2509Dao {
     @Query("Update BM2509 set isDeleted=1, isLocalModified=1 WHERE localId in (:ids)")
     void delete(int[] ids);
 
+    @Query("SELECT * FROM BM2509 WHERE localId = :localId")
+    BM2509 getByLocalId(int localId);
+
+    @Query("SELECT * FROM BM2509 WHERE uniqueId = :uniqueId LIMIT 1")
+    BM2509 getByUniqueId(String uniqueId);
+
+    @Query("DELETE FROM BM2509 WHERE localId = :localId")
+    void deleteLocal(int localId);
+
+    // phiếu BM2509 local gần nhất của xe (gợi ý [2] khi offline)
+    @Query("SELECT * FROM BM2509 WHERE NOT isDeleted AND truckId = :truckId ORDER BY time DESC LIMIT 1")
+    BM2509 getLatest(int truckId);
+
     @Query("SELECT * from BM2509 where isLocalModified")
     List<BM2509> getModified();
 

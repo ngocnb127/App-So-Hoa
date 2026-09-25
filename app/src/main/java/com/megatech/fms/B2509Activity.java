@@ -20,15 +20,20 @@ public class B2509Activity extends BMFormListActivity<BM2509Model> {
     @Override
     protected String[] getHeaders() {
         return new String[]{getString(R.string.time), getString(R.string.bm2509_flight),
-                getString(R.string.bm2509_avg_density), getString(R.string.bm2509_density15),
+                getString(R.string.appearance_check), getString(R.string.bm2509_avg_density),
                 getString(R.string.bm2509_density_diff)};
     }
 
     @Override
     protected String[] getColumns(BM2509Model item) {
-        return new String[]{DateUtils.formatDate(item.getTime(), "HH:mm dd/MM/yyyy"), item.getFlightCode(),
-                String.format("%.1f", item.getAvgDensity()), String.format("%.1f", item.getDensity15()),
-                String.format("%.1f", item.getDensityDiff())};
+        String flight = (item.getFlightNo() != null ? item.getFlightNo() : "")
+                + (item.getAcReg() != null ? " / " + item.getAcReg() : "");
+        String appearance = Boolean.FALSE.equals(item.getAppearanceCheck())
+                ? getString(R.string.other) + ": " + (item.getAppearanceOther() != null ? item.getAppearanceOther() : "")
+                : "C&B";
+        String last = item.getSyncError() != null ? "⚠ " + item.getSyncError() : BM2509Model.num(item.getDensityDiff());
+        return new String[]{DateUtils.formatDate(item.getTime(), "HH:mm dd/MM/yyyy"), flight, appearance,
+                BM2509Model.num(item.getAverageDensity()), last};
     }
 
     @Override

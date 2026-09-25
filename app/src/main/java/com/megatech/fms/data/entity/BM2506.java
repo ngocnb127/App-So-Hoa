@@ -14,6 +14,7 @@ public class BM2506 extends BaseEntity {
     public static BM2506 fromModel(BM2506Model model) {
         if (model != null) {
             BM2506 item = gson.fromJson(model.toJson(), BM2506.class);
+            item.setTime(model.getDate()); // cột time dùng để lọc theo ngày; API gọi là Date
             item.setJsonData(model.toJson());
             item.setId(model.getId());
             return item;

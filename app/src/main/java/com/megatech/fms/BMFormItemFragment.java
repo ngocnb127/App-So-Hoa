@@ -12,12 +12,9 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SearchView;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -26,24 +23,22 @@ import androidx.databinding.DataBindingUtil;
 import androidx.databinding.ViewDataBinding;
 import androidx.fragment.app.DialogFragment;
 
+import com.megatech.fms.model.BM2509Model;
 import com.megatech.fms.model.BaseModel;
 import com.megatech.fms.model.FlightModel;
-import com.megatech.fms.model.UserModel;
 import com.megatech.fms.view.FlightArrayAdapter;
 
-import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 // Màn hình nhập dùng chung cho BM 25.06 / 25.09 (cùng cách nhập "chạm để sửa" như B2505NewItemFragement)
 public abstract class BMFormItemFragment<T extends BaseModel> extends DialogFragment {
 
     protected final T model;
     protected ViewDataBinding binding;
-    private final NumberFormat numberFormat = NumberFormat.getInstance(Locale.getDefault());
 
     protected BMFormItemFragment(T model) {
         this.model = model;
@@ -158,19 +153,50 @@ public abstract class BMFormItemFragment<T extends BaseModel> extends DialogFrag
     }
 
     protected void editText(int titleRes, String current, OnValue<String> onValue) {
-        showInput(titleRes, current, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, onValue);
+        showInput(titleRes, current, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS,
+                text -> onValue.set(text.isEmpty() ? null : text));
     }
 
-    protected void editNumber(int titleRes, double current, OnValue<Double> onValue) {
-        showInput(titleRes, current == 0 ? "" : numberFormat.format(current),
+    // Số để trống = null. Bàn phím tiếng Việt chỉ có dấu ',' -> đổi thành '.' rồi parse (không theo Locale máy)
+    protected void editNumber(int titleRes, Double current, OnValue<Double> onValue) {
+        showInput(titleRes, current == null ? "" : BM2509Model.num(current),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED,
                 text -> {
                     try {
-                        onValue.set(text.isEmpty() ? 0 : numberFormat.parse(text).doubleValue());
+                        onValue.set(text.isEmpty() ? null : Double.parseDouble(text.replace(',', '.')));
                     } catch (Exception ex) {
                         ((BaseActivity) requireActivity()).showErrorMessage(R.string.invalid_number_format);
                     }
                 });
+    }
+
+    // chọn trong danh sách hoặc nhập tự do (mục cuối)
+    protected void chooseText(int titleRes, String[] options, String current, OnValue<String> onValue) {
+        String[] items = Arrays.copyOf(options, options.length + 1);
+        items[options.length] = getString(R.string.other) + "...";
+        new AlertDialog.Builder(requireContext())
+                .setTitle(titleRes)
+                .setItems(items, (d, which) -> {
+                    if (which < options.length) {
+                        onValue.set(options[which]);
+                        refresh();
+                    } else
+                        editText(titleRes, current, onValue);
+                })
+                .show();
+    }
+
+    // chọn chuyến bay trong danh sách, hoặc nhập tay số hiệu (khi đó FlightId = null)
+    protected void chooseFlight(int titleRes, String currentNo, OnValue<FlightModel> onFlight, OnValue<String> onManualNo) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(titleRes)
+                .setItems(new String[]{getString(R.string.bm_select_flight), getString(R.string.bm_enter_flight_no)}, (d, which) -> {
+                    if (which == 0)
+                        selectFlight(onFlight);
+                    else
+                        editText(titleRes, currentNo, onManualNo);
+                })
+                .show();
     }
 
     private void showInput(int titleRes, String current, int inputType, OnValue<String> onValue) {
@@ -240,31 +266,5 @@ public abstract class BMFormItemFragment<T extends BaseModel> extends DialogFrag
             refresh();
         });
         flightDlg.show();
-    }
-
-    // danh sách nhân viên (userList của màn hình danh sách)
-    protected void bindUserSpinner(Spinner spn, int selectedId, OnValue<UserModel> onValue) {
-        List<UserModel> users = getActivity() instanceof DateBaseActivity
-                ? ((DateBaseActivity) getActivity()).userList : null;
-        if (users == null)
-            users = new ArrayList<>();
-        ArrayAdapter<UserModel> adapter = new ArrayAdapter<>(requireContext(), R.layout.support_simple_spinner_dropdown_item, users);
-        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
-        spn.setAdapter(adapter);
-        for (int i = 0; i < users.size(); i++)
-            if (users.get(i).getId() == selectedId) {
-                spn.setSelection(i);
-                break;
-            }
-        spn.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                onValue.set((UserModel) adapterView.getItemAtPosition(i));
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-            }
-        });
     }
 }

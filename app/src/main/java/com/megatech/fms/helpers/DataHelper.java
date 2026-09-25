@@ -56,9 +56,12 @@ import com.megatech.fms.model.TruckFuelModel;
 import com.megatech.fms.model.TruckModel;
 import com.megatech.fms.model.UserModel;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -935,32 +938,85 @@ public class DataHelper {
             });
 
             // =====================
-            // SYNC BM2506 / BM2509
+            // SYNC BM2506 / BM2509 (BM2506_BM2509_ANDROID.md mục 4, 5)
             // =====================
             startSyncTask("bm2506", () -> {
                 for (BM2506 item : requireRepository().getModifiedBM2506()) {
-                    BM2506Model newData = requireHttpClient().postBM2506(item.toModel());
-                    if (newData != null) {
+                    String sent = item.getJsonData();
+                    BM2506Model model = item.toModel();
+                    if (item.getId() > 0)
+                        model.setId(item.getId());
+                    HttpResponse r = requireHttpClient().postBM2506(model);
+                    int code = r.getResponseCode();
+                    if (model.isDeleted()) {
+                        if (code == 200 || code == 404 || code == 410)
+                            requireRepository().deleteLocalBM2506(item.getLocalId());
+                    } else if (code == 200) {
+                        BM2506Model saved = BM2506Model.fromJson(r.getData());
+                        BM2506 current = requireRepository().getBM2506(item.getLocalId());
+                        if (current != null && sent != null && sent.equals(current.getJsonData())) {
+                            BM2506 updated = BM2506.fromModel(saved);
+                            updated.setLocalId(item.getLocalId());
+                            updated.setLocalModified(false);
+                            requireRepository().insertBM2506(updated);
+                        } else if (current != null) {
+                            // người dùng sửa trong lúc đang gửi: giữ bản local, lần đồng bộ sau gửi tiếp
+                            current.setId(saved.getId());
+                            requireRepository().insertBM2506(current);
+                        }
+                    } else if (code == 410) {
+                        requireRepository().deleteLocalBM2506(item.getLocalId());
+                        Logger.appendLog("BM2506", "Phiếu đã bị xoá trên server: " + model.getUniqueId());
+                    } else if (code == 400 || code == 403 || code == 404) {
+                        // gửi lại y nguyên vẫn lỗi -> dừng, hiện Message cho người dùng sửa
+                        model.setSyncError(formErrorMessage(r));
+                        item.setJsonData(model.toJson());
                         item.setLocalModified(false);
-                        item.setId(newData.getId());
                         requireRepository().insertBM2506(item);
-                    }
+                    } // mất mạng / 401 / 5xx: giữ nguyên, lượt sau gửi lại (an toàn nhờ UniqueId)
                 }
-                List<BM2506Model> lstModel = requireHttpClient().getBM2506List();
+                Date[] range = formSyncRange();
+                List<BM2506Model> lstModel = requireHttpClient().getBM2506List(range[0], range[1]);
                 if (lstModel != null)
                     for (BM2506Model model : lstModel)
                         requireRepository().mergeRemoteBM2506(BM2506.fromModel(model));
             });
             startSyncTask("bm2509", () -> {
                 for (BM2509 item : requireRepository().getModifiedBM2509()) {
-                    BM2509Model newData = requireHttpClient().postBM2509(item.toModel());
-                    if (newData != null) {
+                    String sent = item.getJsonData();
+                    BM2509Model model = item.toModel();
+                    if (item.getId() > 0)
+                        model.setId(item.getId());
+                    HttpResponse r = requireHttpClient().postBM2509(model);
+                    int code = r.getResponseCode();
+                    if (model.isDeleted()) {
+                        if (code == 200 || code == 404 || code == 410)
+                            requireRepository().deleteLocalBM2509(item.getLocalId());
+                    } else if (code == 200) {
+                        // [7], [11] lấy theo response của server
+                        BM2509Model saved = BM2509Model.fromJson(r.getData());
+                        BM2509 current = requireRepository().getBM2509(item.getLocalId());
+                        if (current != null && sent != null && sent.equals(current.getJsonData())) {
+                            BM2509 updated = BM2509.fromModel(saved);
+                            updated.setLocalId(item.getLocalId());
+                            updated.setLocalModified(false);
+                            requireRepository().insertBM2509(updated);
+                        } else if (current != null) {
+                            current.setId(saved.getId());
+                            requireRepository().insertBM2509(current);
+                        }
+                    } else if (code == 410) {
+                        requireRepository().deleteLocalBM2509(item.getLocalId());
+                        Logger.appendLog("BM2509", "Phiếu đã bị xoá trên server: " + model.getUniqueId());
+                    } else if (code == 400 || code == 403 || code == 404) {
+                        model.setSyncError(formErrorMessage(r));
+                        item.setJsonData(model.toJson());
                         item.setLocalModified(false);
-                        item.setId(newData.getId());
                         requireRepository().insertBM2509(item);
                     }
                 }
-                List<BM2509Model> lstModel = requireHttpClient().getBM2509List();
+                Date[] range = formSyncRange();
+                List<BM2509Model> lstModel = requireHttpClient().getBM2509List(range[0], range[1]);
                 if (lstModel != null)
                     for (BM2509Model model : lstModel)
                         requireRepository().mergeRemoteBM2509(BM2509.fromModel(model));
@@ -2716,6 +2772,46 @@ public class DataHelper {
     }
 
     // ===== BM2506 / BM2509 =====
+
+    // 7 ngày gần nhất (BM2506_BM2509_ANDROID.md mục 4.4)
+    private static Date[] formSyncRange() {
+        Calendar cal = Calendar.getInstance();
+        Date to = cal.getTime();
+        cal.add(Calendar.DATE, -7);
+        return new Date[]{cal.getTime(), to};
+    }
+
+    private static String formErrorMessage(HttpResponse r) {
+        String message = null;
+        try {
+            message = new JSONObject(r.getData()).optString("Message", null);
+        } catch (Exception ignored) {
+        }
+        if (r.getResponseCode() == 404 && (message == null || message.startsWith("No HTTP resource")))
+            return "Server chưa hỗ trợ biểu mẫu này";
+        return message != null ? message : "Lỗi HTTP " + r.getResponseCode();
+    }
+
+    /** Gợi ý [2], [4], [6] cho phiếu BM2509 mới: ưu tiên server, offline thì lấy [2] từ phiếu local gần nhất. */
+    public static void fillBM2509Suggestions(BM2509Model model) {
+        int truckId = model.getTruckId() != null ? model.getTruckId() : 0;
+        JSONObject info = requireHttpClient().getBM2509TruckInfo(truckId, model.getId());
+        if (info != null) {
+            if (model.getLastDensity15() == null && !info.isNull("LastDensity15"))
+                model.setLastDensity15(info.optDouble("LastDensity15"));
+            if (model.getReleaseCertNo() == null && !info.isNull("ReleaseCertNo"))
+                model.setReleaseCertNo(info.optString("ReleaseCertNo"));
+            if (model.getLoadQuantity() == null && !info.isNull("LoadQuantity"))
+                model.setLoadQuantity(info.optDouble("LoadQuantity"));
+        }
+        if (model.getLastDensity15() == null) {
+            BM2509 latest = requireRepository().getLatestBM2509(truckId);
+            if (latest != null)
+                model.setLastDensity15(latest.toModel().getAverageDensity());
+        }
+        model.calculate();
+    }
+
     public static List<BM2506Model> getBM2506List(Date date) {
         return requireRepository().getBM2506List(date);
     }
@@ -2725,6 +2821,7 @@ public class DataHelper {
     }
 
     public static void postBM2506(BM2506Model model) {
+        model.setSyncError(null); // lưu lại sau khi sửa -> gửi lại
         BM2506 localModel = BM2506.fromModel(model);
         localModel.setLocalModified(true);
         requireRepository().insertBM2506(localModel);
@@ -2732,6 +2829,7 @@ public class DataHelper {
     }
 
     public static void postBM2509(BM2509Model model) {
+        model.setSyncError(null); // lưu lại sau khi sửa -> gửi lại
         BM2509 localModel = BM2509.fromModel(model);
         localModel.setLocalModified(true);
         requireRepository().insertBM2509(localModel);

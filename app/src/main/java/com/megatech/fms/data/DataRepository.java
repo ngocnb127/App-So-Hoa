@@ -947,8 +947,11 @@ public class DataRepository {
         }
     }
 
+    // ghép theo UniqueId, phiếu tạo trên web (UniqueId null) ghép theo Id; phiếu local đang chờ gửi thì giữ bản local
     public void mergeRemoteBM2506(BM2506 remote) {
-        BM2506 local = db.bm2506Dao().get(remote.getId(), remote.getLocalId());
+        BM2506 local = remote.getUniqueId() != null ? db.bm2506Dao().getByUniqueId(remote.getUniqueId()) : null;
+        if (local == null)
+            local = db.bm2506Dao().get(remote.getId(), 0);
         if (local == null) {
             db.bm2506Dao().insert(remote);
         } else if (!local.isLocalModified()) {
@@ -957,8 +960,11 @@ public class DataRepository {
         }
     }
 
+    // ghép theo UniqueId, phiếu tạo trên web (UniqueId null) ghép theo Id; phiếu local đang chờ gửi thì giữ bản local
     public void mergeRemoteBM2509(BM2509 remote) {
-        BM2509 local = db.bm2509Dao().get(remote.getId(), remote.getLocalId());
+        BM2509 local = remote.getUniqueId() != null ? db.bm2509Dao().getByUniqueId(remote.getUniqueId()) : null;
+        if (local == null)
+            local = db.bm2509Dao().get(remote.getId(), 0);
         if (local == null) {
             db.bm2509Dao().insert(remote);
         } else if (!local.isLocalModified()) {
@@ -973,6 +979,26 @@ public class DataRepository {
 
     public List<BM2509> getModifiedBM2509() {
         return db.bm2509Dao().getModified();
+    }
+
+    public BM2506 getBM2506(int localId) {
+        return db.bm2506Dao().getByLocalId(localId);
+    }
+
+    public BM2509 getBM2509(int localId) {
+        return db.bm2509Dao().getByLocalId(localId);
+    }
+
+    public void deleteLocalBM2506(int localId) {
+        db.bm2506Dao().deleteLocal(localId);
+    }
+
+    public void deleteLocalBM2509(int localId) {
+        db.bm2509Dao().deleteLocal(localId);
+    }
+
+    public BM2509 getLatestBM2509(int truckId) {
+        return db.bm2509Dao().getLatest(truckId);
     }
 
     public void deleteBM2506(int[] ids) {

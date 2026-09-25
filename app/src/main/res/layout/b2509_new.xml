@@ -6,6 +6,8 @@
 
         <import type="com.megatech.fms.helpers.DateUtils" />
 
+        <import type="com.megatech.fms.model.BM2509Model" />
+
         <import type="android.view.View" />
 
         <variable
@@ -57,6 +59,13 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView
+                    style="@style/BMFormSection"
+                    android:background="#ffdddd"
+                    android:text="@{mItem.syncError}"
+                    android:textColor="#b00020"
+                    android:visibility="@{mItem.syncError == null ? View.GONE : View.VISIBLE}" />
+
                 <TableRow
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -74,12 +83,12 @@
 
                     <TextView
                         style="@style/BMFormLabel"
-                        android:text="@string/truck_no" />
+                        android:text="@string/bm2509_flight_no" />
 
                     <TextView
-                        android:id="@+id/b2509_truck_no"
-                        style="@style/BMFormLabel"
-                        android:text='@{mItem.truckNo}' />
+                        android:id="@+id/b2509_flight"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.flightNo}' />
                 </TableRow>
                 <TableRow
                     android:layout_width="match_parent"
@@ -89,62 +98,54 @@
 
                     <TextView
                         style="@style/BMFormLabel"
-                        android:text="@string/bm2509_flight" />
+                        android:text="@string/bm2509_ac_reg" />
 
                     <TextView
-                        android:id="@+id/b2509_flight"
+                        android:id="@+id/b2509_ac_reg"
                         style="@style/BMFormValue"
-                        android:text='@{mItem.flightCode == null ? "" : mItem.flightCode + (mItem.aircraftCode == null ? "" : " / " + mItem.aircraftCode)}' />
-
-                    <TextView
-                        style="@style/BMFormLabel"
-                        android:text="@string/bm2505_checker" />
-
-                    <Spinner
-                        android:id="@+id/b2509_operator"
-                        android:layout_width="0dp"
-                        android:layout_height="34dp"
-                        android:layout_weight=".25"
-                        android:padding="5dp" />
-                </TableRow>
-
-                <TableRow
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#ffffff"
-                    android:padding="5dp">
+                        android:text="@{mItem.acReg}" />
 
                     <TextView
                         style="@style/BMFormLabel"
                         android:text="@string/appearance_check" />
 
-                    <RadioGroup
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight=".25"
-                        android:orientation="horizontal">
+                        android:orientation="vertical">
 
-                        <RadioButton
-                            android:id="@+id/b2509_appearance_cb"
-                            android:layout_width="wrap_content"
+                        <RadioGroup
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:checked='@{"C&amp;B".equals(mItem.appearanceCheck)}'
-                            android:text="C&amp;B" />
+                            android:orientation="horizontal">
 
-                        <RadioButton
-                            android:id="@+id/b2509_appearance_other"
-                            android:layout_width="wrap_content"
+                            <RadioButton
+                                android:id="@+id/b2509_appearance_cb"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="@{!Boolean.FALSE.equals(mItem.appearanceCheck)}"
+                                android:text="C&amp;B" />
+
+                            <RadioButton
+                                android:id="@+id/b2509_appearance_other"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="@{Boolean.FALSE.equals(mItem.appearanceCheck)}"
+                                android:text="@string/other" />
+                        </RadioGroup>
+
+                        <TextView
+                            android:id="@+id/b2509_appearance"
+                            style="?android:attr/textAppearanceMedium"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:checked='@{!"C&amp;B".equals(mItem.appearanceCheck)}'
-                            android:text="@string/other" />
-                    </RadioGroup>
-
-                    <TextView
-                        android:id="@+id/b2509_appearance"
-                        style="@style/BMFormValue"
-                        android:layout_weight=".5"
-                        android:text="@{mItem.appearanceCheck}"
-                        android:visibility='@{"C&amp;B".equals(mItem.appearanceCheck) ? View.INVISIBLE : View.VISIBLE}' />
+                            android:drawableStart="@drawable/ic_edit"
+                            android:hint="@string/touch_to_edit"
+                            android:padding="5dp"
+                            android:text="@{mItem.appearanceOther}"
+                            android:visibility="@{Boolean.FALSE.equals(mItem.appearanceCheck) ? View.VISIBLE : View.GONE}" />
+                    </LinearLayout>
                 </TableRow>
 
                 <TextView
@@ -172,7 +173,7 @@
                     <TextView
                         android:id="@+id/b2509_last_density15"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%.1f", mItem.lastDensity15)}' />
+                        android:text='@{BM2509Model.num(mItem.lastDensity15)}' />
                 </TableRow>
                 <TableRow
                     android:layout_width="match_parent"
@@ -187,16 +188,7 @@
                     <TextView
                         android:id="@+id/b2509_remain_qty"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%,.0f", mItem.remainQuantity)}' />
-
-                    <TextView
-                        style="@style/BMFormLabel"
-                        android:text="@string/bm2509_avg_density" />
-
-                    <TextView
-                        android:id="@+id/b2509_avg_density"
-                        style="@style/BMFormLabel"
-                        android:text='@{String.format("%.1f", mItem.avgDensity)}' />
+                        android:text='@{BM2509Model.num(mItem.remainQuantity)}' />
                 </TableRow>
 
                 <TextView
@@ -224,7 +216,7 @@
                     <TextView
                         android:id="@+id/b2509_tank_density15"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%.1f", mItem.tankDensity15)}' />
+                        android:text='@{BM2509Model.num(mItem.tankDensity15)}' />
                 </TableRow>
                 <TableRow
                     android:layout_width="match_parent"
@@ -239,7 +231,16 @@
                     <TextView
                         android:id="@+id/b2509_load_qty"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%,.0f", mItem.loadQuantity)}' />
+                        android:text='@{BM2509Model.num(mItem.loadQuantity)}' />
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/bm2509_avg_density" />
+
+                    <TextView
+                        android:id="@+id/b2509_avg_density"
+                        style="@style/BMFormLabel"
+                        android:text='@{BM2509Model.num(mItem.averageDensity)}' />
                 </TableRow>
 
                 <TextView
@@ -258,7 +259,7 @@
                     <TextView
                         android:id="@+id/b2509_temperature"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%.1f", mItem.temperature)}' />
+                        android:text='@{BM2509Model.num(mItem.obsTemperature)}' />
 
                     <TextView
                         style="@style/BMFormLabel"
@@ -267,7 +268,7 @@
                     <TextView
                         android:id="@+id/b2509_density"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%.1f", mItem.density)}' />
+                        android:text='@{BM2509Model.num(mItem.obsDensity)}' />
                 </TableRow>
                 <TableRow
                     android:layout_width="match_parent"
@@ -282,7 +283,7 @@
                     <TextView
                         android:id="@+id/b2509_density15"
                         style="@style/BMFormValue"
-                        android:text='@{String.format("%.1f", mItem.density15)}' />
+                        android:text='@{BM2509Model.num(mItem.density15)}' />
 
                     <TextView
                         style="@style/BMFormLabel"
@@ -291,7 +292,22 @@
                     <TextView
                         android:id="@+id/b2509_density_diff"
                         style="@style/BMFormLabel"
-                        android:text='@{String.format("%.1f", mItem.densityDiff)}' />
+                        android:text='@{BM2509Model.num(mItem.densityDiff)}' />
+                </TableRow>
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#ffffff"
+                    android:padding="5dp">
+
+                    <TextView
+                        style="@style/BMFormLabel"
+                        android:text="@string/note" />
+
+                    <TextView
+                        android:id="@+id/b2509_note"
+                        style="@style/BMFormValue"
+                        android:text='@{mItem.note}' />
                 </TableRow>
             </LinearLayout>
         </ScrollView>

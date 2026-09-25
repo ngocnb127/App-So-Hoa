@@ -28,6 +28,15 @@ public interface BM2506Dao {
     @Query("Update BM2506 set isDeleted=1, isLocalModified=1 WHERE localId in (:ids)")
     void delete(int[] ids);
 
+    @Query("SELECT * FROM BM2506 WHERE localId = :localId")
+    BM2506 getByLocalId(int localId);
+
+    @Query("SELECT * FROM BM2506 WHERE uniqueId = :uniqueId LIMIT 1")
+    BM2506 getByUniqueId(String uniqueId);
+
+    @Query("DELETE FROM BM2506 WHERE localId = :localId")
+    void deleteLocal(int localId);
+
     @Query("SELECT * from BM2506 where isLocalModified")
     List<BM2506> getModified();
 

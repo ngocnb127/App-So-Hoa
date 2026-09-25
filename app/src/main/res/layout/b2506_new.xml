@@ -6,6 +6,8 @@
 
         <import type="com.megatech.fms.helpers.DateUtils" />
 
+        <import type="android.view.View" />
+
         <variable
             name="mItem"
             type="com.megatech.fms.model.BM2506Model" />
@@ -55,6 +57,13 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView
+                    style="@style/BMFormSection"
+                    android:background="#ffdddd"
+                    android:text="@{mItem.syncError}"
+                    android:textColor="#b00020"
+                    android:visibility="@{mItem.syncError == null ? View.GONE : View.VISIBLE}" />
+
                 <TableRow
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -77,7 +86,7 @@
                     <TextView
                         android:id="@+id/b2506_time"
                         style="@style/BMFormValue"
-                        android:text='@{DateUtils.formatDate(mItem.time,"dd/MM/yyyy HH:mm")}' />
+                        android:text='@{DateUtils.formatDate(mItem.date,"dd/MM/yyyy HH:mm")}' />
                 </TableRow>
 
                 <TableRow
@@ -90,12 +99,10 @@
                         style="@style/BMFormLabel"
                         android:text="@string/bm2506_taken_by" />
 
-                    <Spinner
-                        android:id="@+id/b2506_operator"
-                        android:layout_width="0dp"
-                        android:layout_height="34dp"
-                        android:layout_weight=".25"
-                        android:padding="5dp" />
+                    <TextView
+                        android:id="@+id/b2506_taken_by"
+                        style="@style/BMFormValue"
+                        android:text="@{mItem.takenBy}" />
 
                     <TextView
                         style="@style/BMFormLabel"
@@ -154,7 +161,7 @@
                     <TextView
                         android:id="@+id/b2506_flight"
                         style="@style/BMFormValue"
-                        android:text='@{mItem.flightCode == null ? "" : mItem.flightCode + (mItem.aircraftCode == null ? "" : " / " + mItem.aircraftCode)}' />
+                        android:text="@{mItem.flightNo}" />
                 </TableRow>
 
                 <TableRow
@@ -179,7 +186,7 @@
                     <TextView
                         android:id="@+id/b2506_delivery_seal"
                         style="@style/BMFormValue"
-                        android:text="@{mItem.deliverySealNo}" />
+                        android:text="@{mItem.deliveringSealNo}" />
                 </TableRow>
 
                 <TableRow

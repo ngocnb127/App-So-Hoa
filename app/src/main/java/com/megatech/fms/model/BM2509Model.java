@@ -1,56 +1,121 @@
 package com.megatech.fms.model;
 
+import com.google.gson.annotations.SerializedName;
+
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.Date;
 
 // BM 25.09/NLHK - Phiếu kiểm tra đối chứng nhiên liệu JET A-1 trên xe tra nạp
+// (API_DOC_AppSoHoa mục 4.6, tên trường theo BM2509Model của API). Số để null = trống.
 public class BM2509Model extends BaseModel {
 
-    private int truckId;
-    private String truckNo;             // Xe tra nạp
-    private Date time;                  // Thời gian kiểm tra
-    private int flightId;               // Chuyến bay / Tàu bay
-    private String flightCode;
-    private String aircraftCode;
-    private String appearanceCheck = "C&B"; // 1. Kiểm tra ngoại quan
-    private int operatorId;
-    private String operatorName;
+    private Integer airportId;
+    private Integer truckId;
+    private Integer flightId;
+    private String flightNo;                // rỗng + có FlightId -> server lấy Flight.Code
+    @SerializedName("ACReg")
+    private String acReg;                   // rỗng + có FlightId -> server lấy Flight.AircraftCode
+    private Date time;                      // Thời gian kiểm tra
+    private Boolean appearanceCheck = true; // true = Trong và sáng (C&B), false = Khác
+    private String appearanceOther;
 
     // Chuyến tra nạp trước
-    private String documentNo;          // [1] Số chứng từ
-    private double lastDensity15;       // [2] KLR ở 15°C
-    private double remainQuantity;      // [3] Lượng nhiên liệu còn lại trên xe
+    private String documentNo;              // [1]
+    private Double lastDensity15;           // [2]
+    private Double remainQuantity;          // [3]
     // Bể cấp hàng gần nhất
-    private String releaseCertNo;       // [4] Số CNXH
-    private double tankDensity15;       // [5] KLR ở 15°C
-    private double loadQuantity;        // [6] Lượng nhiên liệu cấp lên xe
-    private double avgDensity;          // [7] KLR trung bình
-    // Đo tại sân đỗ cho lần tra nạp này
-    private double temperature;         // [8] Nhiệt độ quan sát
-    private double density;             // [9] KLR quan sát
-    private double density15;           // [10] KLR ở 15°C
-    private double densityDiff;         // [11] Chênh lệch KLR
+    private String releaseCertNo;           // [4]
+    private Double tankDensity15;           // [5]
+    private Double loadQuantity;            // [6]
+    private Double averageDensity;          // [7] server tính lại, giá trị gửi lên bị bỏ qua
+    // Đo tại sân đỗ
+    private Double obsTemperature;          // [8]
+    private Double obsDensity;              // [9]
+    private Double density15;               // [10]
+    private Double densityDiff;             // [11] server tính lại
+    private String note;
 
-    // [7] = ([2]x[3] + [5]x[6]) / ([3] + [6]); [11] = [10] - [7]
+    // chỉ đọc (server trả về)
+    private String truckCode;
+    private String flightCode;
+
+    // chỉ dùng trên app: Message của lần đồng bộ lỗi gần nhất (400/403/404)
+    private String syncError;
+
+    /**
+     * Tính [7], [11] để hiển thị trước khi đồng bộ — cùng công thức BM2509.Calculate() của server
+     * (mục 4.6.3): làm tròn banker's (HALF_EVEN) 4 chữ số lẻ. Giá trị cuối cùng lấy từ response.
+     */
     public void calculate() {
-        double qty = remainQuantity + loadQuantity;
-        avgDensity = qty > 0 ? (lastDensity15 * remainQuantity + tankDensity15 * loadQuantity) / qty : 0;
-        densityDiff = avgDensity > 0 && density15 > 0 ? density15 - avgDensity : 0;
+        BigDecimal remain = decimal(remainQuantity, true);
+        BigDecimal load = decimal(loadQuantity, true);
+        BigDecimal total = remain.add(load);
+        BigDecimal avg = null;
+        if (total.signum() > 0)
+            avg = decimal(lastDensity15, true).multiply(remain)
+                    .add(decimal(tankDensity15, true).multiply(load))
+                    .divide(total, MathContext.DECIMAL128)
+                    .setScale(4, RoundingMode.HALF_EVEN);
+        averageDensity = avg == null ? null : avg.doubleValue();
+        densityDiff = avg == null || density15 == null ? null
+                : decimal(density15, false).subtract(avg).doubleValue();
     }
 
-    public int getTruckId() {
+    // hiển thị số: bỏ số 0 thừa (server trả 795.2000), trống khi null
+    public static String num(Double value) {
+        return value == null ? "" : new BigDecimal(Double.toString(value)).stripTrailingZeros().toPlainString();
+    }
+
+    public static BM2509Model fromJson(String json) {
+        return gson.fromJson(json, BM2509Model.class);
+    }
+
+    private static BigDecimal decimal(Double value, boolean zeroIfNull) {
+        if (value == null)
+            return zeroIfNull ? BigDecimal.ZERO : null;
+        return new BigDecimal(Double.toString(value));
+    }
+
+    public Integer getAirportId() {
+        return airportId;
+    }
+
+    public void setAirportId(Integer airportId) {
+        this.airportId = airportId;
+    }
+
+    public Integer getTruckId() {
         return truckId;
     }
 
-    public void setTruckId(int truckId) {
+    public void setTruckId(Integer truckId) {
         this.truckId = truckId;
     }
 
-    public String getTruckNo() {
-        return truckNo;
+    public Integer getFlightId() {
+        return flightId;
     }
 
-    public void setTruckNo(String truckNo) {
-        this.truckNo = truckNo;
+    public void setFlightId(Integer flightId) {
+        this.flightId = flightId;
+    }
+
+    public String getFlightNo() {
+        return flightNo;
+    }
+
+    public void setFlightNo(String flightNo) {
+        this.flightNo = flightNo;
+    }
+
+    public String getAcReg() {
+        return acReg;
+    }
+
+    public void setAcReg(String acReg) {
+        this.acReg = acReg;
     }
 
     public Date getTime() {
@@ -61,52 +126,20 @@ public class BM2509Model extends BaseModel {
         this.time = time;
     }
 
-    public int getFlightId() {
-        return flightId;
-    }
-
-    public void setFlightId(int flightId) {
-        this.flightId = flightId;
-    }
-
-    public String getFlightCode() {
-        return flightCode;
-    }
-
-    public void setFlightCode(String flightCode) {
-        this.flightCode = flightCode;
-    }
-
-    public String getAircraftCode() {
-        return aircraftCode;
-    }
-
-    public void setAircraftCode(String aircraftCode) {
-        this.aircraftCode = aircraftCode;
-    }
-
-    public String getAppearanceCheck() {
+    public Boolean getAppearanceCheck() {
         return appearanceCheck;
     }
 
-    public void setAppearanceCheck(String appearanceCheck) {
+    public void setAppearanceCheck(Boolean appearanceCheck) {
         this.appearanceCheck = appearanceCheck;
     }
 
-    public int getOperatorId() {
-        return operatorId;
+    public String getAppearanceOther() {
+        return appearanceOther;
     }
 
-    public void setOperatorId(int operatorId) {
-        this.operatorId = operatorId;
-    }
-
-    public String getOperatorName() {
-        return operatorName;
-    }
-
-    public void setOperatorName(String operatorName) {
-        this.operatorName = operatorName;
+    public void setAppearanceOther(String appearanceOther) {
+        this.appearanceOther = appearanceOther;
     }
 
     public String getDocumentNo() {
@@ -117,19 +150,19 @@ public class BM2509Model extends BaseModel {
         this.documentNo = documentNo;
     }
 
-    public double getLastDensity15() {
+    public Double getLastDensity15() {
         return lastDensity15;
     }
 
-    public void setLastDensity15(double lastDensity15) {
+    public void setLastDensity15(Double lastDensity15) {
         this.lastDensity15 = lastDensity15;
     }
 
-    public double getRemainQuantity() {
+    public Double getRemainQuantity() {
         return remainQuantity;
     }
 
-    public void setRemainQuantity(double remainQuantity) {
+    public void setRemainQuantity(Double remainQuantity) {
         this.remainQuantity = remainQuantity;
     }
 
@@ -141,59 +174,75 @@ public class BM2509Model extends BaseModel {
         this.releaseCertNo = releaseCertNo;
     }
 
-    public double getTankDensity15() {
+    public Double getTankDensity15() {
         return tankDensity15;
     }
 
-    public void setTankDensity15(double tankDensity15) {
+    public void setTankDensity15(Double tankDensity15) {
         this.tankDensity15 = tankDensity15;
     }
 
-    public double getLoadQuantity() {
+    public Double getLoadQuantity() {
         return loadQuantity;
     }
 
-    public void setLoadQuantity(double loadQuantity) {
+    public void setLoadQuantity(Double loadQuantity) {
         this.loadQuantity = loadQuantity;
     }
 
-    public double getAvgDensity() {
-        return avgDensity;
+    public Double getAverageDensity() {
+        return averageDensity;
     }
 
-    public void setAvgDensity(double avgDensity) {
-        this.avgDensity = avgDensity;
+    public Double getObsTemperature() {
+        return obsTemperature;
     }
 
-    public double getTemperature() {
-        return temperature;
+    public void setObsTemperature(Double obsTemperature) {
+        this.obsTemperature = obsTemperature;
     }
 
-    public void setTemperature(double temperature) {
-        this.temperature = temperature;
+    public Double getObsDensity() {
+        return obsDensity;
     }
 
-    public double getDensity() {
-        return density;
+    public void setObsDensity(Double obsDensity) {
+        this.obsDensity = obsDensity;
     }
 
-    public void setDensity(double density) {
-        this.density = density;
-    }
-
-    public double getDensity15() {
+    public Double getDensity15() {
         return density15;
     }
 
-    public void setDensity15(double density15) {
+    public void setDensity15(Double density15) {
         this.density15 = density15;
     }
 
-    public double getDensityDiff() {
+    public Double getDensityDiff() {
         return densityDiff;
     }
 
-    public void setDensityDiff(double densityDiff) {
-        this.densityDiff = densityDiff;
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public String getTruckCode() {
+        return truckCode;
+    }
+
+    public String getFlightCode() {
+        return flightCode;
+    }
+
+    public String getSyncError() {
+        return syncError;
+    }
+
+    public void setSyncError(String syncError) {
+        this.syncError = syncError;
     }
 }

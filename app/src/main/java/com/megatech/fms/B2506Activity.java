@@ -26,8 +26,9 @@ public class B2506Activity extends BMFormListActivity<BM2506Model> {
 
     @Override
     protected String[] getColumns(BM2506Model item) {
-        return new String[]{item.getSampleNo(), DateUtils.formatDate(item.getTime(), "dd/MM/yyyy HH:mm"),
-                item.getSampleType(), item.getFlightCode(), item.getOperatorName()};
+        String last = item.getSyncError() != null ? "⚠ " + item.getSyncError() : item.getTakenBy();
+        return new String[]{item.getSampleNo(), DateUtils.formatDate(item.getDate(), "dd/MM/yyyy HH:mm"),
+                item.getSampleType(), item.getFlightNo(), last};
     }
 
     @Override

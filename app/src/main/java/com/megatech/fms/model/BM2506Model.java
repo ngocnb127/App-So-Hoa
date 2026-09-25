@@ -2,32 +2,61 @@ package com.megatech.fms.model;
 
 import java.util.Date;
 
-// BM 25.06/NLHK - Biên bản lấy và giao nhận mẫu
+// BM 25.06/NLHK - Biên bản lấy và giao nhận mẫu (API_DOC_AppSoHoa mục 4.5, tên trường theo BM2506Model của API)
+// Id, UniqueId, IsDeleted nằm ở BaseModel. POST là ghi đè toàn bộ phiếu -> luôn gửi đủ các trường.
 public class BM2506Model extends BaseModel {
 
-    private int truckId;
+    public static final String[] SAMPLE_TYPES = {"Mẫu lưu", "Mẫu giao khách hàng", "Mẫu thử nghiệm"};
+
+    private Integer airportId;          // thiếu -> server tự suy theo xe/chuyến bay
+    private Integer truckId;
+    private Integer flightId;
     private String sampleNo;            // 1. Mẫu số
-    private Date time;                  // 2. Thời gian lấy mẫu
-    private int operatorId;             // 3. Người lấy mẫu
-    private String operatorName;
+    private Date date;                  // 2. Thời gian lấy mẫu
+    private String takenBy;             // 3. Người lấy mẫu
     private String place;               // 4. Địa điểm lấy mẫu
-    private String location;            // 5. Vị trí (ngăn xe / vị trí)
+    private String location;            // 5. Vị trí / khoang xe
     private String sampleType;          // 6. Loại mẫu
     private String grade = "JET A-1";   // 7. Chủng loại nhiên liệu
-    private int flightId;               // 8. Số chuyến bay phục vụ
-    private String flightCode;
-    private String aircraftCode;
+    private String flightNo;            // 8. Số chuyến bay (rỗng + có FlightId -> server lấy Flight.Code)
     private String retentionSealNo;     // 9. Số niêm phong mẫu lưu
-    private String deliverySealNo;      // 10. Số niêm phong mẫu giao cho khách hàng
+    private String deliveringSealNo;    // 10. Số niêm phong mẫu giao khách hàng
     private String delivererName;       // Người giao mẫu
     private String recipientName;       // Người nhận mẫu
 
-    public int getTruckId() {
+    // chỉ đọc (server trả về)
+    private String truckCode;
+    private String flightCode;
+
+    // chỉ dùng trên app: Message của lần đồng bộ lỗi gần nhất (400/403/404)
+    private String syncError;
+
+    public static BM2506Model fromJson(String json) {
+        return gson.fromJson(json, BM2506Model.class);
+    }
+
+    public Integer getAirportId() {
+        return airportId;
+    }
+
+    public void setAirportId(Integer airportId) {
+        this.airportId = airportId;
+    }
+
+    public Integer getTruckId() {
         return truckId;
     }
 
-    public void setTruckId(int truckId) {
+    public void setTruckId(Integer truckId) {
         this.truckId = truckId;
+    }
+
+    public Integer getFlightId() {
+        return flightId;
+    }
+
+    public void setFlightId(Integer flightId) {
+        this.flightId = flightId;
     }
 
     public String getSampleNo() {
@@ -38,28 +67,20 @@ public class BM2506Model extends BaseModel {
         this.sampleNo = sampleNo;
     }
 
-    public Date getTime() {
-        return time;
+    public Date getDate() {
+        return date;
     }
 
-    public void setTime(Date time) {
-        this.time = time;
+    public void setDate(Date date) {
+        this.date = date;
     }
 
-    public int getOperatorId() {
-        return operatorId;
+    public String getTakenBy() {
+        return takenBy;
     }
 
-    public void setOperatorId(int operatorId) {
-        this.operatorId = operatorId;
-    }
-
-    public String getOperatorName() {
-        return operatorName;
-    }
-
-    public void setOperatorName(String operatorName) {
-        this.operatorName = operatorName;
+    public void setTakenBy(String takenBy) {
+        this.takenBy = takenBy;
     }
 
     public String getPlace() {
@@ -94,28 +115,12 @@ public class BM2506Model extends BaseModel {
         this.grade = grade;
     }
 
-    public int getFlightId() {
-        return flightId;
+    public String getFlightNo() {
+        return flightNo;
     }
 
-    public void setFlightId(int flightId) {
-        this.flightId = flightId;
-    }
-
-    public String getFlightCode() {
-        return flightCode;
-    }
-
-    public void setFlightCode(String flightCode) {
-        this.flightCode = flightCode;
-    }
-
-    public String getAircraftCode() {
-        return aircraftCode;
-    }
-
-    public void setAircraftCode(String aircraftCode) {
-        this.aircraftCode = aircraftCode;
+    public void setFlightNo(String flightNo) {
+        this.flightNo = flightNo;
     }
 
     public String getRetentionSealNo() {
@@ -126,12 +131,12 @@ public class BM2506Model extends BaseModel {
         this.retentionSealNo = retentionSealNo;
     }
 
-    public String getDeliverySealNo() {
-        return deliverySealNo;
+    public String getDeliveringSealNo() {
+        return deliveringSealNo;
     }
 
-    public void setDeliverySealNo(String deliverySealNo) {
-        this.deliverySealNo = deliverySealNo;
+    public void setDeliveringSealNo(String deliveringSealNo) {
+        this.deliveringSealNo = deliveringSealNo;
     }
 
     public String getDelivererName() {
@@ -148,5 +153,21 @@ public class BM2506Model extends BaseModel {
 
     public void setRecipientName(String recipientName) {
         this.recipientName = recipientName;
+    }
+
+    public String getTruckCode() {
+        return truckCode;
+    }
+
+    public String getFlightCode() {
+        return flightCode;
+    }
+
+    public String getSyncError() {
+        return syncError;
+    }
+
+    public void setSyncError(String syncError) {
+        this.syncError = syncError;
     }
 }
