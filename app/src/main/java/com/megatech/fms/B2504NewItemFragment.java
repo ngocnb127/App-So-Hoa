@@ -91,6 +91,13 @@ public class B2504NewItemFragment extends DialogFragment {
         Bundle args = getArguments();
         Date now = new Date();
 
+        // BM2504Main.openEdit truyền phiếu cũ qua BM2504_MODEL. Trước đây tham số này bị bỏ qua:
+        // "sửa" mở ra một phiếu trắng Id = 0 và bấm Lưu sinh phiếu thứ hai (đo trên máy ảo 2026-09-28).
+        if (args != null && args.getSerializable("BM2504_MODEL") instanceof BM2504Model) {
+            model = (BM2504Model) args.getSerializable("BM2504_MODEL");
+            return;
+        }
+
         model = new BM2504Model();
         model.setTruckId(FMSApplication.getApplication().getTruckId());
         model.setTruckNo(FMSApplication.getApplication().getTruckNo());
@@ -238,6 +245,14 @@ public class B2504NewItemFragment extends DialogFragment {
         view.findViewById(R.id.b2504_packing).setOnClickListener(v ->
                 showEditDialog("Nhập vị trí", model.getPacking(), text -> {
                     model.setPacking(text);
+                    binding.invalidateAll();
+                }));
+
+        // layout khai android:onClick="onClick", nhưng trong DialogFragment nó gọi sang Activity nên
+        // chạm vào ô không làm gì: số hiệu tàu bay chỉ điền được qua chọn chuyến
+        view.findViewById(R.id.b2504_aircraft).setOnClickListener(v ->
+                showEditDialog("Nhập số hiệu tàu bay", model.getAcReg(), text -> {
+                    model.setAcReg(text);
                     binding.invalidateAll();
                 }));
 
