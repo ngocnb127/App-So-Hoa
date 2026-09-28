@@ -412,32 +412,7 @@ public class DataHelper {
             }).start();
 
             //sync BM2307A
-            new Thread(() -> {
-
-                List<CheckTrucks> modified = repo.getModifiedCheckTrucks();
-                if (modified.size() > 0) {
-                    for (CheckTrucks item : modified) {
-                        CheckTrucksModel itemData = item.toModel();
-                        CheckTrucksModel newData = httpClient.postCheckTrucks(itemData);
-                        if (newData != null) {
-                            item.setLocalModified(false);
-                            item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
-                            repo.insertCheckTrucks(item);
-                        }
-                    }
-                }
-                List<CheckTrucksModel> lstModel = httpClient.getCheckTrucksList();
-
-                if (lstModel != null) {
-                    int[] ids = new int[lstModel.size()];
-                    int i = 0;
-                    for (CheckTrucksModel model : lstModel) {
-                        repo.insertCheckTrucks(CheckTrucks.fromModel(model));
-                    }
-
-                }
-            }).start();
+            new Thread(DataHelper::syncCheckTrucks).start();
             //sync BM2508
             new Thread(DataHelper::syncBM2508).start();
             //update airlines, users from another thread
@@ -558,6 +533,38 @@ public class DataHelper {
             Logger.appendLog("BM2505", "sync error " + ex.getMessage());
         } finally {
             bm2505Syncing.set(false);
+        }
+    }
+
+    private static final AtomicBoolean checkTrucksSyncing = new AtomicBoolean(false);
+
+    private static void syncCheckTrucks() {
+        // a slow previous run must not post the same records twice
+        if (!checkTrucksSyncing.compareAndSet(false, true))
+            return;
+        try {
+            List<CheckTrucks> modified = repo.getModifiedCheckTrucks();
+            for (CheckTrucks item : modified) {
+                String postedJson = item.getJsonData();
+                CheckTrucksModel newData = httpClient.postCheckTrucks(item.toModel());
+                if (newData == null) {
+                    Logger.appendLog("BM2307A", "post failed, keep for retry, localId " + item.getLocalId());
+                    continue;
+                }
+                // keep it marked as modified if the user saved it again while it was being posted
+                repo.markCheckTrucksPosted(item, postedJson, newData.getId(), newData.toJson());
+            }
+
+            List<CheckTrucksModel> lstModel = httpClient.getCheckTrucksList();
+            if (lstModel != null) {
+                for (CheckTrucksModel model : lstModel) {
+                    repo.mergeCheckTrucksFromServer(CheckTrucks.fromModel(model));
+                }
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("BM2307A", "sync error " + ex.getMessage());
+        } finally {
+            checkTrucksSyncing.set(false);
         }
     }
 
@@ -768,7 +775,15 @@ public class DataHelper {
     }
 
     public static List<CheckTrucksModel> getCheckTrucksList(Date date) {
-        return repo.getCheckTrucksList(date);
+        // only records of the truck this tablet is assigned to
+        int truckId = FMSApplication.getApplication().getTruckId();
+        List<CheckTrucksModel> lst = new ArrayList<>();
+        for (CheckTrucksModel model : repo.getCheckTrucksList(date)) {
+            Integer modelTruckId = model.getTruckId();
+            if (truckId <= 0 || modelTruckId == null || modelTruckId <= 0 || modelTruckId == truckId)
+                lst.add(model);
+        }
+        return lst;
     }
 
     public static void postBM2505(BM2505Model model) {
@@ -794,7 +809,8 @@ public class DataHelper {
 
         CheckTrucks localModel = CheckTrucks.fromModel(model);
         localModel.setLocalModified(true);
-        repo.insertCheckTrucks(localModel);
+        // keep the generated localId so saving the same model again updates it instead of adding a copy
+        model.setLocalId(repo.insertCheckTrucks(localModel));
         // call synchronize to update remote database
         Synchronize();
     }

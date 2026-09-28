@@ -318,21 +318,33 @@ public class A2307NewItemFragement extends DialogFragment {
 
 
         Spinner spntruck = view.findViewById(R.id.a2307_new_truck_no);
-        ArrayAdapter<TruckModel> spntruckAdapter = new ArrayAdapter<TruckModel>(activity, R.layout.support_simple_spinner_dropdown_item, Trucklst);
+        // the spinner is display only: when the record's truck is missing from the list it would
+        // fall back to the first truck and the listener below would move the record to that truck
+        List<TruckModel> truckItems = new ArrayList<>();
+        if (Trucklst != null)
+            truckItems.addAll(Trucklst);
+        int truckPos = -1;
+        for (int i = 0; i < truckItems.size(); i++)
+            if (model.getTruckId() != null && model.getTruckId().equals(truckItems.get(i).getId())) {
+                truckPos = i;
+                break;
+            }
+        if (truckPos < 0 && model.getTruckId() != null && model.getTruckId() > 0) {
+            truckItems.add(0, new TruckModel(model.getTruckNo(), model.getTruckId()));
+            truckPos = 0;
+        }
+        ArrayAdapter<TruckModel> spntruckAdapter = new ArrayAdapter<TruckModel>(activity, R.layout.support_simple_spinner_dropdown_item, truckItems);
         spntruckAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         spntruck.setAdapter(spntruckAdapter);
         spntruck.setEnabled(false);
-        if (model.getTruckId() > 0) {
-            for (int i = 0; i < Trucklst.size(); i++)
-                if (model.getTruckId().equals(Trucklst.get(i).getId())) {
-                    spntruck.setSelection(i);
-                    break;
-                }
-        }
+        if (truckPos >= 0)
+            spntruck.setSelection(truckPos);
         spntruck.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 TruckModel truck = (TruckModel) adapterView.getItemAtPosition(i);
+                if (!adapterView.isEnabled() && !truck.getId().equals(model.getTruckId()))
+                    return;
                 model.setTruckId(truck.getId());
                  model.setTruckNo(truck.getTruckNo());
             }
@@ -1748,7 +1760,12 @@ public class A2307NewItemFragement extends DialogFragment {
         }
     }
 
+    private boolean isSaving = false;
+
     private void save() {
+        // a second tap before the dialog closes would insert the new record twice
+        if (isSaving) return;
+        isSaving = true;
 
         new AsyncTask<Void, Void, Void>() {
             @Override
@@ -1760,6 +1777,7 @@ public class A2307NewItemFragement extends DialogFragment {
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
+                isSaving = false;
                 if (activitya2307 instanceof A2307Activity)
                 {
                     activitya2307.loaddata();

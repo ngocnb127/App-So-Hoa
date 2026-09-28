@@ -562,18 +562,60 @@ public class DataRepository {
             }
         });
     }
-    public void insertCheckTrucks(CheckTrucks model) {
+    public int insertCheckTrucks(CheckTrucks model) {
 
         CheckTrucks item = db.checkTrucksDao().get(model.getId(), model.getLocalId());
 
         if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.checkTrucksDao().insert(model);
+            long localId = db.checkTrucksDao().insert(model);
+            model.setLocalId((int) localId);
         } else {
 
 
             model.setLocalId(item.getLocalId());
             db.checkTrucksDao().update(model);
         }
+        return model.getLocalId();
+    }
+
+    public void markCheckTrucksPosted(CheckTrucks posted, String postedJson, int serverId, String serverJson) {
+        db.runInTransaction(() -> {
+            CheckTrucks current = db.checkTrucksDao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return;
+            current.setId(serverId);
+            if (postedJson != null && postedJson.equals(current.getJsonData())
+                    && current.isDeleted() == posted.isDeleted()) {
+                current.setLocalModified(false);
+                current.setJsonData(serverJson);
+            }
+            db.checkTrucksDao().update(current);
+        });
+    }
+
+    // Same rules as mergeBM2508FromServer: never match by LocalId from the server and never
+    // overwrite a record that is still waiting to be posted.
+    public void mergeCheckTrucksFromServer(CheckTrucks remote) {
+        if (remote == null || remote.getId() <= 0)
+            return;
+
+        db.runInTransaction(() -> {
+            CheckTrucks local = db.checkTrucksDao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.checkTrucksDao().getByUniqueId(remote.getUniqueId());
+
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.checkTrucksDao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.checkTrucksDao().update(remote);
+            }
+        });
     }
 
     public List<FlightModel> getFlights(Date date) {
