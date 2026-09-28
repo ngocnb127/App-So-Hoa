@@ -28,10 +28,19 @@ public interface BM2504Dao {
      ========================= */
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(BM2504 item);
+    long insert(BM2504 item);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(BM2504 item);
+
+    @Query("SELECT * FROM BM2504 WHERE localId = :localId LIMIT 1")
+    BM2504 getByLocalId(int localId);
+
+    @Query("SELECT * FROM BM2504 WHERE id > 0 AND id = :id LIMIT 1")
+    BM2504 getById(int id);
+
+    @Query("SELECT * FROM BM2504 WHERE uniqueId = :uniqueId LIMIT 1")
+    BM2504 getByUniqueId(String uniqueId);
 
     /* =========================
        GET ONE

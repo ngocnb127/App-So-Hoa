@@ -351,7 +351,12 @@ public class B2504NewItemFragment extends DialogFragment {
     // SAVE
     // =========================
 
+    private boolean saving = false;
+
     private void save() {
+        // bấm Lưu lần hai trước khi hộp thoại đóng sẽ chèn phiếu mới hai lần
+        if (saving) return;
+        saving = true;
         new AsyncTask<Void, Void, Exception>() {
             @Override
             protected Exception doInBackground(Void... voids) {
@@ -366,6 +371,7 @@ public class B2504NewItemFragment extends DialogFragment {
 
             @Override
             protected void onPostExecute(Exception error) {
+                saving = false;
                 if (!isAdded()) return;
 
                 if (error == null) {

@@ -121,7 +121,12 @@ public abstract class BMFormItemFragment<T extends BaseModel> extends DialogFrag
         binding.invalidateAll();
     }
 
+    private boolean saving = false;
+
     private void save() {
+        // bấm Lưu lần hai trước khi hộp thoại đóng sẽ chèn phiếu mới hai lần
+        if (saving) return;
+        saving = true;
         new AsyncTask<Void, Void, Void>() {
             private Throwable error;
 
@@ -137,6 +142,7 @@ public abstract class BMFormItemFragment<T extends BaseModel> extends DialogFrag
 
             @Override
             protected void onPostExecute(Void aVoid) {
+                saving = false;
                 if (error != null) {
                     reportError("save", error);
                     return;

@@ -1978,26 +1978,18 @@ public class DataHelper {
                             requireRepository().deleteLocalBM2506(item.getLocalId());
                     } else if (code == 200) {
                         BM2506Model saved = BM2506Model.fromJson(r.getData());
-                        BM2506 current = requireRepository().getBM2506(item.getLocalId());
-                        if (current != null && sent != null && sent.equals(current.getJsonData())) {
-                            BM2506 updated = BM2506.fromModel(saved);
-                            updated.setLocalId(item.getLocalId());
-                            updated.setLocalModified(false);
-                            requireRepository().insertBM2506(updated);
-                        } else if (current != null) {
-                            // người dùng sửa trong lúc đang gửi: giữ bản local, lần đồng bộ sau gửi tiếp
-                            current.setId(saved.getId());
-                            requireRepository().insertBM2506(current);
-                        }
+                        // UniqueId là của máy: response thiếu trường này thì Gson để lại UUID ngẫu
+                        // nhiên của constructor, lần gửi sau server không nhận ra phiếu nữa
+                        saved.setUniqueId(model.getUniqueId());
+                        // người dùng sửa trong lúc đang gửi: chỉ gắn id, giữ bản local để lượt sau gửi tiếp
+                        requireRepository().markBM2506Posted(item.getLocalId(), sent, BM2506.fromModel(saved));
                     } else if (code == 410) {
                         requireRepository().deleteLocalBM2506(item.getLocalId());
                         Logger.appendLog("BM2506", "Phiếu đã bị xoá trên server: " + model.getUniqueId());
                     } else if (code == 400 || code == 403 || code == 404) {
                         // gửi lại y nguyên vẫn lỗi -> dừng, hiện Message cho người dùng sửa
                         model.setSyncError(formErrorMessage(r));
-                        item.setJsonData(model.toJson());
-                        item.setLocalModified(false);
-                        requireRepository().insertBM2506(item);
+                        requireRepository().markBM2506Rejected(item.getLocalId(), sent, model.toJson());
                     } // mất mạng / 401 / 5xx: giữ nguyên, lượt sau gửi lại (an toàn nhờ UniqueId)
                 }
                 Date[] range = formSyncRange();
@@ -2020,24 +2012,14 @@ public class DataHelper {
                     } else if (code == 200) {
                         // [7], [11] lấy theo response của server
                         BM2509Model saved = BM2509Model.fromJson(r.getData());
-                        BM2509 current = requireRepository().getBM2509(item.getLocalId());
-                        if (current != null && sent != null && sent.equals(current.getJsonData())) {
-                            BM2509 updated = BM2509.fromModel(saved);
-                            updated.setLocalId(item.getLocalId());
-                            updated.setLocalModified(false);
-                            requireRepository().insertBM2509(updated);
-                        } else if (current != null) {
-                            current.setId(saved.getId());
-                            requireRepository().insertBM2509(current);
-                        }
+                        saved.setUniqueId(model.getUniqueId()); // xem BM2506 ở trên
+                        requireRepository().markBM2509Posted(item.getLocalId(), sent, BM2509.fromModel(saved));
                     } else if (code == 410) {
                         requireRepository().deleteLocalBM2509(item.getLocalId());
                         Logger.appendLog("BM2509", "Phiếu đã bị xoá trên server: " + model.getUniqueId());
                     } else if (code == 400 || code == 403 || code == 404) {
                         model.setSyncError(formErrorMessage(r));
-                        item.setJsonData(model.toJson());
-                        item.setLocalModified(false);
-                        requireRepository().insertBM2509(item);
+                        requireRepository().markBM2509Rejected(item.getLocalId(), sent, model.toJson());
                     }
                 }
                 Date[] range = formSyncRange();
@@ -2060,10 +2042,10 @@ public class DataHelper {
                         BM2503Model newData = requireHttpClient().postBM2503(itemData);
 
                         if (newData != null) {
-                            item.setLocalModified(false);
-                            item.setId(newData.getId());
-
-                            requireRepository().insertBM2503(item);
+                            // Không ghi lại `item`: người dùng có thể đã lưu bản sửa trong lúc gửi.
+                            if (!requireRepository().markBM2503Synced(item, newData.getId()))
+                                Logger.appendLog("BM2503", "Có bản lưu mới trong lúc gửi -> giữ chờ gửi, localId="
+                                        + item.getLocalId());
                         }
                     }
                 }
@@ -2093,10 +2075,10 @@ public class DataHelper {
                         BM2504Model newData = requireHttpClient().postBM2504(itemData);
 
                         if (newData != null) {
-                            item.setLocalModified(false);
-                            item.setId(newData.getId());
-
-                            requireRepository().insertBM2504(item);
+                            // Không ghi lại `item`: người dùng có thể đã lưu bản sửa trong lúc gửi.
+                            if (!requireRepository().markBM2504Synced(item, newData.getId()))
+                                Logger.appendLog("BM2504", "Có bản lưu mới trong lúc gửi -> giữ chờ gửi, localId="
+                                        + item.getLocalId());
                         }
                     }
                 }
@@ -4491,18 +4473,27 @@ public class DataHelper {
     }
 
     public static List<BM2506Model> getBM2506List(Date date) {
-        return requireRepository().getBM2506List(date);
+        List<BM2506Model> lst = new ArrayList<>();
+        for (BM2506Model model : requireRepository().getBM2506List(date))
+            if (isCurrentTruck(model.getTruckId()))
+                lst.add(model);
+        return lst;
     }
 
     public static List<BM2509Model> getBM2509List(Date date) {
-        return requireRepository().getBM2509List(date);
+        List<BM2509Model> lst = new ArrayList<>();
+        for (BM2509Model model : requireRepository().getBM2509List(date))
+            if (isCurrentTruck(model.getTruckId()))
+                lst.add(model);
+        return lst;
     }
 
     public static void postBM2506(BM2506Model model) {
         model.setSyncError(null); // lưu lại sau khi sửa -> gửi lại
         BM2506 localModel = BM2506.fromModel(model);
         localModel.setLocalModified(true);
-        requireRepository().insertBM2506(localModel);
+        // trả localId về model để lần lưu sau là update chứ không tạo bản ghi mới
+        model.setLocalId(requireRepository().insertBM2506(localModel));
         Synchronize();
     }
 
@@ -4510,7 +4501,7 @@ public class DataHelper {
         model.setSyncError(null); // lưu lại sau khi sửa -> gửi lại
         BM2509 localModel = BM2509.fromModel(model);
         localModel.setLocalModified(true);
-        requireRepository().insertBM2509(localModel);
+        model.setLocalId(requireRepository().insertBM2509(localModel));
         Synchronize();
     }
 
@@ -4526,14 +4517,19 @@ public class DataHelper {
 
     // ===== BM2503 =====
     public static List<BM2503Model> getBM2503List(Date date) {
-        return requireRepository().getBM2503List(date);
+        List<BM2503Model> lst = new ArrayList<>();
+        for (BM2503Model model : requireRepository().getBM2503List(date))
+            if (isCurrentTruck(model.getTruckId()))
+                lst.add(model);
+        return lst;
     }
     public static void postBM2503(BM2503Model model) {
 
         BM2503 localModel = BM2503.fromModel(model);
         localModel.setLocalModified(true);
 
-        requireRepository().insertBM2503(localModel);
+        // trả localId về model để lần lưu sau là update chứ không tạo bản ghi mới
+        model.setLocalId(requireRepository().insertBM2503(localModel));
 
         // gọi sync giống các nghiệp vụ khác
         Synchronize();
@@ -4545,7 +4541,11 @@ public class DataHelper {
     // ===== BM2504 =====
 
     public static List<BM2504Model> getBM2504List(Date date) {
-        return requireRepository().getBM2504List(date);
+        List<BM2504Model> lst = new ArrayList<>();
+        for (BM2504Model model : requireRepository().getBM2504List(date))
+            if (isCurrentTruck(model.getTruckId()))
+                lst.add(model);
+        return lst;
     }
 
     public static void postBM2504(BM2504Model model) {
@@ -4553,7 +4553,8 @@ public class DataHelper {
         BM2504 localModel = BM2504.fromModel(model);
         localModel.setLocalModified(true);
 
-        requireRepository().insertBM2504(localModel);
+        // trả localId về model để lần lưu sau là update chứ không tạo bản ghi mới
+        model.setLocalId(requireRepository().insertBM2504(localModel));
 
         // gọi sync giống các nghiệp vụ khác
         Synchronize();

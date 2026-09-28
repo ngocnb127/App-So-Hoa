@@ -1394,50 +1394,158 @@ public class DataRepository {
         return returnList;
     }
 
-    public void insertBM2506(BM2506 model) {
-        BM2506 item = db.bm2506Dao().get(model.getId(), model.getLocalId());
-        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
-            db.bm2506Dao().insert(model);
-        } else {
-            model.setLocalId(item.getLocalId());
-            db.bm2506Dao().update(model);
-        }
+    /** Xem {@link #insertBM2505}: tìm theo localId của máy này, giữ id server, trả localId. */
+    public int insertBM2506(BM2506 model) {
+        return db.runInTransaction(() -> {
+            BM2506 item = model.getLocalId() > 0 ? db.bm2506Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2506Dao().getById(model.getId());
+
+            if (item == null) {
+                long newLocalId = db.bm2506Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2506Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
 
-    public void insertBM2509(BM2509 model) {
-        BM2509 item = db.bm2509Dao().get(model.getId(), model.getLocalId());
-        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
-            db.bm2509Dao().insert(model);
-        } else {
-            model.setLocalId(item.getLocalId());
-            db.bm2509Dao().update(model);
-        }
+    /** Xem {@link #insertBM2505}. */
+    public int insertBM2509(BM2509 model) {
+        return db.runInTransaction(() -> {
+            BM2509 item = model.getLocalId() > 0 ? db.bm2509Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2509Dao().getById(model.getId());
+
+            if (item == null) {
+                long newLocalId = db.bm2509Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2509Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
 
-    // ghép theo UniqueId, phiếu tạo trên web (UniqueId null) ghép theo Id; phiếu local đang chờ gửi thì giữ bản local
+    /**
+     * Ghi kết quả POST 25.06 thành công. Dòng vẫn là bản đã gửi thì lấy bản server trả về
+     * ([7], [11] theo server) và xoá cờ chờ gửi; người dùng đã lưu bản mới trong lúc gửi thì chỉ
+     * gắn id server và giữ cờ. Đọc và ghi trong một giao dịch, lần lưu không chen vào giữa được.
+     */
+    public boolean markBM2506Posted(int localId, String sentJson, BM2506 saved) {
+        return db.runInTransaction(() -> {
+            BM2506 current = db.bm2506Dao().getByLocalId(localId);
+            if (current == null)
+                return false;
+            boolean unchanged = sentJson != null && sentJson.equals(current.getJsonData());
+            if (unchanged && saved != null) {
+                saved.setLocalId(localId);
+                saved.setLocalModified(false);
+                db.bm2506Dao().update(saved);
+            } else if (saved != null && saved.getId() > 0) {
+                current.setId(saved.getId());
+                db.bm2506Dao().update(current);
+            }
+            return unchanged;
+        });
+    }
+
+    /** Server từ chối nội dung (400/403/404): dừng gửi lại, nhưng không đè bản lưu mới hơn. */
+    public void markBM2506Rejected(int localId, String sentJson, String jsonWithError) {
+        db.runInTransaction(() -> {
+            BM2506 current = db.bm2506Dao().getByLocalId(localId);
+            if (current == null || sentJson == null || !sentJson.equals(current.getJsonData()))
+                return;
+            current.setJsonData(jsonWithError);
+            current.setLocalModified(false);
+            db.bm2506Dao().update(current);
+        });
+    }
+
+    /** Xem {@link #markBM2506Posted}. */
+    public boolean markBM2509Posted(int localId, String sentJson, BM2509 saved) {
+        return db.runInTransaction(() -> {
+            BM2509 current = db.bm2509Dao().getByLocalId(localId);
+            if (current == null)
+                return false;
+            boolean unchanged = sentJson != null && sentJson.equals(current.getJsonData());
+            if (unchanged && saved != null) {
+                saved.setLocalId(localId);
+                saved.setLocalModified(false);
+                db.bm2509Dao().update(saved);
+            } else if (saved != null && saved.getId() > 0) {
+                current.setId(saved.getId());
+                db.bm2509Dao().update(current);
+            }
+            return unchanged;
+        });
+    }
+
+    /** Xem {@link #markBM2506Rejected}. */
+    public void markBM2509Rejected(int localId, String sentJson, String jsonWithError) {
+        db.runInTransaction(() -> {
+            BM2509 current = db.bm2509Dao().getByLocalId(localId);
+            if (current == null || sentJson == null || !sentJson.equals(current.getJsonData()))
+                return;
+            current.setJsonData(jsonWithError);
+            current.setLocalModified(false);
+            db.bm2509Dao().update(current);
+        });
+    }
+
+    // ghép theo UniqueId, phiếu tạo trên web (UniqueId null) ghép theo Id; phiếu local đang chờ gửi thì giữ bản local.
+    // Dòng mới luôn nhận localId mới: LocalId trong dữ liệu server là của máy đã tạo phiếu, insert
+    // REPLACE giữ nguyên nó sẽ thay mất một phiếu khác của máy này.
     public void mergeRemoteBM2506(BM2506 remote) {
-        BM2506 local = remote.getUniqueId() != null ? db.bm2506Dao().getByUniqueId(remote.getUniqueId()) : null;
-        if (local == null)
-            local = db.bm2506Dao().get(remote.getId(), 0);
-        if (local == null) {
-            db.bm2506Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2506Dao().update(remote);
-        }
+        if (remote == null)
+            return;
+        db.runInTransaction(() -> {
+            BM2506 local = remote.getUniqueId() != null ? db.bm2506Dao().getByUniqueId(remote.getUniqueId()) : null;
+            if (local == null && remote.getId() > 0)
+                local = db.bm2506Dao().getById(remote.getId());
+            if (local == null) {
+                if (remote.getId() <= 0)
+                    return;
+                remote.setLocalModified(false);
+                remote.setLocalId(0);
+                db.bm2506Dao().insert(remote);
+            } else if (!local.isLocalModified()) {
+                remote.setLocalModified(false);
+                remote.setLocalId(local.getLocalId());
+                db.bm2506Dao().update(remote);
+            }
+        });
     }
 
-    // ghép theo UniqueId, phiếu tạo trên web (UniqueId null) ghép theo Id; phiếu local đang chờ gửi thì giữ bản local
+    /** Xem {@link #mergeRemoteBM2506}. */
     public void mergeRemoteBM2509(BM2509 remote) {
-        BM2509 local = remote.getUniqueId() != null ? db.bm2509Dao().getByUniqueId(remote.getUniqueId()) : null;
-        if (local == null)
-            local = db.bm2509Dao().get(remote.getId(), 0);
-        if (local == null) {
-            db.bm2509Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2509Dao().update(remote);
-        }
+        if (remote == null)
+            return;
+        db.runInTransaction(() -> {
+            BM2509 local = remote.getUniqueId() != null ? db.bm2509Dao().getByUniqueId(remote.getUniqueId()) : null;
+            if (local == null && remote.getId() > 0)
+                local = db.bm2509Dao().getById(remote.getId());
+            if (local == null) {
+                if (remote.getId() <= 0)
+                    return;
+                remote.setLocalModified(false);
+                remote.setLocalId(0);
+                db.bm2509Dao().insert(remote);
+            } else if (!local.isLocalModified()) {
+                remote.setLocalModified(false);
+                remote.setLocalId(local.getLocalId());
+                db.bm2509Dao().update(remote);
+            }
+        });
     }
 
     public List<BM2506> getModifiedBM2506() {
@@ -1495,25 +1603,67 @@ public class DataRepository {
         }
         return returnList;
     }
-    public void insertBM2503(BM2503 model) {
+    /** Xem {@link #insertBM2505}. */
+    public int insertBM2503(BM2503 model) {
+        return db.runInTransaction(() -> {
+            BM2503 item = model.getLocalId() > 0 ? db.bm2503Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2503Dao().getById(model.getId());
 
-        BM2503 item = db.bm2503Dao().get(model.getId(), model.getLocalId());
-
-        if (item == null || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
-            db.bm2503Dao().insert(model);
-        } else {
-            model.setLocalId(item.getLocalId());
-            db.bm2503Dao().update(model);
-        }
+            if (item == null) {
+                long newLocalId = db.bm2503Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2503Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
+
+    /** Xem {@link #markBM2505Synced}. */
+    public boolean markBM2503Synced(BM2503 posted, int serverId) {
+        return db.runInTransaction(() -> {
+            BM2503 current = db.bm2503Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                current.setJsonData(current.toModel().toJson());
+                current.setLocalModified(false);
+            }
+            db.bm2503Dao().update(current);
+            return unchanged;
+        });
+    }
+
+    /** Xem {@link #mergeRemoteBM2505}. */
     public void mergeRemoteBM2503(BM2503 remote) {
-        BM2503 local = db.bm2503Dao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.bm2503Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2503Dao().update(remote);
-        }
+        if (remote == null || remote.getId() <= 0)
+            return;
+        db.runInTransaction(() -> {
+            BM2503 local = db.bm2503Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2503Dao().getByUniqueId(remote.getUniqueId());
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2503Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2503Dao().update(remote);
+            }
+        });
     }
     public List<BM2503> getModifiedBM2503() {
         return db.bm2503Dao().getModified();
@@ -1548,28 +1698,67 @@ public class DataRepository {
     }
 
 
-    public void insertBM2504(BM2504 model) {
+    /** Xem {@link #insertBM2505}. */
+    public int insertBM2504(BM2504 model) {
+        return db.runInTransaction(() -> {
+            BM2504 item = model.getLocalId() > 0 ? db.bm2504Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2504Dao().getById(model.getId());
 
-        BM2504 item = db.bm2504Dao().get(model.getId(), model.getLocalId());
-
-        if (item == null
-                || (item.getId() == 0 && item.getLocalId() != model.getLocalId())) {
-
-            db.bm2504Dao().insert(model);
-
-        } else {
-            model.setLocalId(item.getLocalId());
-            db.bm2504Dao().update(model);
-        }
+            if (item == null) {
+                long newLocalId = db.bm2504Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2504Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
+
+    /** Xem {@link #markBM2505Synced}. */
+    public boolean markBM2504Synced(BM2504 posted, int serverId) {
+        return db.runInTransaction(() -> {
+            BM2504 current = db.bm2504Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                current.setJsonData(current.toModel().toJson());
+                current.setLocalModified(false);
+            }
+            db.bm2504Dao().update(current);
+            return unchanged;
+        });
+    }
+
+    /** Xem {@link #mergeRemoteBM2505}. */
     public void mergeRemoteBM2504(BM2504 remote) {
-        BM2504 local = db.bm2504Dao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.bm2504Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2504Dao().update(remote);
-        }
+        if (remote == null || remote.getId() <= 0)
+            return;
+        db.runInTransaction(() -> {
+            BM2504 local = db.bm2504Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2504Dao().getByUniqueId(remote.getUniqueId());
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2504Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2504Dao().update(remote);
+            }
+        });
     }
     public List<BM2504> getModifiedBM2504() {
         return db.bm2504Dao().getModified();

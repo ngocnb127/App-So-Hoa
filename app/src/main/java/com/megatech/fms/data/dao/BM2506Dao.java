@@ -17,7 +17,7 @@ public interface BM2506Dao {
     List<BM2506> getAll(long start, long end);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(BM2506 item);
+    long insert(BM2506 item);
 
     @Query("Select * from BM2506 where (id>0 and id = :id) or (id=0 and localId=:localId)")
     BM2506 get(int id, int localId);
@@ -33,6 +33,9 @@ public interface BM2506Dao {
 
     @Query("SELECT * FROM BM2506 WHERE uniqueId = :uniqueId LIMIT 1")
     BM2506 getByUniqueId(String uniqueId);
+
+    @Query("SELECT * FROM BM2506 WHERE id > 0 AND id = :id LIMIT 1")
+    BM2506 getById(int id);
 
     @Query("DELETE FROM BM2506 WHERE localId = :localId")
     void deleteLocal(int localId);

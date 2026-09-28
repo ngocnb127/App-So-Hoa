@@ -140,7 +140,21 @@ public class B2503NewItemFragment extends DialogFragment {
 
             model.setDate(new Date());
             model.setTime(new Date());
+
+            // BM2503Main mở form mới không kèm tham số: phiếu lưu xuống không có xe và sân bay,
+            // server trả 500 "Nullable object must have a value" và phiếu không bao giờ lên
+            // được (đo trên máy ảo 2026-09-28). Lấy xe/sân bay hiện tại của máy.
+            FMSApplication app = FMSApplication.getApplication();
+            if (model.getTruckId() == null || model.getTruckId() <= 0) {
+                model.setTruckId(app.getTruckId());
+                model.setTruckNo(app.getSetting().getTruckNo());
+            }
+            if ((model.getAirportId() == null || model.getAirportId() <= 0) && app.getUser() != null)
+                model.setAirportId(app.getUser().getAirportId());
         }
+        // loaddata() sau khi lưu và thông báo của nút In đều đi qua activity
+        if (getActivity() instanceof BM2503Main)
+            activity = (BM2503Main) getActivity();
     }
 
     @NonNull
@@ -541,7 +555,12 @@ public class B2503NewItemFragment extends DialogFragment {
     // SAVE
     // =========================
 
+    private boolean saving = false;
+
     private void save() {
+        // bấm Lưu lần hai trước khi hộp thoại đóng sẽ chèn phiếu mới hai lần
+        if (saving) return;
+        saving = true;
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
@@ -553,6 +572,7 @@ public class B2503NewItemFragment extends DialogFragment {
 
             @Override
             protected void onPostExecute(Void v) {
+                saving = false;
                 if (activity != null) activity.loaddata();
 
                 Toast.makeText(getContext(), "Lưu thành công", Toast.LENGTH_SHORT).show();
@@ -756,7 +776,12 @@ public class B2503NewItemFragment extends DialogFragment {
                             model.setFlightNo(m_Text);
                             break;
                         case R.id.b2508_new_aircraftType:
+                        case R.id.b2503_aircraft:
+                            // chỉ có id của 25.08 thì số hiệu tàu bay nhập ở 25.03 bị bỏ im lặng
                             model.setAcReg(m_Text);
+                            break;
+                        case R.id.b2503_route:
+                            model.setRouter(m_Text);
                             break;
 
                         case R.id.b2503_value:
