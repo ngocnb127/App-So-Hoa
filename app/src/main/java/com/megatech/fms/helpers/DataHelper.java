@@ -396,30 +396,7 @@ public class DataHelper {
             //sync BM2505
             new Thread(() -> {
 
-                List<BM2505> modified = repo.getModifiedBM2505();
-                if (modified.size() > 0) {
-                    for (BM2505 item : modified) {
-                        BM2505Model itemData = item.toModel();
-                        BM2505Model newData = httpClient.postBM2505(itemData);
-                        if (newData != null) {
-                            item.setLocalModified(false);
-                            item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
-                            repo.insertBM2505(item);
-                        }
-                    }
-                }
-                List<BM2505Model> lstModel = httpClient.getBM2505List();
-
-                if (lstModel != null) {
-                    int[] ids = new int[lstModel.size()];
-                    int i = 0;
-                    for (BM2505Model model : lstModel) {
-                        repo.insertBM2505(BM2505.fromModel(model));
-
-                    }
-
-                }
+                syncBM2505();
 
                 List<BM2505ContainerModel> lstContainer = httpClient.getBM2505ContainerList();
 
@@ -550,6 +527,38 @@ public class DataHelper {
         }
 
 
+    }
+
+    private static final AtomicBoolean bm2505Syncing = new AtomicBoolean(false);
+
+    private static void syncBM2505() {
+        // a slow previous run must not post the same records twice
+        if (!bm2505Syncing.compareAndSet(false, true))
+            return;
+        try {
+            List<BM2505> modified = repo.getModifiedBM2505();
+            for (BM2505 item : modified) {
+                String postedJson = item.getJsonData();
+                BM2505Model newData = httpClient.postBM2505(item.toModel());
+                if (newData == null) {
+                    Logger.appendLog("BM2505", "post failed, keep for retry, localId " + item.getLocalId());
+                    continue;
+                }
+                // keep it marked as modified if the user saved it again while it was being posted
+                repo.markBM2505Posted(item, postedJson, newData.getId(), newData.toJson());
+            }
+
+            List<BM2505Model> lstModel = httpClient.getBM2505List();
+            if (lstModel != null) {
+                for (BM2505Model model : lstModel) {
+                    repo.mergeBM2505FromServer(BM2505.fromModel(model));
+                }
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("BM2505", "sync error " + ex.getMessage());
+        } finally {
+            bm2505Syncing.set(false);
+        }
     }
 
     private static final AtomicBoolean bm2508Syncing = new AtomicBoolean(false);
@@ -735,7 +744,14 @@ public class DataHelper {
     }
 
     public static List<BM2505Model> getBM2505List(Date date) {
-        return repo.getBM2505List(date);
+        // only records of the truck this tablet is assigned to
+        int truckId = FMSApplication.getApplication().getTruckId();
+        List<BM2505Model> lst = new ArrayList<>();
+        for (BM2505Model model : repo.getBM2505List(date)) {
+            if (truckId <= 0 || model.getTruckId() <= 0 || model.getTruckId() == truckId)
+                lst.add(model);
+        }
+        return lst;
     }
 
     public static List<BM2508Model> getBM2508List(Date date) {
@@ -759,7 +775,8 @@ public class DataHelper {
 
         BM2505 localModel = BM2505.fromModel(model);
         localModel.setLocalModified(true);
-        repo.insertBM2505(localModel);
+        // keep the generated localId so saving the same model again updates it instead of adding a copy
+        model.setLocalId(repo.insertBM2505(localModel));
         // call synchronize to update remote database
         Synchronize();
     }

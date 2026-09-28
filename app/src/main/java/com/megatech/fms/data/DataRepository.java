@@ -446,18 +446,60 @@ public class DataRepository {
         }
     }
 
-    public void insertBM2505(BM2505 model) {
+    public int insertBM2505(BM2505 model) {
 
         BM2505 item = db.bm2505Dao().get(model.getId(), model.getLocalId());
 
         if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.bm2505Dao().insert(model);
+            long localId = db.bm2505Dao().insert(model);
+            model.setLocalId((int) localId);
         } else {
 
 
             model.setLocalId(item.getLocalId());
             db.bm2505Dao().update(model);
         }
+        return model.getLocalId();
+    }
+
+    public void markBM2505Posted(BM2505 posted, String postedJson, int serverId, String serverJson) {
+        db.runInTransaction(() -> {
+            BM2505 current = db.bm2505Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return;
+            current.setId(serverId);
+            if (postedJson != null && postedJson.equals(current.getJsonData())
+                    && current.isDeleted() == posted.isDeleted()) {
+                current.setLocalModified(false);
+                current.setJsonData(serverJson);
+            }
+            db.bm2505Dao().update(current);
+        });
+    }
+
+    // Same rules as mergeBM2508FromServer: never match by LocalId from the server and never
+    // overwrite a record that is still waiting to be posted.
+    public void mergeBM2505FromServer(BM2505 remote) {
+        if (remote == null || remote.getId() <= 0)
+            return;
+
+        db.runInTransaction(() -> {
+            BM2505 local = db.bm2505Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2505Dao().getByUniqueId(remote.getUniqueId());
+
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2505Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2505Dao().update(remote);
+            }
+        });
     }
     public int insertBM2508(BM2508 model) {
 

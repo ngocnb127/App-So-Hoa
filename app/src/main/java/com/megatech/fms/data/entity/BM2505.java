@@ -27,6 +27,9 @@ public class BM2505 extends BaseEntity {
 
         BM2505Model model = gson.fromJson(this.getJsonData(), BM2505Model.class);
         model.setLocalId(this.getLocalId());
+        // jsonData may still hold Id = 0 when it was saved before the first successful post
+        if (this.getId() > 0)
+            model.setId(this.getId());
         model.setDeleted(this.isDeleted());
         return model;
 

@@ -1122,10 +1122,9 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
         model.setTime(new Date());
         model.setOperatorId(FMSApplication.getApplication().getUser().getUserId());
         model.setTruckId(FMSApplication.getApplication().getTruckId());
-        B2505NewItemFragement newItemFragement = new B2505NewItemFragement(model);
-        newItemFragement.show(fm, "fragment_edit_name");
-        // setProgressDialog();
-        //String mData = b.getString("REFUEL", "");
+        // the form reads userListbm2505/containerList in onViewCreated: load them before showing it
+        // (it used to be shown first and could open with empty or null lists)
+        setProgressDialog();
         new AsyncTask<Void, Void, List<BM2505Model>>() {
             @Override
             protected List<BM2505Model> doInBackground(Void... voids) {
@@ -1134,6 +1133,15 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
                 containerList = DataHelper.getBM2505ContainerList();
                 List<BM2505Model> lst = DataHelper.getBM2505List(selectedDate);
                 return lst;
+            }
+
+            @Override
+            protected void onPostExecute(List<BM2505Model> models) {
+                closeProgressDialog();
+                if (isFinishing() || fm.isStateSaved())
+                    return;
+                B2505NewItemFragement newItemFragement = new B2505NewItemFragement(model);
+                newItemFragement.show(fm, "fragment_edit_name");
             }
         }.execute();
     }

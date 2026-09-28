@@ -321,7 +321,12 @@ public class B2505NewItemFragement extends DialogFragment {
         }
     }
 
+    private boolean isSaving = false;
+
     private void save() {
+        // a second tap before the dialog closes would insert the new record twice
+        if (isSaving) return;
+        isSaving = true;
 
         new AsyncTask<Void, Void, Void>() {
             @Override
@@ -333,6 +338,7 @@ public class B2505NewItemFragement extends DialogFragment {
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
+                isSaving = false;
                 if (activityb25 instanceof B2505Activity)
                 {
                     activityb25.loaddata();
