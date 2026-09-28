@@ -22,10 +22,19 @@ public interface CheckTrucksDao {
     List<CheckTrucks> getAll(long start, long end);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(CheckTrucks truck);
+    long insert(CheckTrucks truck);
 
     @Query("Select * from CheckTrucks where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
     CheckTrucks get(int id, int localId);
+
+    @Query("Select * from CheckTrucks where localId = :localId limit 1")
+    CheckTrucks getByLocalId(int localId);
+
+    @Query("Select * from CheckTrucks where id > 0 and id = :id limit 1")
+    CheckTrucks getById(int id);
+
+    @Query("Select * from CheckTrucks where uniqueId = :uniqueId limit 1")
+    CheckTrucks getByUniqueId(String uniqueId);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(CheckTrucks item);

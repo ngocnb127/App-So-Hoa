@@ -34,6 +34,10 @@ public class CheckTrucks extends BaseEntity {
 
         CheckTrucksModel model = gson.fromJson(this.getJsonData(), CheckTrucksModel.class);
         model.setLocalId(this.getLocalId());
+        // id trong jsonData có thể còn là 0 (lưu trước lần gửi đầu tiên), lấy theo entity để lần
+        // gửi sau là cập nhật chứ không tạo bản ghi mới.
+        if (this.getId() > 0)
+            model.setId(this.getId());
         model.setDeleted(this.isDeleted());
         return model;
 

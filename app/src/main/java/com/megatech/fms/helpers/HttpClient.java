@@ -1040,7 +1040,7 @@ public class HttpClient {
 
     public List<TruckFuelModel> getTruckFuels() {
 
-        String url = API_BASE_URL + "api/trucks/fuels?truckId=" + setting.getTruckId();
+        String url = API_BASE_URL + "api/trucks/fuels?truckId=" + currentSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -1256,7 +1256,7 @@ public class HttpClient {
 
     public List<BM2508Model> getBM2508List2() {
 
-        String url = API_BASE_URL + "api/bm2508/get2/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2508/get2/" + currentSetting().getTruckId();
 
         try {
             HttpResponse response = sendGET(url);
@@ -1317,7 +1317,7 @@ public class HttpClient {
     }
     public List<BM2505Model> getBM2505List() {
 
-        String url = API_BASE_URL + "api/bm2505/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2505/" + currentSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -1343,7 +1343,7 @@ public class HttpClient {
     }
     public List<BM2508Model> getBM2508List() {
 
-        String url = API_BASE_URL + "api/bm2508/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2508/" + currentSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -1369,7 +1369,7 @@ public class HttpClient {
     }
     public List<CheckTrucksModel> getCheckTrucksList() {
 
-        String url = API_BASE_URL + "api/checktrucks/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/checktrucks/" + currentSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -1677,7 +1677,7 @@ public class HttpClient {
 
     public List<BM2503Model> getBM2503List() {
 
-        String url = API_BASE_URL + "api/bm2503/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2503/" + currentSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -1773,7 +1773,7 @@ public class HttpClient {
 // =====================
     public List<BM2504Model> getBM2504List() {
 
-        String url = API_BASE_URL + "api/bm2504/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2504/" + currentSetting().getTruckId();
 
         try {
             HttpResponse response = sendGET(url);

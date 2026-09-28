@@ -203,6 +203,11 @@ public class B2508NewItemFragement extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 AirportsModel airport = (AirportsModel) adapterView.getItemAtPosition(i);
+                // spinner chỉ để hiển thị: sân bay của phiếu không có trong danh sách thì spinner
+                // rơi về dòng đầu, không được vì thế mà chuyển phiếu sang sân bay khác
+                if (airport != null && model.getAirportId() != null && model.getAirportId() > 0
+                        && !airport.getId().equals(model.getAirportId()))
+                    return;
                 if (airport != null) {
                     model.setAirportId(airport.getId());
                     model.setAirportName(airport.getName());
@@ -213,21 +218,31 @@ public class B2508NewItemFragement extends DialogFragment {
             public void onNothingSelected(AdapterView<?> adapterView) { }
         });
 
+        // spinner chỉ để hiển thị: xe của phiếu không có trong danh sách thì spinner rơi về xe
+        // đầu tiên và listener bên dưới chuyển phiếu sang xe đó, nên thêm xe của phiếu vào đầu
+        List<TruckModel> truckItems = new ArrayList<>();
+        if (Trucklst != null)
+            truckItems.addAll(Trucklst);
+        int truckPos = -1;
+        for (int i = 0; i < truckItems.size(); i++) {
+            if (model.getTruckId() != null && model.getTruckId().equals(truckItems.get(i).getId())) {
+                truckPos = i;
+                break;
+            }
+        }
+        if (truckPos < 0 && model.getTruckId() != null && model.getTruckId() > 0) {
+            truckItems.add(0, new TruckModel(model.getTruckNo(), model.getTruckId()));
+            truckPos = 0;
+        }
         ArrayAdapter<TruckModel> spntruckAdapter =
                 new ArrayAdapter<>(requireContext(),
                         R.layout.support_simple_spinner_dropdown_item,
-                        Trucklst != null ? Trucklst : new ArrayList<>());
+                        truckItems);
         spntruckAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         spntruck.setAdapter(spntruckAdapter);
 
-        if (model.getTruckId() != null && model.getTruckId() > 0 && Trucklst != null) {
-            for (int i = 0; i < Trucklst.size(); i++) {
-                if (model.getTruckId().equals(Trucklst.get(i).getId())) {
-                    spntruck.setSelection(i, false);
-                    break;
-                }
-            }
-        }
+        if (truckPos >= 0)
+            spntruck.setSelection(truckPos, false);
 
         spntruck.post(() -> {
             spntruck.setEnabled(false);
@@ -238,6 +253,9 @@ public class B2508NewItemFragement extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 TruckModel truck = (TruckModel) adapterView.getItemAtPosition(i);
+                if (truck != null && model.getTruckId() != null && model.getTruckId() > 0
+                        && !truck.getId().equals(model.getTruckId()))
+                    return;
                 if (truck != null) {
                     model.setTruckId(truck.getId());
                     model.setTruckNo(truck.getTruckNo());

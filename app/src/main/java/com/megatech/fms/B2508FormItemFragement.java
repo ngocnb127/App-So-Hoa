@@ -263,8 +263,12 @@ public class B2508FormItemFragement extends DialogFragment {
                 com.megatech.fms.data.DataRepository repo = com.megatech.fms.data.DataRepository.getInstance(db);
                 com.megatech.fms.data.entity.BM2508 entity = com.megatech.fms.data.entity.BM2508.fromModel(model);
                 entity.setAttachmentPending(hasCompleteAttachments && !attachmentSaved);
+                // fromModel để cờ chờ gửi = false: phiếu chưa lên server hoặc đang chờ gửi bản
+                // sửa sẽ không bao giờ được gửi nữa. Giữ cờ cho các trường hợp đó.
+                entity.setLocalModified(model.getId() == null || model.getId() <= 0
+                        || repo.isBM2508LocalModified(model.getLocalId()));
                 repo.insertBM2508(entity);
-                if (!attachmentSaved) com.megatech.fms.helpers.DataHelper.Synchronize();
+                if (!attachmentSaved || entity.isLocalModified()) com.megatech.fms.helpers.DataHelper.Synchronize();
 
                 return null;
             }

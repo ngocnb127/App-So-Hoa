@@ -27,6 +27,15 @@ public interface BM2505Dao {
     @Query("Select * from BM2505 where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
     BM2505 get(int id, int localId);
 
+    @Query("Select * from BM2505 where localId = :localId limit 1")
+    BM2505 getByLocalId(int localId);
+
+    @Query("Select * from BM2505 where id > 0 and id = :id limit 1")
+    BM2505 getById(int id);
+
+    @Query("Select * from BM2505 where uniqueId = :uniqueId limit 1")
+    BM2505 getByUniqueId(String uniqueId);
+
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(BM2505 item);
 

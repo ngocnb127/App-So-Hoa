@@ -841,73 +841,221 @@ public class DataRepository {
      * khi người dùng lưu nhiều lần trên cùng một phiếu).
      */
     public int insertBM2505(BM2505 model) {
+        // Đọc rồi ghi trong một giao dịch như insertTruckFuel. Tìm theo localId của chính máy
+        // này: query get(id, localId) cũ bỏ sót dòng đã được server cấp id, nên lần lưu sau
+        // chèn đè dòng đó với id = 0 và POST tạo phiếu trùng.
+        return db.runInTransaction(() -> {
+            BM2505 item = model.getLocalId() > 0 ? db.bm2505Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2505Dao().getById(model.getId());
 
-        BM2505 item = db.bm2505Dao().get(model.getId(), model.getLocalId());
-
-        if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            long newLocalId = db.bm2505Dao().insert(model);
-            if (newLocalId > 0)
-                model.setLocalId((int) newLocalId);
-        } else {
-
-
-            model.setLocalId(item.getLocalId());
-            db.bm2505Dao().update(model);
-        }
-        return model.getLocalId();
+            if (item == null) {
+                long newLocalId = db.bm2505Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2505Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
+
+    /**
+     * Ghi kết quả POST phiếu 2505 mà không đè bản người dùng lưu trong lúc gói còn đang gửi.
+     * Cùng luật với {@link #markTruckFuelSynced}.
+     *
+     * @return true nếu dòng vẫn là bản đã gửi (đã xoá cờ chờ gửi)
+     */
+    public boolean markBM2505Synced(BM2505 posted, int serverId) {
+        return db.runInTransaction(() -> {
+            BM2505 current = db.bm2505Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                current.setJsonData(current.toModel().toJson());
+                current.setLocalModified(false);
+            }
+            db.bm2505Dao().update(current);
+            return unchanged;
+        });
+    }
+
+    /**
+     * Nhận một phiếu 2505 tải từ server về.
+     *
+     * <p>LocalId trong dữ liệu server là số thứ tự của MÁY ĐÃ TẠO phiếu, nên nó trùng với phiếu
+     * của máy này: ghép theo nó (hoặc insert REPLACE giữ nguyên nó) là ghi đè phiếu khác bằng
+     * dữ liệu của xe khác. Chỉ ghép theo Id/UniqueId, dòng mới luôn nhận localId mới, và
+     * không bao giờ đè phiếu còn chờ gửi.
+     */
     public void mergeRemoteBM2505(BM2505 remote) {
-        BM2505 local = db.bm2505Dao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.bm2505Dao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2505Dao().update(remote);
-        }
+        if (remote == null || remote.getId() <= 0)
+            return;
+        db.runInTransaction(() -> {
+            BM2505 local = db.bm2505Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2505Dao().getByUniqueId(remote.getUniqueId());
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2505Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2505Dao().update(remote);
+            }
+        });
     }
-    public void insertBM2508(BM2508 model) {
 
-        BM2508 item = db.bm2508Dao().get(model.getId(), model.getLocalId());
+    public int insertBM2508(BM2508 model) {
+        // Xem insertBM2505.
+        return db.runInTransaction(() -> {
+            BM2508 item = model.getLocalId() > 0 ? db.bm2508Dao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.bm2508Dao().getById(model.getId());
 
-        if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.bm2508Dao().insert(model);
-        } else {
-
-
-            model.setLocalId(item.getLocalId());
-            db.bm2508Dao().update(model);
-        }
+            if (item == null) {
+                long newLocalId = db.bm2508Dao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.bm2508Dao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
+
+    /**
+     * Ghi kết quả POST phiếu 2508, xem {@link #markBM2505Synced}. Bản lưu mới trong lúc gửi đã
+     * tự đặt cờ ảnh của nó, nên cờ ảnh chỉ ghi khi dòng vẫn là bản đã gửi.
+     */
+    public boolean markBM2508Synced(BM2508 posted, int serverId, boolean attachmentPending) {
+        return db.runInTransaction(() -> {
+            BM2508 current = db.bm2508Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                current.setJsonData(current.toModel().toJson());
+                current.setLocalModified(false);
+                current.setAttachmentPending(attachmentPending);
+            }
+            db.bm2508Dao().update(current);
+            return unchanged;
+        });
+    }
+
+    public boolean isBM2508LocalModified(int localId) {
+        BM2508 item = localId > 0 ? db.bm2508Dao().getByLocalId(localId) : null;
+        return item != null && item.isLocalModified();
+    }
+
+    /** Chỉ đổi cờ ảnh chờ gửi, không ghi lại bản chụp cũ đè lên bản người dùng vừa sửa. */
+    public void setBM2508AttachmentPending(int localId, boolean pending) {
+        db.bm2508Dao().setAttachmentPending(localId, pending);
+    }
+
+    /** Xem {@link #mergeRemoteBM2505}; phiếu còn ảnh chờ gửi cũng được giữ nguyên. */
     public void mergeRemoteBM2508(BM2508 remote) {
-        BM2508 local = db.bm2508Dao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.bm2508Dao().insert(remote);
-        } else if (!local.isLocalModified() && !local.isAttachmentPending()) {
-            remote.setLocalId(local.getLocalId());
-            db.bm2508Dao().update(remote);
-        }
+        if (remote == null || remote.getId() <= 0)
+            return;
+        db.runInTransaction(() -> {
+            BM2508 local = db.bm2508Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2508Dao().getByUniqueId(remote.getUniqueId());
+            if (local != null && (local.isLocalModified() || local.isAttachmentPending()))
+                return;
+
+            remote.setLocalModified(false);
+            remote.setAttachmentPending(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2508Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2508Dao().update(remote);
+            }
+        });
     }
-    public void insertCheckTrucks(CheckTrucks model) {
 
-        CheckTrucks item = db.checkTrucksDao().get(model.getId(), model.getLocalId());
+    public int insertCheckTrucks(CheckTrucks model) {
+        // Xem insertBM2505.
+        return db.runInTransaction(() -> {
+            CheckTrucks item = model.getLocalId() > 0 ? db.checkTrucksDao().getByLocalId(model.getLocalId()) : null;
+            if (item == null && model.getId() > 0)
+                item = db.checkTrucksDao().getById(model.getId());
 
-        if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.checkTrucksDao().insert(model);
-        } else {
-
-
-            model.setLocalId(item.getLocalId());
-            db.checkTrucksDao().update(model);
-        }
+            if (item == null) {
+                long newLocalId = db.checkTrucksDao().insert(model);
+                if (newLocalId > 0)
+                    model.setLocalId((int) newLocalId);
+            } else {
+                model.setLocalId(item.getLocalId());
+                if (model.getId() == 0)
+                    model.setId(item.getId());
+                db.checkTrucksDao().update(model);
+            }
+            return model.getLocalId();
+        });
     }
+
+    /** Ghi kết quả POST phiếu 23.07A, xem {@link #markBM2505Synced}. */
+    public boolean markCheckTrucksSynced(CheckTrucks posted, int serverId) {
+        return db.runInTransaction(() -> {
+            CheckTrucks current = db.checkTrucksDao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return false;
+            if (serverId > 0)
+                current.setId(serverId);
+
+            boolean unchanged = java.util.Objects.equals(current.getJsonData(), posted.getJsonData())
+                    && current.isDeleted() == posted.isDeleted();
+            if (unchanged) {
+                current.setJsonData(current.toModel().toJson());
+                current.setLocalModified(false);
+            }
+            db.checkTrucksDao().update(current);
+            return unchanged;
+        });
+    }
+
+    /** Xem {@link #mergeRemoteBM2505}. */
     public void mergeRemoteCheckTrucks(CheckTrucks remote) {
-        CheckTrucks local = db.checkTrucksDao().get(remote.getId(), remote.getLocalId());
-        if (local == null) {
-            db.checkTrucksDao().insert(remote);
-        } else if (!local.isLocalModified()) {
-            remote.setLocalId(local.getLocalId());
-            db.checkTrucksDao().update(remote);
-        }
+        if (remote == null || remote.getId() <= 0)
+            return;
+        db.runInTransaction(() -> {
+            CheckTrucks local = db.checkTrucksDao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.checkTrucksDao().getByUniqueId(remote.getUniqueId());
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.checkTrucksDao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.checkTrucksDao().update(remote);
+            }
+        });
     }
 
     public List<FlightModel> getFlights(Date date) {
