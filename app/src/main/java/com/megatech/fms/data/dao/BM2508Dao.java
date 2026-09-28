@@ -20,10 +20,19 @@ public interface BM2508Dao {
     List<BM2508> getAll(long start, long end);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(BM2508 truck);
+    long insert(BM2508 truck);
 
     @Query("Select * from BM2508 where  (id>0 and id = :id) or (id=0 and localId=:localId) ")
     BM2508 get(int id, int localId);
+
+    @Query("Select * from BM2508 where localId = :localId limit 1")
+    BM2508 getByLocalId(int localId);
+
+    @Query("Select * from BM2508 where id > 0 and id = :id limit 1")
+    BM2508 getById(int id);
+
+    @Query("Select * from BM2508 where uniqueId = :uniqueId limit 1")
+    BM2508 getByUniqueId(String uniqueId);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(BM2508 item);

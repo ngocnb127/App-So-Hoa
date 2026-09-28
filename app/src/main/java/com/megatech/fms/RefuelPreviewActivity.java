@@ -605,9 +605,41 @@ public class RefuelPreviewActivity extends UserBaseActivity implements View.OnCl
 
     private void reprintReceipt() {
         //ReceiptModel model = ReceiptModel.createReceipt(printItems,oldNumber, createNew);
-        Intent intent = new Intent(this, PrintReceiptActivity.class);
-        intent.putExtra("RECEIPT_ID", refuelData.getReceiptUniqueId());
-        startActivityForResult(intent, RECEIPT_WINDOW);
+        String receiptId = refuelData.getReceiptUniqueId();
+        List<RefuelItemData> items = printItems;
+        String number = refuelData.getReceiptNumber() != null && !refuelData.getReceiptNumber().isEmpty()
+                ? refuelData.getReceiptNumber() : oldNumber;
+        new Thread(() -> {
+            boolean hasLocal = receiptId != null && DataHelper.getReceipt(receiptId) != null;
+            runOnUiThread(() -> {
+                if (hasLocal) {
+                    Intent intent = new Intent(this, PrintReceiptActivity.class);
+                    intent.putExtra("RECEIPT_ID", receiptId);
+                    startActivityForResult(intent, RECEIPT_WINDOW);
+                } else
+                    reprintFromRefuels(items, number);
+            });
+        }).start();
+    }
+
+    // Receipts are stored only on the tablet that saved them, so a receipt of another truck is
+    // not found here. Rebuild it from the refuel items with the old number, for printing only.
+    private void reprintFromRefuels(List<RefuelItemData> items, String number) {
+        if (items == null || items.isEmpty() || number == null) {
+            showErrorMessage(R.string.receipt_not_found);
+            return;
+        }
+        try {
+            ReceiptModel model = ReceiptModel.createReceipt(items, null, false, number, false);
+            // createReceipt takes the number of the first item, which may have none
+            model.setNumber(number);
+            Intent intent = new Intent(this, PrintReceiptActivity.class);
+            intent.putExtra("RECEIPT", model.toJson());
+            intent.putExtra("REPRINT", true);
+            startActivity(intent);
+        } catch (InvalidRefuelTimeException ex) {
+            showBusinessError(ex.getMessage());
+        }
     }
     private String oldNumber;
     private String[] checkPrintedItems() {

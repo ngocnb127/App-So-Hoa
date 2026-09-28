@@ -52,6 +52,7 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DataHelper {
 
@@ -60,7 +61,7 @@ public class DataHelper {
     private static final Context context = FMSApplication.getApplication();
     private static final HttpClient httpClient = new HttpClient();
     private static final DataRepository repo = DataRepository.getInstance(AppDatabase.getInstance(context));
-    private static boolean processing = false;
+    private static volatile boolean processing = false;
 
     public static List<TruckModel> getTrucks() {
         if (isDebug) {
@@ -146,7 +147,15 @@ public class DataHelper {
         RefuelItem localItem = repo.getRefuel(uniqueId);
 
         if (localItem == null) {
-            return null;
+            // item of another truck that has not been synced to this tablet yet
+            if (remoteItem != null) {
+                localItem = RefuelItem.fromRefuelItemData(remoteItem);
+                repo.insertRefuel(localItem);
+                remoteItem.setLocalId(localItem.getLocalId());
+                if (remoteItem.getOthers() == null)
+                    remoteItem.setOthers(new ArrayList<>());
+            }
+            return remoteItem;
         }
 
         if (localItem.isLocalModified() || remoteItem == null) {
@@ -230,7 +239,7 @@ public class DataHelper {
             processing = true;
             //post local modified data
             new Thread(() -> {
-
+              try {
                 List<RefuelItem> modified = repo.getModifiedRefuel();
                 if (modified.size() > 0) {
                     for (RefuelItem item : modified) {
@@ -282,7 +291,12 @@ public class DataHelper {
 
                 //Delete old records
                 repo.deleteOldRefuels(10);
+              } catch (Exception ex) {
+                Logger.appendLog("SYNC", "refuel sync error " + ex.getMessage());
+              } finally {
+                // must always be released, otherwise Synchronize() never runs again until restart
                 processing = false;
+              }
 
                 List<Review> modifiedReview = repo.getModifiedReview();
 
@@ -448,38 +462,7 @@ public class DataHelper {
                 }
             }).start();
             //sync BM2508
-            new Thread(() -> {
-
-                List<BM2508> modified = repo.getModifiedBM2508();
-                if (modified.size() > 0) {
-                    for (BM2508 item : modified) {
-                        BM2508Model itemData = item.toModel();
-                        BM2508Model newData = httpClient.postBM2508(itemData);
-                        if (newData != null) {
-                            item.setLocalModified(false);
-                            item.setId(newData.getId());
-                            item.setJsonData(newData.toJson());
-                            repo.insertBM2508(item);
-                            ReceiptAPI client = new ReceiptAPI();
-                            // Gửi file ảnh lên API
-                            client.postMultipartBM2508(itemData);
-                        }
-                    }
-                }
-                List<BM2508Model> lstModel = httpClient.getBM2508List();
-
-                if (lstModel != null) {
-                    int[] ids = new int[lstModel.size()];
-                    int i = 0;
-                    for (BM2508Model model : lstModel) {
-                        repo.insertBM2508(BM2508.fromModel(model));
-                        ReceiptAPI client = new ReceiptAPI();
-                        // Gửi file ảnh lên API
-                        //client.postMultipartBM2508(model);
-                    }
-
-                }
-            }).start();
+            new Thread(DataHelper::syncBM2508).start();
             //update airlines, users from another thread
             new Thread(() -> {
                 List<AirlineModel> lstModel = httpClient.getAirlines();
@@ -567,6 +550,45 @@ public class DataHelper {
         }
 
 
+    }
+
+    private static final AtomicBoolean bm2508Syncing = new AtomicBoolean(false);
+
+    private static void syncBM2508() {
+        // Synchronize() runs every 30s; a slow previous run must not post the same records twice
+        if (!bm2508Syncing.compareAndSet(false, true))
+            return;
+        try {
+            List<BM2508> modified = repo.getModifiedBM2508();
+            for (BM2508 item : modified) {
+                String postedJson = item.getJsonData();
+                BM2508Model itemData = item.toModel();
+                BM2508Model newData = httpClient.postBM2508(itemData);
+                if (newData == null) {
+                    Logger.appendLog("BM2508", "post failed, keep for retry, localId " + item.getLocalId());
+                    continue;
+                }
+
+                // the user may have saved this record again while it was being posted:
+                // keep it marked as modified so the newer data is posted on the next run
+                repo.markBM2508Posted(item, postedJson, newData.getId(), newData.toJson());
+
+                // Gửi file ảnh lên API, dùng Id của server để không tạo bản ghi mới
+                itemData.setId(newData.getId());
+                new ReceiptAPI().postMultipartBM2508(itemData);
+            }
+
+            List<BM2508Model> lstModel = httpClient.getBM2508List();
+            if (lstModel != null) {
+                for (BM2508Model model : lstModel) {
+                    repo.mergeBM2508FromServer(BM2508.fromModel(model));
+                }
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("BM2508", "sync error " + ex.getMessage());
+        } finally {
+            bm2508Syncing.set(false);
+        }
     }
 
     public static void postRefuels(List<RefuelItemData> refuels) {
@@ -717,7 +739,16 @@ public class DataHelper {
     }
 
     public static List<BM2508Model> getBM2508List(Date date) {
-        return repo.getBM2508List(date);
+        // only show records of the truck this tablet is assigned to, so a record of another
+        // truck can't be opened and saved from here
+        int truckId = FMSApplication.getApplication().getTruckId();
+        List<BM2508Model> lst = new ArrayList<>();
+        for (BM2508Model model : repo.getBM2508List(date)) {
+            Integer modelTruckId = model.getTruckId();
+            if (truckId <= 0 || modelTruckId == null || modelTruckId <= 0 || modelTruckId == truckId)
+                lst.add(model);
+        }
+        return lst;
     }
 
     public static List<CheckTrucksModel> getCheckTrucksList(Date date) {
@@ -736,7 +767,8 @@ public class DataHelper {
 
         BM2508 localModel = BM2508.fromModel(model);
         localModel.setLocalModified(true);
-        repo.insertBM2508(localModel);
+        // keep the generated localId so saving the same model again updates it instead of adding a copy
+        model.setLocalId(repo.insertBM2508(localModel));
         // call synchronize to update remote database
         Synchronize();
     }

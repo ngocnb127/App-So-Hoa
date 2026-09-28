@@ -123,6 +123,8 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         String data = b.getString("RECEIPT");
         if (data !=null) {
             model = ReceiptModel.fromJson(data);
+            // receipt rebuilt from refuel items for re-printing only (it was saved on another tablet)
+            reprint = b.getBoolean("REPRINT", false);
             bindData();
         }
         else
@@ -700,12 +702,8 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
             @Override
             protected Void doInBackground(Void... voids) {
                 DataHelper.postReceipt(model);
-                if (autoNumber) {
-                    TruckModel setting = FMSApplication.getApplication().getSetting();
-                    int number = Integer.valueOf(model.getNumber().substring(4), 36);
-                    setting.setReceiptCount(number);
-                    FMSApplication.getApplication().saveSetting(setting);
-                }
+                if (autoNumber)
+                    updateReceiptCount(model.getNumber());
                 return null;
             }
 
@@ -722,6 +720,27 @@ public class PrintReceiptActivity extends UserBaseActivity implements View.OnCli
         }.execute();
     }
 
+
+    // Only numbers generated from this tablet's receipt code move the counter. A receipt that
+    // reuses the number of another truck's receipt used to overwrite (or crash parsing) the counter.
+    private void updateReceiptCount(String number) {
+        try {
+            TruckModel setting = FMSApplication.getApplication().getSetting();
+            String code = setting.getReceiptCode();
+            if (number == null || code == null || !number.startsWith(code))
+                return;
+            String counter = number.substring(code.length());
+            if (counter.endsWith("HT"))
+                counter = counter.substring(0, counter.length() - 2);
+            int count = Integer.parseInt(counter, 36);
+            if (count > setting.getReceiptCount()) {
+                setting.setReceiptCount(count);
+                FMSApplication.getApplication().saveSetting(setting);
+            }
+        } catch (Exception ex) {
+            Logger.appendLog("RECEIPT_WINDOW", "invalid receipt number " + number);
+        }
+    }
 
     private void postCompleted() {
         closeProgressDialog();

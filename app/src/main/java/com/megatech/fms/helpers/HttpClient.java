@@ -58,12 +58,15 @@ import java.util.List;
 public class HttpClient {
     private final String API_BASE_URL = BuildConfig.API_BASE_URL;
     private String token;
-    private TruckModel setting;
+    // always read the current setting: DataHelper keeps one static HttpClient for the whole
+    // app lifetime, so a copy taken in the constructor keeps the old truck after it is changed
+    private TruckModel getSetting() {
+        return FMSApplication.getApplication().getSetting();
+    }
     private final Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
 
     public HttpClient() {
         this.token = FMSApplication.getApplication().getUser().getToken();
-        this.setting = FMSApplication.getApplication().getSetting();
     }
 
     public HttpClient(String token) {
@@ -786,10 +789,10 @@ public class HttpClient {
             con.setRequestProperty("Accept", "*/*");
             String USER_AGENT = "Mozilla/5.0";
             con.setRequestProperty("User-Agent", USER_AGENT);
-            con.setRequestProperty("Tablet-Id", setting.getTabletSerial());
-            con.setRequestProperty("App-Version", setting.getAppVersion());
-            con.setRequestProperty("Truck-Id", String.valueOf(setting.getTruckId()));
-            con.setRequestProperty("Truck-Code", setting.getTruckNo());
+            con.setRequestProperty("Tablet-Id", getSetting().getTabletSerial());
+            con.setRequestProperty("App-Version", getSetting().getAppVersion());
+            con.setRequestProperty("Truck-Id", String.valueOf(getSetting().getTruckId()));
+            con.setRequestProperty("Truck-Code", getSetting().getTruckNo());
             this.token = FMSApplication.getApplication().getUser().getToken();
             if (this.token != null)
                 con.setRequestProperty("Authorization", "bearer " + this.token);
@@ -816,7 +819,7 @@ public class HttpClient {
 
     public List<TruckFuelModel> getTruckFuels() {
 
-        String url = API_BASE_URL + "api/trucks/fuels?truckId=" + setting.getTruckId();
+        String url = API_BASE_URL + "api/trucks/fuels?truckId=" + getSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -887,7 +890,7 @@ public class HttpClient {
     }
     public List<BM2505Model> getBM2505List() {
 
-        String url = API_BASE_URL + "api/bm2505/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2505/" + getSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -913,7 +916,7 @@ public class HttpClient {
     }
     public List<BM2508Model> getBM2508List() {
 
-        String url = API_BASE_URL + "api/bm2508/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/bm2508/" + getSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -939,7 +942,7 @@ public class HttpClient {
     }
     public List<CheckTrucksModel> getCheckTrucksList() {
 
-        String url = API_BASE_URL + "api/checktrucks/" + setting.getTruckId();
+        String url = API_BASE_URL + "api/checktrucks/" + getSetting().getTruckId();
         try {
             HttpResponse response = sendGET(url);
             if (response.getResponseCode() == HttpURLConnection.HTTP_OK) {

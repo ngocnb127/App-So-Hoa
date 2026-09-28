@@ -248,19 +248,20 @@ public class B2508FormItemFragement extends DialogFragment {
                 // model.setUserSkypecSignaturePath(null);
                 // model.setAirlineSignaturePath(null);
 
-                // ✅ Chỉ upload ảnh chữ ký lên server, không chạm dữ liệu khác
-                try {
-                    com.megatech.fms.helpers.ReceiptAPI client = new com.megatech.fms.helpers.ReceiptAPI();
-                    client.postMultipartBM2508(model);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+                // ✅ Chỉ upload ảnh chữ ký lên server khi bản ghi đã có Id trên server,
+                // nếu chưa có thì lần sync sau sẽ gửi bản ghi rồi mới upload ảnh
+                if (model.getId() != null && model.getId() > 0) {
+                    try {
+                        com.megatech.fms.helpers.ReceiptAPI client = new com.megatech.fms.helpers.ReceiptAPI();
+                        client.postMultipartBM2508(model);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
                 }
 
-                // ✅ Lưu local để đảm bảo lần sau mở lại vẫn có ảnh
-                com.megatech.fms.data.AppDatabase db = com.megatech.fms.data.AppDatabase.getInstance(getContext());
-                com.megatech.fms.data.DataRepository repo = com.megatech.fms.data.DataRepository.getInstance(db);
-                com.megatech.fms.data.entity.BM2508 entity = com.megatech.fms.data.entity.BM2508.fromModel(model);
-                repo.insertBM2508(entity);
+                // ✅ Lưu local và đánh dấu chưa đồng bộ. Trước đây ghi thẳng với isLocalModified = false
+                // nên bản ghi vừa tạo chưa kịp sync sẽ không bao giờ được gửi lên server.
+                DataHelper.postBM2508(model);
 
                 return null;
             }

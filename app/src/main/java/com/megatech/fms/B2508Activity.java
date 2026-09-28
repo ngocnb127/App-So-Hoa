@@ -310,7 +310,7 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             binding.invalidateAll();
 
             // Gửi file ảnh lên API
-            client.postMultipartBM2508(modelb2508);
+            uploadSignatures(client);
         }
         else if (requestCode == UserSkypec && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
@@ -333,8 +333,17 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             binding.invalidateAll();
             ReceiptAPI client = new ReceiptAPI();
             // Gửi file ảnh lên API
-            client.postMultipartBM2508(modelb2508);
+            uploadSignatures(client);
         }
+    }
+
+    // network calls are not allowed on the main thread (NetworkOnMainThreadException was
+    // swallowed and nothing was uploaded). A record without a server Id is uploaded by the sync.
+    private void uploadSignatures(ReceiptAPI client) {
+        BM2508Model model = modelb2508;
+        if (model == null || model.getId() == null || model.getId() <= 0)
+            return;
+        new Thread(() -> client.postMultipartBM2508(model)).start();
     }
 
     public void saveImageToGallery(Context context, Bitmap bitmap, String fileName,boolean isAirlineSignature) {

@@ -77,7 +77,8 @@ public class ReceiptAPI extends  BaseAPI{
             String airlineImageUrl = model.getUrlImageAirline();
             String airlineSignaturePath = model.getAirlineSignaturePath();
 
-            if (airlineSignaturePath == null || airlineImageUrl.equals(airlineSignaturePath)) {
+            // a missing airline signature must not abort the upload of the other files
+            if (airlineImageUrl != null && (airlineSignaturePath == null || airlineImageUrl.equals(airlineSignaturePath))) {
                 File file = new File(airlineImageUrl);
                 if (file.exists()) {
                     try {
@@ -91,7 +92,7 @@ public class ReceiptAPI extends  BaseAPI{
             String UrlImageSkypec = model.getUrlImageSkypec();
             String UserSkypecSignaturePath = model.getUserSkypecSignaturePath();
 
-            if (UserSkypecSignaturePath == null || UrlImageSkypec.equals(UserSkypecSignaturePath)) {
+            if (UrlImageSkypec != null && (UserSkypecSignaturePath == null || UrlImageSkypec.equals(UserSkypecSignaturePath))) {
                 File file = new File(UrlImageSkypec);
                 if (file.exists()) {
                     try {

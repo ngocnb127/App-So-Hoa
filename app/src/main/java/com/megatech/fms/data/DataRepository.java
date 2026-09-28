@@ -459,18 +459,66 @@ public class DataRepository {
             db.bm2505Dao().update(model);
         }
     }
-    public void insertBM2508(BM2508 model) {
+    public int insertBM2508(BM2508 model) {
 
         BM2508 item = db.bm2508Dao().get(model.getId(), model.getLocalId());
 
         if (item == null || (item.getId() == 0 &&  item.getLocalId() != model.getLocalId())) {
-            db.bm2508Dao().insert(model);
+            long localId = db.bm2508Dao().insert(model);
+            model.setLocalId((int) localId);
         } else {
 
 
             model.setLocalId(item.getLocalId());
             db.bm2508Dao().update(model);
         }
+        return model.getLocalId();
+    }
+
+    public BM2508 getBM2508ByLocalId(int localId) {
+        return db.bm2508Dao().getByLocalId(localId);
+    }
+
+    public void markBM2508Posted(BM2508 posted, String postedJson, int serverId, String serverJson) {
+        db.runInTransaction(() -> {
+            BM2508 current = db.bm2508Dao().getByLocalId(posted.getLocalId());
+            if (current == null)
+                return;
+            current.setId(serverId);
+            if (postedJson != null && postedJson.equals(current.getJsonData())
+                    && current.isDeleted() == posted.isDeleted()) {
+                current.setLocalModified(false);
+                current.setJsonData(serverJson);
+            }
+            db.bm2508Dao().update(current);
+        });
+    }
+
+    // Merge a record pulled from the server. LocalId in server data belongs to whichever
+    // tablet created it, so it must never be used to match or overwrite local rows.
+    public void mergeBM2508FromServer(BM2508 remote) {
+        if (remote == null || remote.getId() <= 0)
+            return;
+
+        // in one transaction so a record saved by the user in between is not overwritten
+        db.runInTransaction(() -> {
+            BM2508 local = db.bm2508Dao().getById(remote.getId());
+            if (local == null && remote.getUniqueId() != null)
+                local = db.bm2508Dao().getByUniqueId(remote.getUniqueId());
+
+            // keep local changes that have not been posted yet
+            if (local != null && local.isLocalModified())
+                return;
+
+            remote.setLocalModified(false);
+            if (local == null) {
+                remote.setLocalId(0);
+                db.bm2508Dao().insert(remote);
+            } else {
+                remote.setLocalId(local.getLocalId());
+                db.bm2508Dao().update(remote);
+            }
+        });
     }
     public void insertCheckTrucks(CheckTrucks model) {
 

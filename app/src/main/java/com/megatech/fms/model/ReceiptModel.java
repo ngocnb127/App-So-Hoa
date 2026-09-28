@@ -101,7 +101,15 @@ public class ReceiptModel extends BaseModel {
             model.setRefuelMethod(model.isFHS ? REFUEL_METHOD.FHS : REFUEL_METHOD.REFUELER);
             //model.setDate(new Date());
             model.customerId = refuel.getAirlineId();
-            model.customerName = refuel.getInvoiceNameCharter().trim();
+            // the first item can belong to another truck and have no charter name (NPE before),
+            // so take the first one set on any item
+            model.customerName = "";
+            for (RefuelItemData item : refuels) {
+                if (item.getInvoiceNameCharter() != null && !item.getInvoiceNameCharter().trim().isEmpty()) {
+                    model.customerName = item.getInvoiceNameCharter().trim();
+                    break;
+                }
+            }
             if (model.customerName.isEmpty())
                 model.customerName = refuel.getAirlineModel().getName().trim();
             model.customerCode = refuel.getAirlineModel().getCode().trim();
