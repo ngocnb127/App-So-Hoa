@@ -43,8 +43,8 @@ public interface BM2508Dao {
     @Query("SELECT * from BM2508 where isAttachmentPending = 1 and id > 0 and isDeleted = 0")
     List<BM2508> getPendingAttachments();
 
-    @Query("Update BM2508 set isAttachmentPending = :pending WHERE localId = :localId")
-    void setAttachmentPending(int localId, boolean pending);
+    @Query("Update BM2508 set isAttachmentPending = 0 WHERE isAttachmentPending = 1")
+    void clearAttachmentPending();
 
     @Query("DELETE from BM2508 WHERE id= :id")
     void delete(int id);

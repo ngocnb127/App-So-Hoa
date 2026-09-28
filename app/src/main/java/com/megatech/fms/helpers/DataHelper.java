@@ -2152,48 +2152,20 @@ public class DataHelper {
                         BM2508Model itemData = item.toModel();
                         BM2508Model newData = requireHttpClient().postBM2508Post2(itemData);
                         if (newData != null) {
-                            // Dữ liệu chính đã thành công: không POST lại, dù ảnh có thể chưa gửi được.
+                            // post2 gửi kèm chữ ký trong cùng gói, không còn lượt gửi ảnh riêng.
                             // Không ghi lại `item`: người dùng có thể đã lưu bản sửa trong lúc gửi.
-                            if (!requireRepository().markBM2508Synced(item, newData.getId(),
-                                    hasCompleteBM2508Attachments(itemData)))
+                            if (!requireRepository().markBM2508Synced(item, newData.getId()))
                                 Logger.appendLog("BM2508", "Có bản lưu mới trong lúc gửi -> giữ chờ gửi, localId="
                                         + item.getLocalId());
                         }
                     }
                 }
 
-                // Ảnh/chữ ký có hàng đợi riêng; lỗi chỉ retry ảnh theo Id đã có trên server.
-                List<BM2508> pendingAttachments = requireRepository().getPendingBM2508Attachments();
-                ReceiptAPI attachmentApi = new ReceiptAPI();
-                for (BM2508 item : pendingAttachments) {
-                    BM2508Model itemData = item.toModel();
-                    if (!hasCompleteBM2508Attachments(itemData)) {
-                        // Thiếu ảnh/chữ ký hoặc file đã bị xóa: dừng retry, giữ nguyên dữ liệu phiếu.
-                        requireRepository().setBM2508AttachmentPending(item.getLocalId(), false);
-                        Logger.appendLog("BM2508_ATTACHMENT", "Stop retry, missing local attachment. id=" + item.getId());
-                        continue;
-                    }
+                // Cờ ảnh chờ gửi của bản cũ (hàng đợi api/bm2508/multipart, server trả 400 kể cả
+                // khi Id đúng). Ảnh đã đi theo post2 nên chỉ gỡ cờ, để phiếu không bị kẹt khỏi
+                // lượt tải về và khỏi dọn dữ liệu cũ.
+                requireRepository().clearBM2508AttachmentPending();
 
-                    // Model dựng lại từ jsonData, mà jsonData có thể được ghi TRƯỚC khi server
-                    // cấp Id. Cột id của row thì đã đúng (hàng đợi lọc theo id > 0), nên lấy
-                    // từ row xuống — nếu không, gói tin mang Id = 0 và chắc chắn bị từ chối.
-                    if (itemData.getId() == null || itemData.getId() <= 0)
-                        itemData.setId(item.getId());
-
-                    ReceiptAPI.AttachmentOutcome outcome = attachmentApi.send(itemData);
-
-                    // Chỉ đổi cờ ảnh: ghi lại `item` (bản chụp đầu vòng lặp) sẽ đè bản người dùng
-                    // vừa sửa và xoá cờ chờ gửi của nó.
-                    if (outcome == ReceiptAPI.AttachmentOutcome.SENT) {
-                        requireRepository().setBM2508AttachmentPending(item.getLocalId(), false);
-                    } else if (outcome == ReceiptAPI.AttachmentOutcome.GIVE_UP) {
-                        // Gửi lại y hệt cũng hỏng. Dừng hàng đợi để không quay vòng vô hạn;
-                        // ảnh vẫn còn trên máy, gửi lại được bằng tay từ màn hình biểu mẫu.
-                        requireRepository().setBM2508AttachmentPending(item.getLocalId(), false);
-                        Logger.appendLog("BM2508_ATTACHMENT",
-                                "Dừng thử lại gửi ảnh, server từ chối nội dung. id=" + item.getId());
-                    }
-                }
                 List<BM2508Model> lstModel = requireHttpClient().getBM2508List();
 
                 if (lstModel != null) {
@@ -2201,9 +2173,6 @@ public class DataHelper {
                     int i = 0;
                     for (BM2508Model model : lstModel) {
                         requireRepository().mergeRemoteBM2508(BM2508.fromModel(model));
-                        ReceiptAPI client = new ReceiptAPI();
-                        // Gửi file ảnh lên API
-                        //client.postMultipartBM2508(model);
                     }
 
                 }
@@ -4602,20 +4571,10 @@ public class DataHelper {
 
         BM2508 localModel = BM2508.fromModel(model);
         localModel.setLocalModified(true);
-        localModel.setAttachmentPending(hasCompleteBM2508Attachments(model));
         // trả localId về model để lần lưu sau là update chứ không tạo bản ghi mới
         model.setLocalId(requireRepository().insertBM2508(localModel));
         // call synchronize to update remote database
         Synchronize();
-    }
-
-    public static boolean hasCompleteBM2508Attachments(BM2508Model model) {
-        if (model == null) return false;
-        String airlinePath = model.getAirlineSignaturePath();
-        String skypecPath = model.getUserSkypecSignaturePath();
-        if (airlinePath == null || airlinePath.trim().isEmpty()
-                || skypecPath == null || skypecPath.trim().isEmpty()) return false;
-        return new File(airlinePath).isFile() && new File(skypecPath).isFile();
     }
 
     public static void postCheckTrucks(CheckTrucksModel model) {

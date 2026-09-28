@@ -938,11 +938,8 @@ public class DataRepository {
         });
     }
 
-    /**
-     * Ghi kết quả POST phiếu 2508, xem {@link #markBM2505Synced}. Bản lưu mới trong lúc gửi đã
-     * tự đặt cờ ảnh của nó, nên cờ ảnh chỉ ghi khi dòng vẫn là bản đã gửi.
-     */
-    public boolean markBM2508Synced(BM2508 posted, int serverId, boolean attachmentPending) {
+    /** Ghi kết quả POST phiếu 2508, xem {@link #markBM2505Synced}. */
+    public boolean markBM2508Synced(BM2508 posted, int serverId) {
         return db.runInTransaction(() -> {
             BM2508 current = db.bm2508Dao().getByLocalId(posted.getLocalId());
             if (current == null)
@@ -955,21 +952,15 @@ public class DataRepository {
             if (unchanged) {
                 current.setJsonData(current.toModel().toJson());
                 current.setLocalModified(false);
-                current.setAttachmentPending(attachmentPending);
             }
             db.bm2508Dao().update(current);
             return unchanged;
         });
     }
 
-    public boolean isBM2508LocalModified(int localId) {
-        BM2508 item = localId > 0 ? db.bm2508Dao().getByLocalId(localId) : null;
-        return item != null && item.isLocalModified();
-    }
-
-    /** Chỉ đổi cờ ảnh chờ gửi, không ghi lại bản chụp cũ đè lên bản người dùng vừa sửa. */
-    public void setBM2508AttachmentPending(int localId, boolean pending) {
-        db.bm2508Dao().setAttachmentPending(localId, pending);
+    /** Gỡ cờ ảnh chờ gửi còn sót từ hàng đợi api/bm2508/multipart cũ (chữ ký nay đi theo post2). */
+    public void clearBM2508AttachmentPending() {
+        db.bm2508Dao().clearAttachmentPending();
     }
 
     /** Xem {@link #mergeRemoteBM2505}; phiếu còn ảnh chờ gửi cũng được giữ nguyên. */
@@ -1107,10 +1098,6 @@ public class DataRepository {
     public List<BM2508> getModifiedBM2508() {
         List<BM2508> modified = db.bm2508Dao().getModified();
         return modified;
-    }
-
-    public List<BM2508> getPendingBM2508Attachments() {
-        return db.bm2508Dao().getPendingAttachments();
     }
 
     public List<CheckTrucks> getModifiedCheckTrucks() {

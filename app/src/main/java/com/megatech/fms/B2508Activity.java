@@ -35,7 +35,6 @@ import com.megatech.fms.helpers.DateUtils;
 import com.megatech.fms.helpers.HttpResponse;
 import com.megatech.fms.helpers.ImageUtil;
 import com.megatech.fms.helpers.Logger;
-import com.megatech.fms.helpers.ReceiptAPI;
 import com.megatech.fms.model.AirportsModel;
 import com.megatech.fms.model.BM2505ContainerModel;
 import com.megatech.fms.model.BM2505Model;
@@ -295,7 +294,6 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             String file = data.getExtras().getString("signature_file");
             modelb2508.setAirlineSignaturePath(file);
             modelb2508.setUrlImageAirline(file);
-            ReceiptAPI client = new ReceiptAPI();
             // save();
             ImageView signatureImageView = b2508FormItemFragement.getView().findViewById(R.id.ImageAirlineSign);
 
@@ -312,8 +310,6 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             modelb2508.setTextAirlineSignature("Chạm để ký");
             binding.invalidateAll();
 
-            // Gửi file ảnh lên API
-            client.postMultipartBM2508(modelb2508);
         }
         else if (requestCode == UserSkypec && resultCode == RESULT_OK) {
             String file = data.getExtras().getString("signature_file");
@@ -334,9 +330,6 @@ public class B2508Activity extends DateBaseActivity implements View.OnClickListe
             b2508FormItemFragement.model.setUserSkypecSignaturePath(file);
             modelb2508.setTextUserSkypecSignature("Chạm để ký");
             binding.invalidateAll();
-            ReceiptAPI client = new ReceiptAPI();
-            // Gửi file ảnh lên API
-            client.postMultipartBM2508(modelb2508);
         }
     }
 

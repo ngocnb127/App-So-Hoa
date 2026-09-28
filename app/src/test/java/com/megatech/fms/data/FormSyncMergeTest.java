@@ -225,30 +225,25 @@ public class FormSyncMergeTest {
         assertNotNull(db.bm2508Dao().getById(500));
     }
 
-    /** Hàng đợi ảnh chỉ được đổi cờ ảnh, không ghi lại bản chụp cũ đè bản vừa sửa. */
+    /**
+     * Chữ ký BM 25.08 đi theo post2; hàng đợi api/bm2508/multipart đã bỏ (server trả 400 kể cả
+     * khi Id đúng, đo trên máy ảo 2026-09-28). Cờ ảnh còn sót từ bản cũ phải được gỡ, nếu không
+     * phiếu bị loại khỏi lượt tải về và khỏi dọn dữ liệu cũ mãi mãi — nhưng không đụng cờ chờ gửi.
+     */
     @Test
-    public void phieu2508GuiAnhXongKhongDeBanVuaSua() {
+    public void goCoAnhCuKhongDungCoChoGui() {
         BM2508Model mine = new BM2508Model();
         mine.setTruckId(11);
         BM2508 local = BM2508.fromModel(mine);
         local.setLocalModified(true);
+        local.setAttachmentPending(true);
         int myLocalId = repo.insertBM2508(local);
-        repo.markBM2508Synced(db.bm2508Dao().getByLocalId(myLocalId), 600, true);
-        assertTrue(db.bm2508Dao().getByLocalId(myLocalId).isAttachmentPending());
 
-        BM2508Model edited = db.bm2508Dao().getByLocalId(myLocalId).toModel();
-        edited.setTruckNo("sua");
-        BM2508 editedRow = BM2508.fromModel(edited);
-        editedRow.setLocalModified(true);
-        repo.insertBM2508(editedRow);
-
-        repo.setBM2508AttachmentPending(myLocalId, false);
+        repo.clearBM2508AttachmentPending();
 
         BM2508 row = db.bm2508Dao().getByLocalId(myLocalId);
         assertFalse(row.isAttachmentPending());
-        assertTrue("bản sửa phải còn chờ gửi", row.isLocalModified());
-        assertEquals("sua", row.toModel().getTruckNo());
-        assertEquals(600, row.getId());
+        assertTrue("phiếu chờ gửi phải giữ cờ chờ gửi", row.isLocalModified());
     }
 
     @Test

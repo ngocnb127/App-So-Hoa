@@ -236,8 +236,6 @@ public class B2508FormItemFragement extends DialogFragment {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
-                boolean attachmentSaved = false;
-
                 // ✅ Lấy đường dẫn chữ ký từ Activity gốc (nếu có)
                 if (activityb25.modelb2508.getUserSkypecSignaturePath() != null)
                     model.setUserSkypecSignaturePath(activityb25.modelb2508.getUserSkypecSignaturePath());
@@ -249,26 +247,9 @@ public class B2508FormItemFragement extends DialogFragment {
                 // model.setUserSkypecSignaturePath(null);
                 // model.setAirlineSignaturePath(null);
 
-                // ✅ Chỉ upload ảnh chữ ký lên server, không chạm dữ liệu khác
-                boolean hasCompleteAttachments = com.megatech.fms.helpers.DataHelper.hasCompleteBM2508Attachments(model);
-                try {
-                    com.megatech.fms.helpers.ReceiptAPI client = new com.megatech.fms.helpers.ReceiptAPI();
-                    attachmentSaved = !hasCompleteAttachments || client.postMultipartBM2508(model) != null;
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-
-                // ✅ Lưu local để đảm bảo lần sau mở lại vẫn có ảnh
-                com.megatech.fms.data.AppDatabase db = com.megatech.fms.data.AppDatabase.getInstance(getContext());
-                com.megatech.fms.data.DataRepository repo = com.megatech.fms.data.DataRepository.getInstance(db);
-                com.megatech.fms.data.entity.BM2508 entity = com.megatech.fms.data.entity.BM2508.fromModel(model);
-                entity.setAttachmentPending(hasCompleteAttachments && !attachmentSaved);
-                // fromModel để cờ chờ gửi = false: phiếu chưa lên server hoặc đang chờ gửi bản
-                // sửa sẽ không bao giờ được gửi nữa. Giữ cờ cho các trường hợp đó.
-                entity.setLocalModified(model.getId() == null || model.getId() <= 0
-                        || repo.isBM2508LocalModified(model.getLocalId()));
-                repo.insertBM2508(entity);
-                if (!attachmentSaved || entity.isLocalModified()) com.megatech.fms.helpers.DataHelper.Synchronize();
+                // ✅ Lưu local và đánh dấu chờ gửi: lượt đồng bộ gửi phiếu qua post2, chữ ký đi
+                // kèm trong cùng gói (không còn gọi api/bm2508/multipart riêng)
+                com.megatech.fms.helpers.DataHelper.postBM2508(model);
 
                 return null;
             }
