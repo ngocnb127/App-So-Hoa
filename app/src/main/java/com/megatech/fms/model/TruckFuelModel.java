@@ -199,7 +199,9 @@ public class TruckFuelModel extends BaseModel {
     }
 
     public String getAppearanceCheck() {
-        return appearanceCheck;
+        // server trả cột có độ dài cố định ("C&B       "): màn hình so equals("C&B") nên phiếu
+        // tải về hiện thành "Khác". Chỉ gọt khi đọc, JSON gửi đi vẫn là giá trị gốc.
+        return appearanceCheck == null ? null : appearanceCheck.trim();
     }
 
     public void setAppearanceCheck(String appearanceCheck) {

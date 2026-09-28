@@ -188,7 +188,8 @@ public class BM2505Model extends BaseModel {
     }
 
     public String getAppearanceCheck() {
-        return appearanceCheck;
+        // xem TruckFuelModel.getAppearanceCheck: server trả "C&B" kèm dấu cách thừa
+        return appearanceCheck == null ? null : appearanceCheck.trim();
     }
 
     public void setAppearanceCheck(String appearanceCheck) {
